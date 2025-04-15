@@ -171,7 +171,7 @@ class RegisterScreen extends StatelessWidget {
                         ),
                         child: const Text(
                           'Sign up',
-                          style: TextStyle(fontSize: 16),
+                          style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                       ),
                     ),

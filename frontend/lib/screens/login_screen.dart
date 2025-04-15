@@ -14,11 +14,7 @@ class LoginScreen extends StatelessWidget {
           Container(
             height: MediaQuery.of(context).size.height * 0.45,
             alignment: Alignment.center,
-            child: Image.asset(
-              'assets/Login.png',
-              height: 250, // ← increased height
-              // fit: BoxFit.contain,
-            ),
+            child: Image.asset('assets/Login.png', height: 250),
           ),
 
           // Form section
@@ -115,6 +111,22 @@ class LoginScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Don't have an account?"),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/register');
+                          },
+                          child: const Text(
+                            'Register',
+                            style: TextStyle(color: maroon),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
