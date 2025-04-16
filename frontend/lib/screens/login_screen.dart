@@ -11,24 +11,31 @@ class LoginScreen extends StatelessWidget {
       backgroundColor: maroon,
       body: Column(
         children: [
-          // Logo section
+          // Logo/Header Section
           Container(
-            height: MediaQuery.of(context).size.height * 0.45,
+            height: MediaQuery.of(context).size.height * 0.35,
             alignment: Alignment.center,
-            child: Image.asset('assets/Login.png', height: 250),
+            child: Image.asset(
+              'assets/Login.png',
+              height: 160,
+              fit: BoxFit.contain,
+            ),
           ),
 
-          // Form section
+          // Login Form Section
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(40)),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(50),
+                  topRight: Radius.circular(50),
+                ),
               ),
               child: SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const Text(
                       'Login',
@@ -37,13 +44,17 @@ class LoginScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     const Text(
-                      'Sign in to continue.',
+                      'Login to continue your journey.',
                       style: TextStyle(fontSize: 14, color: Colors.grey),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),
+
+                    // Name field
                     TextField(
                       decoration: InputDecoration(
                         labelText: 'Name',
@@ -53,14 +64,16 @@ class LoginScreen extends StatelessWidget {
                           letterSpacing: 0.5,
                         ),
                         filled: true,
-                        fillColor: lightGrey,
+                        fillColor: Colors.grey.shade200,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(20),
                           borderSide: BorderSide.none,
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Password field
                     TextField(
                       obscureText: true,
                       decoration: InputDecoration(
@@ -71,65 +84,75 @@ class LoginScreen extends StatelessWidget {
                           letterSpacing: 0.5,
                         ),
                         filled: true,
-                        fillColor: lightGrey,
+                        fillColor: Colors.grey.shade200,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(20),
                           borderSide: BorderSide.none,
                         ),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Simulated successful login
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HomeScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text(
-                          'Log in',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
-                        ),
-                      ),
-                    ),
 
-                    const SizedBox(height: 16),
+                    // Login Button
                     Center(
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/forgot-password');
-                        },
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            color: Colors.black54,
-                            decoration: TextDecoration.underline,
+                      child: SizedBox(
+                        width: 200,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const HomeScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: maroon,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Log in',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Forgot Password
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/forgot-password');
+                      },
+                      child: Text(
+                        'Forgot Password?',
+                        style: TextStyle(
+                          color: maroon,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Register
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Don't have an account?"),
+                        const Text("Don't have an account? "),
                         TextButton(
                           onPressed: () {
                             Navigator.pushNamed(context, '/register');
                           },
-                          child: const Text(
+                          child: Text(
                             'Register',
                             style: TextStyle(color: maroon),
                           ),
