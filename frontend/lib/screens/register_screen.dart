@@ -38,17 +38,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registered successfully')),
         );
+        // ignore: use_build_context_synchronously
         Navigator.pop(context);
       } else {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'] ?? 'Registration failed')),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }

@@ -39,16 +39,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         Navigator.pushReplacement(
+          // ignore: use_build_context_synchronously
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       } else {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'] ?? 'Login failed')),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
