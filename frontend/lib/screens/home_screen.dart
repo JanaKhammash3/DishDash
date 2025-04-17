@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
+import 'package:frontend/screens/community_screen.dart';
 import 'package:frontend/screens/profile_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -17,7 +18,6 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     GestureDetector(
@@ -53,8 +53,6 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Search Bar
                 TextField(
                   decoration: InputDecoration(
                     hintText: 'Search recipes...',
@@ -69,8 +67,6 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Recipe Categories
                 SizedBox(
                   height: 80,
                   child: ListView(
@@ -121,8 +117,6 @@ class HomeScreen extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 const SizedBox(height: 12),
-
-                // 2x2 Grid for Popular Recipes
                 GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
@@ -151,7 +145,7 @@ class HomeScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(40),
             boxShadow: [
               BoxShadow(
-                color: Color.fromARGB(25, 0, 0, 0), // replaces withOpacity(0.1)
+                color: const Color.fromARGB(25, 0, 0, 0),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -160,20 +154,24 @@ class HomeScreen extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              bottomNavItem(Icons.home, 'Home'),
-              bottomNavItem(LucideIcons.users, 'Community'),
-              bottomNavItem(LucideIcons.calendar, 'Meal Plan'),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProfileScreen(),
-                    ),
-                  );
-                },
-                child: bottomNavItem(Icons.person, 'Profile'),
-              ),
+              bottomNavItem(Icons.home, 'Home', () {}),
+              bottomNavItem(LucideIcons.users, 'Community', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CommunityScreen(),
+                  ),
+                );
+              }),
+              bottomNavItem(LucideIcons.calendar, 'Meal Plan', () {}),
+              bottomNavItem(Icons.person, 'Profile', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -181,14 +179,17 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget bottomNavItem(IconData icon, String text) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: Colors.white),
-        const SizedBox(height: 4),
-        Text(text, style: const TextStyle(color: Colors.white, fontSize: 10)),
-      ],
+  Widget bottomNavItem(IconData icon, String text, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(height: 4),
+          Text(text, style: const TextStyle(color: Colors.white, fontSize: 10)),
+        ],
+      ),
     );
   }
 
@@ -243,13 +244,10 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
-                colors: [
-                  Color.fromARGB(153, 0, 0, 0), // 0.6 * 255 = 153
-                  Colors.transparent,
-                ],
+                colors: [Color.fromARGB(153, 0, 0, 0), Colors.transparent],
               ),
             ),
             child: Column(
@@ -284,9 +282,7 @@ class HomeScreen extends StatelessWidget {
           right: 20,
           child: IconButton(
             icon: const Icon(Icons.bookmark_border, color: Colors.white),
-            onPressed: () {
-              // Add to saved logic here
-            },
+            onPressed: () {},
           ),
         ),
       ],
@@ -312,10 +308,7 @@ class HomeScreen extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
-                colors: [
-                  Color.fromARGB(153, 0, 0, 0), // 0.6 * 255 = 153
-                  Colors.transparent,
-                ],
+                colors: [Color.fromARGB(153, 0, 0, 0), Colors.transparent],
               ),
             ),
             child: Text(
