@@ -1,8 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
+import 'package:frontend/screens/home_screen.dart';
+import 'package:frontend/screens/login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  File? _profileImage;
 
   @override
   Widget build(BuildContext context) {
@@ -10,7 +20,15 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: maroon,
-        leading: const Icon(Icons.arrow_back, color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          },
+        ),
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         elevation: 0,
@@ -26,19 +44,27 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 Stack(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 50,
-                      backgroundImage: AssetImage(
-                        'assets/profile.jpg',
-                      ), // replace with your image
+                      backgroundImage:
+                          _profileImage != null
+                              ? FileImage(_profileImage!)
+                              : const AssetImage('assets/profile.jpg')
+                                  as ImageProvider,
                     ),
                     Positioned(
                       bottom: 0,
                       right: 4,
-                      child: CircleAvatar(
-                        radius: 14,
-                        backgroundColor: maroon,
-                        child: Icon(Icons.edit, size: 16, color: Colors.white),
+                      child: GestureDetector(
+                        child: CircleAvatar(
+                          radius: 14,
+                          backgroundColor: maroon,
+                          child: const Icon(
+                            Icons.edit,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -56,16 +82,34 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
+
           const SizedBox(height: 30),
 
-          /// General Settings Title
+          /// Saved Recipes
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
+            child: ListTile(
+              leading: const Icon(Icons.bookmark, color: Colors.black87),
+              title: const Text('Saved Recipes'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                // Navigate to saved recipes screen
+              },
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          /// General Settings
           const Text(
             'General Settings',
             style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
 
-          /// Mode Toggle
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Mode'),
@@ -76,16 +120,12 @@ class ProfileScreen extends StatelessWidget {
               activeColor: maroon,
             ),
           ),
-
-          /// Change Password
           ListTile(
             leading: const Icon(Icons.vpn_key),
             title: const Text('Change Password'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {},
           ),
-
-          /// Language
           ListTile(
             leading: const Icon(Icons.language),
             title: const Text('Language'),
@@ -95,30 +135,24 @@ class ProfileScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          /// Information Title
           const Text(
             'Information',
             style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
 
-          /// About App
           ListTile(
             leading: const Icon(Icons.phone_android),
             title: const Text('About App'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {},
           ),
-
-          /// Terms & Conditions
           ListTile(
             leading: const Icon(Icons.description),
             title: const Text('Terms & Conditions'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {},
           ),
-
-          /// Privacy Policy
           ListTile(
             leading: const Icon(Icons.privacy_tip),
             title: const Text('Privacy Policy'),
@@ -126,12 +160,33 @@ class ProfileScreen extends StatelessWidget {
             onTap: () {},
           ),
 
-          /// Share This App
-          ListTile(
-            leading: const Icon(Icons.share),
-            title: const Text('Share This App'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
+          const SizedBox(height: 30),
+
+          /// Logout Button
+          Center(
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: maroon,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+              icon: const Icon(Icons.logout, color: Colors.white),
+              label: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
           ),
         ],
       ),
