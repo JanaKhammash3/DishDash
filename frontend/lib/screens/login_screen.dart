@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final url = Uri.parse('http://10.0.2.2:3000/api/auth/login');
+    final url = Uri.parse('http://192.168.68.59:3000/api/auth/login');
     try {
       final response = await http.post(
         url,
@@ -140,14 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 200,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const HomeScreen(),
-                              ),
-                            );
-                          },
+                          onPressed: loginUser,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: maroon,
                             shape: RoundedRectangleBorder(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../colors.dart'; // Make sure the colors.dart file is correct
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../colors.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -9,38 +11,46 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   Future<void> registerUser() async {
+    final name = nameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text;
 
-    if (email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
-    final url = Uri.parse('http://10.0.2.2:3000/api/auth/register');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+    final url = Uri.parse('http://192.168.68.59:3000/api/auth/register');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'name': name, 'email': email, 'password': password}),
+      );
 
-    final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
 
-    if (response.statusCode == 201) {
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registered successfully')),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'] ?? 'Registration failed')),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Registered successfully')));
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data['message'] ?? 'Registration failed')),
-      );
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -59,8 +69,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onPressed: () => Navigator.pop(context),
             ),
           ),
-
-          // White form section
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -85,8 +93,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-
-                    // Already registered - styled text
                     Row(
                       children: [
                         const Text(
@@ -94,9 +100,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
                         GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/');
-                          },
+                          onTap: () => Navigator.pushNamed(context, '/'),
                           child: Text(
                             'Log in here.',
                             style: TextStyle(
@@ -110,53 +114,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Name
                     _buildLabel('NAME'),
-                    _buildTextField('Jiara Martins'),
-                    const SizedBox(height: 20),
-
-                    // Email
-                    _buildLabel('EMAIL'),
-                    _buildTextField('hello@reallygreatsite.com'),
-                    const SizedBox(height: 20),
-
-                    // Password
-                    _buildLabel('PASSWORD'),
-                    _buildTextField('******', isPassword: true),
-                    const SizedBox(height: 20),
-
-                    // Date of Birth
-                    _buildLabel('DATE OF BIRTH'),
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: lightGrey,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      hint: const Text("Select"),
-                      items:
-                          ['2000-01-01', '2001-02-02', '2002-03-03']
-                              .map(
-                                (e) =>
-                                    DropdownMenuItem(value: e, child: Text(e)),
-                              )
-                              .toList(),
-                      onChanged: (val) {},
+                    TextField(
+                      controller: nameController,
+                      decoration: _buildInputDecoration('Jiara Martins'),
                     ),
+                    const SizedBox(height: 20),
 
+                    _buildLabel('EMAIL'),
+                    TextField(
+                      controller: emailController,
+                      decoration: _buildInputDecoration(
+                        'hello@reallygreatsite.com',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildLabel('PASSWORD'),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: _buildInputDecoration('******'),
+                    ),
                     const SizedBox(height: 32),
 
-                    // Sign Up Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Handle registration logic
-                        },
+                        onPressed: registerUser,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: maroon,
                           shape: RoundedRectangleBorder(
@@ -179,7 +165,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Reusable label builder
   Widget _buildLabel(String label) {
     return Text(
       label,
@@ -192,18 +177,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Reusable text field builder
-  Widget _buildTextField(String hint, {bool isPassword = false}) {
-    return TextField(
-      obscureText: isPassword,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: lightGrey,
-        hintText: hint,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
-        ),
+  InputDecoration _buildInputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: lightGrey,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
       ),
     );
   }
