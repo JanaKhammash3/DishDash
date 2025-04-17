@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../colors.dart';
+import '../colors.dart'; // Make sure the colors.dart file is correct
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
@@ -21,13 +21,16 @@ class RegisterScreen extends StatelessWidget {
             ),
           ),
 
-          // White form area
+          // White form section
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(40)),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(50),
+                  topRight: Radius.circular(50),
+                ),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -36,103 +39,55 @@ class RegisterScreen extends StatelessWidget {
                     const Text(
                       'Create new\nAccount',
                       style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                         height: 1.3,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Already Registered? Log in here.',
-                      style: TextStyle(fontSize: 14, color: Colors.black54),
+
+                    // Already registered - styled text
+                    Row(
+                      children: [
+                        const Text(
+                          'Already Registered? ',
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/');
+                          },
+                          child: Text(
+                            'Log in here.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: maroon,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 30),
 
                     // Name
-                    const Text(
-                      'NAME',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: lightGrey,
-                        hintText: 'Jiara Martins',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
+                    _buildLabel('NAME'),
+                    _buildTextField('Jiara Martins'),
                     const SizedBox(height: 20),
 
                     // Email
-                    const Text(
-                      'EMAIL',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: lightGrey,
-                        hintText: 'hello@reallygreatsite.com',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
+                    _buildLabel('EMAIL'),
+                    _buildTextField('hello@reallygreatsite.com'),
                     const SizedBox(height: 20),
 
                     // Password
-                    const Text(
-                      'PASSWORD',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: lightGrey,
-                        hintText: '******',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
+                    _buildLabel('PASSWORD'),
+                    _buildTextField('******', isPassword: true),
                     const SizedBox(height: 20),
 
-                    // Date of birth (simple dropdown for now)
-                    const Text(
-                      'DATE OF BIRTH',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
+                    // Date of Birth
+                    _buildLabel('DATE OF BIRTH'),
                     DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         filled: true,
@@ -153,20 +108,20 @@ class RegisterScreen extends StatelessWidget {
                       onChanged: (val) {},
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 32),
 
-                    // Sign up button
+                    // Sign Up Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Sign up logic here
+                          // Handle registration logic
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: maroon,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                         ),
                         child: const Text(
@@ -181,6 +136,35 @@ class RegisterScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Reusable label builder
+  Widget _buildLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 12,
+        letterSpacing: 1,
+        color: Colors.black54,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
+  // Reusable text field builder
+  Widget _buildTextField(String hint, {bool isPassword = false}) {
+    return TextField(
+      obscureText: isPassword,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: lightGrey,
+        hintText: hint,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
       ),
     );
   }
