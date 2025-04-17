@@ -1,9 +1,58 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/home_screen.dart';
-import '../colors.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class LoginScreen extends StatelessWidget {
+import '../colors.dart';
+import 'home_screen.dart';
+
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  Future<void> loginUser() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      return;
+    }
+
+    final url = Uri.parse('http://10.0.2.2:3000/api/auth/login');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'] ?? 'Login failed')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,14 +60,11 @@ class LoginScreen extends StatelessWidget {
       backgroundColor: maroon,
       body: Column(
         children: [
-          // Logo section
           Container(
             height: MediaQuery.of(context).size.height * 0.45,
             alignment: Alignment.center,
             child: Image.asset('assets/Login.png', height: 250),
           ),
-
-          // Form section
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -45,13 +91,9 @@ class LoginScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
                     TextField(
+                      controller: emailController,
                       decoration: InputDecoration(
-                        labelText: 'Name',
-                        labelStyle: const TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.5,
-                        ),
+                        labelText: 'Email',
                         filled: true,
                         fillColor: lightGrey,
                         border: OutlineInputBorder(
@@ -62,14 +104,10 @@ class LoginScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     TextField(
+                      controller: passwordController,
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        labelStyle: const TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.5,
-                        ),
                         filled: true,
                         fillColor: lightGrey,
                         border: OutlineInputBorder(
@@ -83,15 +121,7 @@ class LoginScreen extends StatelessWidget {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Simulated successful login
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HomeScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: loginUser,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
@@ -104,13 +134,14 @@ class LoginScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
                     Center(
                       child: TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/forgot-password');
-                        },
+                        onPressed:
+                            () => Navigator.pushNamed(
+                              context,
+                              '/forgot-password',
+                            ),
                         child: const Text(
                           'Forgot Password?',
                           style: TextStyle(
@@ -126,9 +157,8 @@ class LoginScreen extends StatelessWidget {
                       children: [
                         const Text("Don't have an account?"),
                         TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/register');
-                          },
+                          onPressed:
+                              () => Navigator.pushNamed(context, '/register'),
                           child: const Text(
                             'Register',
                             style: TextStyle(color: maroon),

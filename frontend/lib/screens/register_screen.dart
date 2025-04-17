@@ -1,8 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import '../colors.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  Future<void> registerUser() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      return;
+    }
+
+    final url = Uri.parse('http://10.0.2.2:3000/api/auth/register');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 201) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Registered successfully')));
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['message'] ?? 'Registration failed')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,7 +53,6 @@ class RegisterScreen extends StatelessWidget {
       backgroundColor: maroon,
       body: Column(
         children: [
-          // Maroon top bar with back arrow
           Container(
             height: MediaQuery.of(context).size.height * 0.12,
             padding: const EdgeInsets.only(top: 40, left: 16),
@@ -20,8 +62,6 @@ class RegisterScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
           ),
-
-          // White form area
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -48,32 +88,6 @@ class RegisterScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 14, color: Colors.black54),
                     ),
                     const SizedBox(height: 32),
-
-                    // Name
-                    const Text(
-                      'NAME',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: lightGrey,
-                        hintText: 'Jiara Martins',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Email
                     const Text(
                       'EMAIL',
                       style: TextStyle(
@@ -85,6 +99,7 @@ class RegisterScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     TextField(
+                      controller: emailController,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: lightGrey,
@@ -96,8 +111,6 @@ class RegisterScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Password
                     const Text(
                       'PASSWORD',
                       style: TextStyle(
@@ -109,6 +122,7 @@ class RegisterScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     TextField(
+                      controller: passwordController,
                       obscureText: true,
                       decoration: InputDecoration(
                         filled: true,
@@ -120,49 +134,12 @@ class RegisterScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Date of birth (simple dropdown for now)
-                    const Text(
-                      'DATE OF BIRTH',
-                      style: TextStyle(
-                        fontSize: 12,
-                        letterSpacing: 1,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: lightGrey,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      hint: const Text("Select"),
-                      items:
-                          ['2000-01-01', '2001-02-02', '2002-03-03']
-                              .map(
-                                (e) =>
-                                    DropdownMenuItem(value: e, child: Text(e)),
-                              )
-                              .toList(),
-                      onChanged: (val) {},
-                    ),
-
                     const SizedBox(height: 30),
-
-                    // Sign up button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Sign up logic here
-                        },
+                        onPressed: registerUser,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
