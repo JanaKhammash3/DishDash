@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../colors.dart';
+import '../colors.dart'; // Make sure the colors.dart file is correct
 
 class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
@@ -31,7 +31,6 @@ class ForgotPasswordScreen extends StatelessWidget {
             ),
           ),
 
-          // Content
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(
@@ -44,7 +43,8 @@ class ForgotPasswordScreen extends StatelessWidget {
                     const Icon(
                       Icons.lock_outline,
                       size: 70,
-                      color: maroon, // or Colors.red if you want it brighter
+                      color:
+                          Colors.black, // or Colors.red if you want it brighter
                     ), // Replace with your lock image
                     const SizedBox(height: 24),
                     const Text(
@@ -98,7 +98,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                           // Add reset logic
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: maroon,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
