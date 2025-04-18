@@ -4,135 +4,197 @@ import 'package:frontend/screens/community_screen.dart';
 import 'package:frontend/screens/profile_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final Map<String, Map<String, bool>> _filters = {
+    'Calories': {'< 200': false, '200-400': false, '400+': false},
+    'Type': {'Vegan': false, 'Desserts': false, 'Meat': false, 'Keto': false},
+    'Meal Time': {'Breakfast': false, 'Lunch': false, 'Dinner': false},
+    'Quick Meals': {'< 15 min': false, '< 30 min': false},
+    'Soups': {'Veg Soup': false, 'Chicken Soup': false},
+  };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F6F5),
+      endDrawer: Drawer(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              'Filter Recipes',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: maroon,
+              ),
+            ),
+            const Divider(),
+            for (var category in _filters.entries)
+              _buildFilterCategory(category.key, category.value),
+          ],
+        ),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        child: Builder(
+          builder: (context) {
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileScreen(),
-                          ),
-                        );
-                      },
-                      child: const CircleAvatar(
-                        radius: 24,
-                        backgroundImage: AssetImage('assets/profile.jpg'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        Text('Welcome back!', style: TextStyle(fontSize: 16)),
-                        Text(
-                          'FOODIE FRIEND',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ProfileScreen(),
+                              ),
+                            );
+                          },
+                          child: const CircleAvatar(
+                            radius: 24,
+                            backgroundImage: AssetImage('assets/profile.jpg'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome back!',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            Text(
+                              'FOODIE FRIEND',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.notifications, color: maroon),
+                          onPressed: () {},
                         ),
                       ],
                     ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.notifications, color: maroon),
-                      onPressed: () {},
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: 'Search recipes...',
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.filter_list, color: maroon),
+                          onPressed: () {
+                            Scaffold.of(context).openEndDrawer();
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 80,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          categoryButton('Vegan', LucideIcons.leaf),
+                          categoryButton('Desserts', LucideIcons.cupSoda),
+                          categoryButton('Quick Meals', LucideIcons.timer),
+                          categoryButton('Breakfast', LucideIcons.sun),
+                          categoryButton('Soups', LucideIcons.utensilsCrossed),
+                          categoryButton('Community', LucideIcons.users),
+                          categoryButton(
+                            'More',
+                            LucideIcons.moreHorizontal,
+                            color: Colors.white,
+                            bgColor: Colors.grey[200],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Recommendation',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 150,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          placeCard(
+                            'BERRY PARFAIT',
+                            'By SweetHeaven',
+                            'assets/Yogurt-Parfait.jpg',
+                          ),
+                          placeCard(
+                            'VEGAN BURGER',
+                            'By GreenEats',
+                            'assets/vegan-burger.jpg',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Popular Recipes',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      children: [
+                        popularCard('PASTA BAKE', 'assets/pasta.png'),
+                        popularCard(
+                          'GARLIC-BUTTER RIB ROAST',
+                          'assets/meat.jpg',
+                        ),
+                        popularCard('CEASER SALAD', 'assets/salad.jpg'),
+                        popularCard('LASAGNA', 'assets/Lasagna.jpg'),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search recipes...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 80,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      categoryButton('Vegan', LucideIcons.leaf),
-                      categoryButton('Desserts', LucideIcons.cupSoda),
-                      categoryButton('Quick Meals', LucideIcons.timer),
-                      categoryButton('Breakfast', LucideIcons.sun),
-                      categoryButton('Soups', LucideIcons.utensilsCrossed),
-                      categoryButton('Community', LucideIcons.users),
-                      categoryButton(
-                        'More',
-                        LucideIcons.moreHorizontal,
-                        color: Colors.white,
-                        bgColor: Colors.grey[200],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Recommendation',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 150,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      placeCard(
-                        'BERRY PARFAIT',
-                        'By SweetHeaven',
-                        'assets/Yogurt-Parfait.jpg',
-                      ),
-                      placeCard(
-                        'VEGAN BURGER',
-                        'By GreenEats',
-                        'assets/vegan-burger.jpg',
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Popular Recipes',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  children: [
-                    popularCard('PASTA BAKE', 'assets/pasta.png'),
-                    popularCard('GARLIC-BUTTER RIB ROAST', 'assets/meat.jpg'),
-                    popularCard('CEASER SALAD', 'assets/salad.jpg'),
-                    popularCard('LASAGNA', 'assets/Lasagna.jpg'),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
       bottomNavigationBar: Padding(
@@ -164,6 +226,7 @@ class HomeScreen extends StatelessWidget {
                 );
               }),
               bottomNavItem(LucideIcons.calendar, 'Meal Plan', () {}),
+              bottomNavItem(Icons.shopping_cart, 'Groceries', () {}),
               bottomNavItem(Icons.person, 'Profile', () {
                 Navigator.push(
                   context,
@@ -176,6 +239,33 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterCategory(String title, Map<String, bool> options) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        ...options.entries.map((entry) {
+          return CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            activeColor: maroon,
+            value: entry.value,
+            onChanged: (val) {
+              setState(() {
+                _filters[title]![entry.key] = val!;
+              });
+            },
+            title: Text(entry.key),
+          );
+          // ignore: unnecessary_to_list_in_spreads
+        }).toList(),
+      ],
     );
   }
 
