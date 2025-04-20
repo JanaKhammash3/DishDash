@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/colors.dart'; // ensure 'maroon' is defined
+import 'package:frontend/colors.dart';
 import 'home_screen.dart';
 
 class AllergyScreen extends StatefulWidget {
@@ -10,7 +10,13 @@ class AllergyScreen extends StatefulWidget {
 }
 
 class _AllergyScreenState extends State<AllergyScreen> {
-  final TextEditingController _allergyController = TextEditingController();
+  List<TextEditingController> _allergyControllers = [TextEditingController()];
+
+  void _addAllergyField() {
+    setState(() {
+      _allergyControllers.add(TextEditingController());
+    });
+  }
 
   void _goToHomeScreen() {
     Navigator.pushReplacement(
@@ -19,12 +25,17 @@ class _AllergyScreenState extends State<AllergyScreen> {
     );
   }
 
-  void _saveAllergy() {
-    String allergy = _allergyController.text.trim();
-    if (allergy.isNotEmpty) {
-      // ignore: avoid_print
-      print("Saved Allergy: $allergy");
-    }
+  void _saveAllergies() {
+    List<String> allergies =
+        _allergyControllers
+            .map((controller) => controller.text.trim())
+            .where((text) => text.isNotEmpty)
+            .toList();
+
+    // Print or send allergies to backend here
+    // ignore: avoid_print
+    print("Saved Allergies: $allergies");
+
     _goToHomeScreen();
   }
 
@@ -34,7 +45,6 @@ class _AllergyScreenState extends State<AllergyScreen> {
       backgroundColor: maroon,
       body: Column(
         children: [
-          // Top section with image
           Container(
             height: MediaQuery.of(context).size.height * 0.35,
             alignment: Alignment.center,
@@ -44,8 +54,6 @@ class _AllergyScreenState extends State<AllergyScreen> {
               fit: BoxFit.contain,
             ),
           ),
-
-          // Bottom section with form
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -59,7 +67,6 @@ class _AllergyScreenState extends State<AllergyScreen> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    // Skip Button (top right in form area)
                     Align(
                       alignment: Alignment.bottomRight,
                       child: TextButton(
@@ -82,35 +89,57 @@ class _AllergyScreenState extends State<AllergyScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      "Let us know in one word.",
+                      "Let us know in one word each.",
                       style: TextStyle(fontSize: 16, color: Colors.black54),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 30),
-                    TextField(
-                      controller: _allergyController,
-                      textAlign: TextAlign.center,
-                      decoration: InputDecoration(
-                        hintText: "E.g. Nuts",
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        filled: true,
-                        fillColor: Colors.grey.shade200,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 15,
+
+                    // Allergy Text Fields
+                    ..._allergyControllers.map((controller) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: TextField(
+                          controller: controller,
+                          textAlign: TextAlign.center,
+                          decoration: InputDecoration(
+                            hintText: "E.g. Nuts",
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            filled: true,
+                            fillColor: Colors.grey.shade200,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 15,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide.none,
-                        ),
+                      );
+                    }).toList(),
+
+                    const SizedBox(height: 10),
+
+                    // Add another allergy field
+                    TextButton.icon(
+                      onPressed: _addAllergyField,
+                      icon: Icon(Icons.add, color: maroon),
+                      label: Text(
+                        "Add another",
+                        style: TextStyle(color: maroon),
                       ),
                     ),
-                    const SizedBox(height: 30),
+
+                    const SizedBox(height: 20),
+
+                    // Save Button
                     SizedBox(
                       width: 200,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _saveAllergy,
+                        onPressed: _saveAllergies,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: maroon,
                           shape: RoundedRectangleBorder(
