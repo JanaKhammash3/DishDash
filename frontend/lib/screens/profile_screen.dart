@@ -18,6 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
+
       appBar: AppBar(
         backgroundColor: maroon,
         leading: IconButton(
@@ -33,12 +34,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
         elevation: 0,
       ),
+
+      // ✅ FAB centered and styled
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 6,
+        onPressed: () {
+          // Navigate to Add Recipe screen
+        },
+        child: Icon(Icons.add, size: 30, color: maroon),
+      ),
+
+      // ✅ Bottom Navigation Bar rounded + clean
+      bottomNavigationBar: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+        child: BottomAppBar(
+          shape: const CircularNotchedRectangle(),
+          notchMargin: 6,
+          color: maroon,
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.home, color: Colors.white),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.people, color: Colors.white),
+                  onPressed: () {
+                    // Navigate to Community
+                  },
+                ),
+                const SizedBox(width: 40), // Spacer for FAB
+                IconButton(
+                  icon: const Icon(Icons.calendar_today, color: Colors.white),
+                  onPressed: () {
+                    // Navigate to Meal Plan
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart, color: Colors.white),
+                  onPressed: () {
+                    // Navigate to Groceries
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+
+      // ✅ Body with bottom padding to reveal Logout button
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
           const SizedBox(height: 20),
 
-          /// Profile Picture and Info
+          // 👤 Profile Info
           Center(
             child: Column(
               children: [
@@ -85,84 +151,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           const SizedBox(height: 30),
 
-          /// Saved Recipes
+          // 🍽️ My Recipes
           Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             elevation: 2,
             child: ListTile(
-              leading: const Icon(Icons.bookmark, color: Colors.black87),
-              title: const Text('Saved Recipes'),
+              leading: const Icon(Icons.restaurant_menu, color: Colors.black87),
+              title: const Text('My Recipes'),
+              subtitle: const Text('Add or manage your custom recipes'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
-                // Navigate to saved recipes screen
+                // Navigate to custom recipes screen
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 🥗 Calorie Score
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
+            child: ListTile(
+              leading: const Icon(Icons.fitness_center, color: Colors.black87),
+              title: const Text('Calorie Score'),
+              subtitle: const Text(
+                'View your nutritional tracking and progress',
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                // Navigate to calorie score screen
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 👥 Following
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
+            child: ListTile(
+              leading: const Icon(Icons.group, color: Colors.black87),
+              title: const Text('Following'),
+              subtitle: const Text('View users and creators you follow'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                // Navigate to following list screen
               },
             ),
           ),
 
           const SizedBox(height: 30),
 
-          /// General Settings
-          const Text(
-            'General Settings',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Mode'),
-            subtitle: const Text('Dark & Light'),
-            trailing: Switch(
-              value: true,
-              onChanged: (val) {},
-              activeColor: maroon,
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.vpn_key),
-            title: const Text('Change Password'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: const Text('Language'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
-          ),
-
-          const SizedBox(height: 20),
-
-          const Text(
-            'Information',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-
-          ListTile(
-            leading: const Icon(Icons.phone_android),
-            title: const Text('About App'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.description),
-            title: const Text('Terms & Conditions'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip),
-            title: const Text('Privacy Policy'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
-          ),
-
-          const SizedBox(height: 30),
-
-          /// Logout Button
+          // 🔓 Logout
           Center(
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
