@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../colors.dart';
+import 'LocationPickerScreen.dart';
+import 'allergy_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -15,15 +18,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  double? latitude;
+  double? longitude;
+
   Future<void> registerUser() async {
     final name = nameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text;
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+    if (name.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        latitude == null ||
+        longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill all fields and choose a location'),
+        ),
+      );
       return;
     }
 
@@ -32,29 +44,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'name': name, 'email': email, 'password': password}),
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'password': password,
+          'location': {'latitude': latitude, 'longitude': longitude},
+        }),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registered successfully')),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AllergyScreen()),
         );
-        // ignore: use_build_context_synchronously
-        Navigator.pop(context);
       } else {
-        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'] ?? 'Registration failed')),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(
-        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  void _pickLocation() async {
+    final picked = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+
+    if (picked != null && picked is LatLng) {
+      setState(() {
+        latitude = picked.latitude;
+        longitude = picked.longitude;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Location selected')));
     }
   }
 
@@ -140,6 +171,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       obscureText: true,
                       decoration: _buildInputDecoration('******'),
                     ),
+                    const SizedBox(height: 20),
+
+                    _buildLabel('LOCATION'),
+                    ElevatedButton.icon(
+                      onPressed: _pickLocation,
+                      icon: const Icon(Icons.location_on),
+                      label: Text(
+                        latitude != null && longitude != null
+                            ? 'Location Selected'
+                            : 'Pick Location',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: maroon,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+
                     const SizedBox(height: 32),
 
                     SizedBox(
