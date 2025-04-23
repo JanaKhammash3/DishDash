@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/home_screen.dart';
 import 'package:frontend/screens/login_screen.dart';
+//import 'package:frontend/screens/saved_recipes_screen.dart'; // ✅ added import
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -35,19 +36,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
       ),
 
-      // ✅ FAB centered and styled
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,
         shape: const CircleBorder(),
         elevation: 6,
         onPressed: () {
-          // Navigate to Add Recipe screen
+          // Add Recipe action
         },
         child: Icon(Icons.add, size: 30, color: maroon),
       ),
 
-      // ✅ Bottom Navigation Bar rounded + clean
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
@@ -67,9 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
                     );
                   },
                 ),
@@ -79,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Navigate to Community
                   },
                 ),
-                const SizedBox(width: 40), // Spacer for FAB
+                const SizedBox(width: 40),
                 IconButton(
                   icon: const Icon(Icons.calendar_today, color: Colors.white),
                   onPressed: () {
@@ -98,13 +95,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
 
-      // ✅ Body with bottom padding to reveal Logout button
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
           const SizedBox(height: 20),
 
-          // 👤 Profile Info
           Center(
             child: Column(
               children: [
@@ -152,58 +147,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 30),
 
           // 🍽️ My Recipes
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 2,
-            child: ListTile(
-              leading: const Icon(Icons.restaurant_menu, color: Colors.black87),
-              title: const Text('My Recipes'),
-              subtitle: const Text('Add or manage your custom recipes'),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
-                // Navigate to custom recipes screen
-              },
-            ),
+          _buildProfileOption(
+            icon: Icons.restaurant_menu,
+            title: 'My Recipes',
+            subtitle: 'Add or manage your custom recipes',
+            onTap: () {
+              // Navigate to My Recipes
+            },
           ),
+
+          const SizedBox(height: 10),
+
+          // 💾 Saved Recipes
+          _buildProfileOption(
+            icon: Icons.bookmark,
+            title: 'Saved Recipes',
+            subtitle: 'View your saved dishes and favorites',
+            onTap: () {
+              /*Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SavedRecipesScreen()),
+              );*/
+            },
+          ),
+
           const SizedBox(height: 10),
 
           // 🥗 Calorie Score
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 2,
-            child: ListTile(
-              leading: const Icon(Icons.fitness_center, color: Colors.black87),
-              title: const Text('Calorie Score'),
-              subtitle: const Text(
-                'View your nutritional tracking and progress',
-              ),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
-                // Navigate to calorie score screen
-              },
-            ),
+          _buildProfileOption(
+            icon: Icons.fitness_center,
+            title: 'Calorie Score',
+            subtitle: 'Track your nutritional progress',
+            onTap: () {
+              // Navigate to Calorie Score
+            },
           ),
+
           const SizedBox(height: 10),
 
           // 👥 Following
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 2,
-            child: ListTile(
-              leading: const Icon(Icons.group, color: Colors.black87),
-              title: const Text('Following'),
-              subtitle: const Text('View users and creators you follow'),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
-                // Navigate to following list screen
-              },
-            ),
+          _buildProfileOption(
+            icon: Icons.group,
+            title: 'Following',
+            subtitle: 'View users and creators you follow',
+            onTap: () {
+              // Navigate to Following list
+            },
           ),
 
           const SizedBox(height: 30),
@@ -224,7 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
               },
               icon: const Icon(Icons.logout, color: Colors.white),
@@ -235,6 +224,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProfileOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        leading: Icon(icon, color: maroon, size: 28),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: onTap,
       ),
     );
   }

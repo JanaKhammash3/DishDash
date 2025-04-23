@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/community_screen.dart';
 import 'package:frontend/screens/profile_screen.dart';
+import 'package:frontend/screens/recipe_screen.dart';
+import 'package:frontend/screens/grocery_screen.dart'; // ✅ Grocery Screen
 import 'package:lucide_icons/lucide_icons.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -58,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const ProfileScreen(),
+                                builder: (_) => const ProfileScreen(),
                               ),
                             );
                           },
@@ -111,9 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.filter_list, color: maroon),
-                          onPressed: () {
-                            Scaffold.of(context).openEndDrawer();
-                          },
+                          onPressed: () => Scaffold.of(context).openEndDrawer(),
                         ),
                       ],
                     ),
@@ -181,13 +181,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                       children: [
-                        popularCard('PASTA BAKE', 'assets/pasta.png'),
-                        popularCard(
+                        popularRecipeButton('PASTA BAKE', 'assets/pasta.png'),
+                        popularRecipeButton(
                           'GARLIC-BUTTER RIB ROAST',
                           'assets/meat.jpg',
                         ),
-                        popularCard('CEASER SALAD', 'assets/salad.jpg'),
-                        popularCard('LASAGNA', 'assets/Lasagna.jpg'),
+                        popularRecipeButton('CEASER SALAD', 'assets/salad.jpg'),
+                        popularRecipeButton('LASAGNA', 'assets/Lasagna.jpg'),
                       ],
                     ),
                   ],
@@ -203,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           height: 60,
           decoration: BoxDecoration(
-            color: const Color(0xFF880808),
+            color: maroon,
             borderRadius: BorderRadius.circular(40),
             boxShadow: [
               BoxShadow(
@@ -220,19 +220,20 @@ class _HomeScreenState extends State<HomeScreen> {
               bottomNavItem(LucideIcons.users, 'Community', () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const CommunityScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const CommunityScreen()),
                 );
               }),
               bottomNavItem(LucideIcons.calendar, 'Meal Plan', () {}),
-              bottomNavItem(Icons.shopping_cart, 'Groceries', () {}),
+              bottomNavItem(Icons.shopping_cart, 'Groceries', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GroceryScreen()),
+                );
+              }),
               bottomNavItem(Icons.person, 'Profile', () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfileScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
                 );
               }),
             ],
@@ -263,7 +264,6 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             title: Text(entry.key),
           );
-          // ignore: unnecessary_to_list_in_spreads
         }).toList(),
       ],
     );
@@ -293,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(right: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: bgColor ?? const Color(0xFF880808),
+        color: bgColor ?? maroon,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
@@ -372,7 +372,11 @@ class _HomeScreenState extends State<HomeScreen> {
           right: 20,
           child: IconButton(
             icon: const Icon(Icons.bookmark_border, color: Colors.white),
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Recipe saved!")));
+            },
           ),
         ),
       ],
@@ -411,12 +415,31 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        const Positioned(
+        Positioned(
           top: 10,
           right: 10,
-          child: Icon(Icons.bookmark_border, color: Colors.white),
+          child: IconButton(
+            icon: const Icon(Icons.bookmark_border, color: Colors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Recipe saved!")));
+            },
+          ),
         ),
       ],
+    );
+  }
+
+  Widget popularRecipeButton(String name, String imagePath) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RecipeScreen()),
+        );
+      },
+      child: popularCard(name, imagePath),
     );
   }
 }
