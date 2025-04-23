@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/home_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
+import 'screens/forgot_password_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -11,17 +13,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'DishDash Grocery',
-      theme: ThemeData(
-        fontFamily: 'Arial',
-        scaffoldBackgroundColor: Colors.white,
-        colorScheme: ColorScheme.fromSwatch().copyWith(
-          primary: Colors.red.shade900, // Maroon
-          secondary: Colors.grey,
-        ),
-      ),
-      home: const HomeScreen(),
+      initialRoute: '/', // The initial route (home screen)
+      routes: {
+        '/': (context) => LoginScreen(), // Define the login screen route
+        '/forgot-password':
+            (context) => ForgotPasswordScreen(), // Define forgot password route
+        '/register': (context) => RegisterScreen(), // Define register route
+      },
     );
   }
 }
