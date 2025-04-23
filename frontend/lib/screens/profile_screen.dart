@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/home_screen.dart';
 import 'package:frontend/screens/login_screen.dart';
-//import 'package:frontend/screens/saved_recipes_screen.dart'; // ✅ added import
+import 'package:frontend/screens/community_screen.dart';
+import 'package:frontend/screens/grocery_screen.dart';
+import 'package:frontend/screens/meal_plan_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,7 +21,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-
       appBar: AppBar(
         backgroundColor: maroon,
         leading: IconButton(
@@ -35,71 +36,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
         elevation: 0,
       ),
-
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.white,
-        shape: const CircleBorder(),
-        elevation: 6,
-        onPressed: () {
-          // Add Recipe action
-        },
-        child: Icon(Icons.add, size: 30, color: maroon),
-      ),
-
-      bottomNavigationBar: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
+      floatingActionButton: Container(
+        width: 64,
+        height: 64,
+        margin: const EdgeInsets.only(top: 10),
+        child: FloatingActionButton(
+          backgroundColor: Colors.white,
+          shape: const CircleBorder(),
+          onPressed: () {
+            // Add Recipe action
+          },
+          elevation: 6,
+          child: Icon(Icons.add, color: maroon, size: 32),
         ),
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 6,
-          color: maroon,
-          child: SizedBox(
-            height: 60,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.home, color: Colors.white),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.people, color: Colors.white),
-                  onPressed: () {
-                    // Navigate to Community
-                  },
-                ),
-                const SizedBox(width: 40),
-                IconButton(
-                  icon: const Icon(Icons.calendar_today, color: Colors.white),
-                  onPressed: () {
-                    // Navigate to Meal Plan
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.shopping_cart, color: Colors.white),
-                  onPressed: () {
-                    // Navigate to Groceries
-                  },
-                ),
-              ],
-            ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: 60,
+          decoration: BoxDecoration(
+            color: maroon,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              navIcon(Icons.home, () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                );
+              }),
+              navIcon(Icons.people, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CommunityScreen()),
+                );
+              }),
+              const SizedBox(width: 40), // space for FAB
+              navIcon(Icons.calendar_today, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MealPlannerScreen()),
+                );
+              }),
+              navIcon(Icons.shopping_cart, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GroceryScreen()),
+                );
+              }),
+            ],
           ),
         ),
       ),
-
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
           const SizedBox(height: 20),
-
           Center(
             child: Column(
               children: [
@@ -143,61 +146,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 30),
-
-          // 🍽️ My Recipes
-          _buildProfileOption(
-            icon: Icons.restaurant_menu,
-            title: 'My Recipes',
-            subtitle: 'Add or manage your custom recipes',
-            onTap: () {
-              // Navigate to My Recipes
-            },
+          _buildCard(
+            Icons.restaurant_menu,
+            'My Recipes',
+            'Add or manage your custom recipes',
+            () {},
           ),
-
           const SizedBox(height: 10),
-
-          // 💾 Saved Recipes
-          _buildProfileOption(
-            icon: Icons.bookmark,
-            title: 'Saved Recipes',
-            subtitle: 'View your saved dishes and favorites',
-            onTap: () {
-              /*Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SavedRecipesScreen()),
-              );*/
-            },
+          _buildCard(
+            Icons.bookmark,
+            'Saved Recipes',
+            'View your saved dishes and favorites',
+            () {},
           ),
-
           const SizedBox(height: 10),
-
-          // 🥗 Calorie Score
-          _buildProfileOption(
-            icon: Icons.fitness_center,
-            title: 'Calorie Score',
-            subtitle: 'Track your nutritional progress',
-            onTap: () {
-              // Navigate to Calorie Score
-            },
+          _buildCard(
+            Icons.fitness_center,
+            'Calorie Score',
+            'Track your nutritional progress',
+            () {},
           ),
-
           const SizedBox(height: 10),
-
-          // 👥 Following
-          _buildProfileOption(
-            icon: Icons.group,
-            title: 'Following',
-            subtitle: 'View users and creators you follow',
-            onTap: () {
-              // Navigate to Following list
-            },
+          _buildCard(
+            Icons.group,
+            'Following',
+            'View users and creators you follow',
+            () {},
           ),
-
           const SizedBox(height: 30),
-
-          // 🔓 Logout
           Center(
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
@@ -228,12 +205,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
+  Widget navIcon(IconData icon, VoidCallback onTap) {
+    return IconButton(icon: Icon(icon, color: Colors.white), onPressed: onTap);
+  }
+
+  Widget _buildCard(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 2,

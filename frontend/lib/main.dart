@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/grocery_screen.dart';
 import 'package:frontend/screens/home_screen.dart';
-import 'package:frontend/screens/recipe_screen.dart';
 
 void main() {
   runApp(const MyApp());

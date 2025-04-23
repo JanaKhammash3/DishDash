@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/community_screen.dart';
+import 'package:frontend/screens/meal_plan_screen.dart';
 import 'package:frontend/screens/profile_screen.dart';
 import 'package:frontend/screens/recipe_screen.dart';
-import 'package:frontend/screens/grocery_screen.dart'; // ✅ Grocery Screen
+import 'package:frontend/screens/grocery_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -223,7 +224,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(builder: (_) => const CommunityScreen()),
                 );
               }),
-              bottomNavItem(LucideIcons.calendar, 'Meal Plan', () {}),
+              bottomNavItem(LucideIcons.calendar, 'Meal Plan', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MealPlannerScreen()),
+                );
+              }),
               bottomNavItem(Icons.shopping_cart, 'Groceries', () {
                 Navigator.push(
                   context,
