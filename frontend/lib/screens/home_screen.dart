@@ -1,7 +1,14 @@
+// PROFILE SCREEN
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/colors.dart';
-import 'package:frontend/screens/community_screen.dart';
+import 'package:frontend/screens/login_screen.dart';
 import 'package:frontend/screens/profile_screen.dart';
+import 'package:frontend/screens/community_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -12,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String? userId;
+
   final Map<String, Map<String, bool>> _filters = {
     'Calories': {'< 200': false, '200-400': false, '400+': false},
     'Type': {'Vegan': false, 'Desserts': false, 'Meat': false, 'Keto': false},
@@ -19,6 +28,19 @@ class _HomeScreenState extends State<HomeScreen> {
     'Quick Meals': {'< 15 min': false, '< 30 min': false},
     'Soups': {'Veg Soup': false, 'Chicken Soup': false},
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = prefs.getString('userId');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,12 +77,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         GestureDetector(
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const ProfileScreen(),
-                              ),
-                            );
+                            if (userId != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => ProfileScreen(userId: userId!),
+                                ),
+                              );
+                            }
                           },
                           child: const CircleAvatar(
                             radius: 24,
@@ -220,20 +245,20 @@ class _HomeScreenState extends State<HomeScreen> {
               bottomNavItem(LucideIcons.users, 'Community', () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const CommunityScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const CommunityScreen()),
                 );
               }),
               bottomNavItem(LucideIcons.calendar, 'Meal Plan', () {}),
               bottomNavItem(Icons.shopping_cart, 'Groceries', () {}),
               bottomNavItem(Icons.person, 'Profile', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfileScreen(),
-                  ),
-                );
+                if (userId != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(userId: userId!),
+                    ),
+                  );
+                }
               }),
             ],
           ),
@@ -256,14 +281,10 @@ class _HomeScreenState extends State<HomeScreen> {
             contentPadding: EdgeInsets.zero,
             activeColor: maroon,
             value: entry.value,
-            onChanged: (val) {
-              setState(() {
-                _filters[title]![entry.key] = val!;
-              });
-            },
+            onChanged:
+                (val) => setState(() => _filters[title]![entry.key] = val!),
             title: Text(entry.key),
           );
-          // ignore: unnecessary_to_list_in_spreads
         }).toList(),
       ],
     );

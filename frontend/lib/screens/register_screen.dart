@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../colors.dart';
 import 'LocationPickerScreen.dart';
 import 'allergy_screen.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart'; // ✅ flutter_map uses this
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -39,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final url = Uri.parse('http://192.168.68.59:3000/api/auth/register');
+    final url = Uri.parse('http://192.168.68.59:3000/api/users/register');
     try {
       final response = await http.post(
         url,

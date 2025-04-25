@@ -2,20 +2,32 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Register
+const multer = require('multer');
+const path = require('path');
+
+// Setup storage for Multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'), // Folder 'uploads'
+  filename: (req, file, cb) => cb(null, `${req.params.id}_${Date.now()}${path.extname(file.originalname)}`),
+});
+
+const upload = multer({ storage });
+// Register user
 exports.register = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, location } = req.body;
+
   try {
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: 'Email already in use' });
 
     const hashed = await bcrypt.hash(password, 10);
+
     const newUser = await User.create({
       name,
       email,
       password: hashed,
       avatar: '',
-      location: { latitude: null, longitude: null },
+      location: location || { latitude: null, longitude: null },
       allergies: [],
       calorieScore: 0,
       following: [],
@@ -31,9 +43,10 @@ exports.register = async (req, res) => {
   }
 };
 
-// Login
+// Login user
 exports.login = async (req, res) => {
   const { email, password } = req.body;
+
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
@@ -51,6 +64,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         avatar: user.avatar,
+        location: user.location,
         allergies: user.allergies,
         calorieScore: user.calorieScore
       }
@@ -60,7 +74,18 @@ exports.login = async (req, res) => {
   }
 };
 
-// Update entire profile
+// Get full user profile (excluding password)
+exports.getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Update full profile
 exports.updateProfile = async (req, res) => {
   try {
     const updated = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -70,17 +95,7 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-// Get profile
-exports.getUserProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id).select('-password');
-    res.status(200).json(user);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-};
-
-// ✅ NEW: Update only allergies
+// Update allergies
 exports.updateAllergies = async (req, res) => {
   try {
     const { allergies } = req.body;
@@ -100,22 +115,28 @@ exports.updateAllergies = async (req, res) => {
   }
 };
 
-// ✅ NEW: Upload avatar as Base64 string
+// Controller for Upload Avatar (base64)
 exports.uploadAvatar = async (req, res) => {
   try {
     const { avatar } = req.body;
-    if (!avatar || typeof avatar !== 'string') {
+
+    if (!avatar || typeof avatar !== 'string' || avatar.length < 50) {
       return res.status(400).json({ message: 'Invalid avatar data' });
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { avatar },
+      { avatar }, // saving base64 string
       { new: true }
     );
 
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     res.status(200).json(updatedUser);
   } catch (err) {
+    console.error('Avatar Upload Error:', err.message);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

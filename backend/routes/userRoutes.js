@@ -11,9 +11,11 @@ const {
 
 router.post('/register', register);
 router.post('/login', login);
+router.get('/profile/:id', getUserProfile);
 router.put('/profile/:id', updateProfile);
 router.get('/profile/:id', getUserProfile);
 router.put('/profile/:id/allergies', updateAllergies); // For allergy update
 router.put('/profile/:id/avatar', uploadAvatar); // For Base64 avatar update
+
 
 module.exports = router;
