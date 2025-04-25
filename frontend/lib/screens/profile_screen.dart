@@ -7,6 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/home_screen.dart';
 import 'package:frontend/screens/login_screen.dart';
+import 'package:frontend/screens/community_screen.dart';
+import 'package:frontend/screens/grocery_screen.dart';
+import 'package:frontend/screens/meal_plan_screen.dart';
 import 'package:image/image.dart' as img;
 
 class ProfileScreen extends StatefulWidget {
@@ -142,8 +145,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
         elevation: 0,
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Container(
+        width: 64,
+        height: 64,
+        margin: const EdgeInsets.only(top: 10),
+        child: FloatingActionButton(
+          backgroundColor: Colors.white,
+          shape: const CircleBorder(),
+          onPressed: () {
+            // Add Recipe action
+          },
+          elevation: 6,
+          child: Icon(Icons.add, color: maroon, size: 32),
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: 60,
+          decoration: BoxDecoration(
+            color: maroon,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              navIcon(Icons.home, () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                );
+              }),
+              navIcon(Icons.people, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CommunityScreen()),
+                );
+              }),
+              const SizedBox(width: 40), // space for FAB
+              navIcon(Icons.calendar_today, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MealPlannerScreen()),
+                );
+              }),
+              navIcon(Icons.shopping_cart, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GroceryScreen()),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
           const SizedBox(height: 20),
           Center(
@@ -196,69 +262,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 30),
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 2,
-            child: ListTile(
-              leading: const Icon(Icons.bookmark, color: Colors.black87),
-              title: const Text('Saved Recipes'),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {},
-            ),
-          ),
-          const SizedBox(height: 30),
-          const Text(
-            'General Settings',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+          _buildCard(
+            Icons.restaurant_menu,
+            'My Recipes',
+            'Add or manage your custom recipes',
+            () {},
           ),
           const SizedBox(height: 10),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Mode'),
-            subtitle: const Text('Dark & Light'),
-            trailing: Switch(
-              value: isDarkMode,
-              onChanged: (val) => setState(() => isDarkMode = val),
-              activeColor: maroon,
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.vpn_key),
-            title: const Text('Change Password'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: const Text('Language'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Information',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+          _buildCard(
+            Icons.bookmark,
+            'Saved Recipes',
+            'View your saved dishes and favorites',
+            () {},
           ),
           const SizedBox(height: 10),
-          ListTile(
-            leading: const Icon(Icons.phone_android),
-            title: const Text('About App'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
+          _buildCard(
+            Icons.fitness_center,
+            'Calorie Score',
+            'Track your nutritional progress',
+            () {},
           ),
-          ListTile(
-            leading: const Icon(Icons.description),
-            title: const Text('Terms & Conditions'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip),
-            title: const Text('Privacy Policy'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {},
+          const SizedBox(height: 10),
+          _buildCard(
+            Icons.group,
+            'Following',
+            'View users and creators you follow',
+            () {},
           ),
           const SizedBox(height: 30),
           Center(
@@ -273,7 +302,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: _logout,
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
               icon: const Icon(Icons.logout, color: Colors.white),
               label: const Text(
                 'Logout',
@@ -285,4 +319,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-} // end ProfileScreen
+
+  Widget navIcon(IconData icon, VoidCallback onTap) {
+    return IconButton(icon: Icon(icon, color: Colors.white), onPressed: onTap);
+  }
+
+  Widget _buildCard(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        leading: Icon(icon, color: maroon, size: 28),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: onTap,
+      ),
+    );
+  }
+}

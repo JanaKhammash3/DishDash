@@ -4,7 +4,6 @@ class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _CommunityScreenState createState() => _CommunityScreenState();
 }
 
@@ -17,7 +16,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
           'https://images.unsplash.com/photo-1504674900247-0877df9cc836',
       'caption': 'Spicy chicken curry with a twist!',
       'likes': 120,
-      'comments': 24,
+      'comments': 2,
+      'liked': false,
     },
     {
       'username': 'Bob',
@@ -26,7 +26,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
           'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
       'caption': 'My favorite vegan lasagna 😋',
       'likes': 90,
-      'comments': 10,
+      'comments': 1,
+      'liked': false,
     },
     {
       'username': 'Sophie',
@@ -35,18 +36,58 @@ class _CommunityScreenState extends State<CommunityScreen> {
           'https://images.unsplash.com/photo-1525351484163-7529414344d8',
       'caption': 'Tried a gluten-free banana bread today 🍌🍞',
       'likes': 75,
-      'comments': 8,
+      'comments': 0,
+      'liked': false,
     },
   ];
 
-  // List to store saved recipes
   List<Map<String, dynamic>> savedRecipes = [];
 
-  // Function to save a recipe
   void saveRecipe(Map<String, dynamic> recipe) {
     setState(() {
       savedRecipes.add(recipe);
     });
+  }
+
+  void toggleLike(int index) {
+    setState(() {
+      posts[index]['liked'] = !posts[index]['liked'];
+      posts[index]['likes'] += posts[index]['liked'] ? 1 : -1;
+    });
+  }
+
+  void addComment(int index) async {
+    final TextEditingController _controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Add Comment"),
+            content: TextField(
+              controller: _controller,
+              decoration: const InputDecoration(hintText: 'Type your comment'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, _controller.text),
+                child: const Text("Post"),
+              ),
+            ],
+          ),
+    );
+
+    if (result != null && result.trim().isNotEmpty) {
+      setState(() {
+        posts[index]['comments'] += 1;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Comment added!")));
+    }
   }
 
   @override
@@ -55,16 +96,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
       appBar: AppBar(
         title: const Text(
           'Our Community',
-          style: TextStyle(fontWeight: FontWeight.bold), // Bold font
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.red.shade900,
         centerTitle: true,
-        foregroundColor: Colors.white, // White icons and text
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.bookmark),
             onPressed: () {
-              // Navigate to saved recipes screen
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -79,12 +119,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
         itemCount: posts.length,
         itemBuilder: (context, index) {
           final post = posts[index];
-          final String username = post['username'] as String;
-          final String userImage = post['userImage'] as String;
-          final String recipeImage = post['recipeImage'] as String;
-          final String caption = post['caption'] as String;
-          final int likes = post['likes'] as int;
-          final int comments = post['comments'] as int;
 
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -97,17 +131,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
               children: [
                 ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: NetworkImage(userImage),
+                    backgroundImage: NetworkImage(post['userImage']),
                   ),
                   title: Text(
-                    username,
+                    post['username'],
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Image.network(
-                    recipeImage,
+                    post['recipeImage'],
                     width: double.infinity,
                     height: 200,
                     fit: BoxFit.cover,
@@ -118,7 +152,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     horizontal: 16.0,
                     vertical: 8,
                   ),
-                  child: Text(caption),
+                  child: Text(post['caption']),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -127,17 +161,25 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.favorite, color: Colors.red.shade900),
-                      const SizedBox(width: 4),
-                      Text('$likes'),
+                      IconButton(
+                        icon: Icon(
+                          post['liked']
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: post['liked'] ? Colors.red : Colors.grey,
+                        ),
+                        onPressed: () => toggleLike(index),
+                      ),
+                      Text('${post['likes']}'),
                       const SizedBox(width: 16),
-                      const Icon(Icons.comment, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text('$comments'),
+                      IconButton(
+                        icon: const Icon(Icons.comment, color: Colors.grey),
+                        onPressed: () => addComment(index),
+                      ),
+                      Text('${post['comments']}'),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.save_alt),
-                        color: Colors.blue,
+                        icon: const Icon(Icons.save_alt, color: Colors.blue),
                         onPressed: () {
                           saveRecipe(post);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -148,7 +190,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
               ],
             ),
           );
@@ -169,11 +210,11 @@ class SavedRecipesScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Saved Recipes',
-          style: TextStyle(fontWeight: FontWeight.bold), // Bold font
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.red.shade900,
         centerTitle: true,
-        foregroundColor: Colors.white, // White icons and text
+        foregroundColor: Colors.white,
       ),
       body:
           savedRecipes.isEmpty
@@ -196,14 +237,14 @@ class SavedRecipesScreen extends StatelessWidget {
                       children: [
                         ListTile(
                           title: Text(
-                            recipe['username'] as String,
+                            recipe['username'],
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: Image.network(
-                            recipe['recipeImage'] as String,
+                            recipe['recipeImage'],
                             width: double.infinity,
                             height: 200,
                             fit: BoxFit.cover,
@@ -214,7 +255,7 @@ class SavedRecipesScreen extends StatelessWidget {
                             horizontal: 16.0,
                             vertical: 8,
                           ),
-                          child: Text(recipe['caption'] as String),
+                          child: Text(recipe['caption']),
                         ),
                       ],
                     ),
