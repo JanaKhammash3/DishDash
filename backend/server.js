@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const path = require('path');
+
 
 const app = express();
 app.use(cors());
@@ -24,6 +26,7 @@ app.use('/api/comments', require('./routes/commentRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/stores', require('./routes/storeRoutes'));
 app.use('/uploads', express.static('uploads'));
+app.use('/images', express.static(path.join(__dirname, './public/images')));
 
 
 const PORT = process.env.PORT || 3000;

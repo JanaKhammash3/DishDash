@@ -11,6 +11,7 @@ import 'package:frontend/screens/community_screen.dart';
 import 'package:frontend/screens/grocery_screen.dart';
 import 'package:frontend/screens/meal_plan_screen.dart';
 import 'package:image/image.dart' as img;
+import 'package:frontend/screens/saved_recipes_screen.dart' as saved;
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -273,8 +274,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icons.bookmark,
             'Saved Recipes',
             'View your saved dishes and favorites',
-            () {},
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => saved.SavedRecipesScreen(userId: widget.userId),
+                ),
+              );
+            },
           ),
+
           const SizedBox(height: 10),
           _buildCard(
             Icons.fitness_center,

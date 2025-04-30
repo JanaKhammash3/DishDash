@@ -140,3 +140,46 @@ exports.uploadAvatar = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+exports.saveRecipeToUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { recipeId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (user.recipes.includes(recipeId)) {
+      return res.status(400).json({ message: 'Recipe already saved' });
+    }
+
+    user.recipes.push(recipeId);
+    await user.save();
+
+    res.status(200).json({ message: 'Recipe saved successfully' });
+  } catch (err) {
+    console.error('Error saving recipe:', err.message);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+exports.unsaveRecipe = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { recipeId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.recipes = user.recipes.filter(
+      id => id.toString() !== recipeId.toString()
+    );
+
+    await user.save();
+    res.status(200).json({ message: 'Recipe removed from saved list' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+exports.getSavedRecipes = async (req, res) => {
+  const user = await User.findById(req.params.id).populate('recipes');
+  res.json(user.recipes);
+};

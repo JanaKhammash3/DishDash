@@ -1,16 +1,13 @@
-// PROFILE SCREEN
-import 'dart:io';
+// HOME SCREEN (Updated with Dynamic Popular & Random Recipes)
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/colors.dart';
-import 'package:frontend/screens/login_screen.dart';
 import 'package:frontend/screens/profile_screen.dart';
 import 'package:frontend/screens/community_screen.dart';
 import 'package:frontend/screens/meal_plan_screen.dart';
-import 'package:frontend/screens/profile_screen.dart';
 import 'package:frontend/screens/recipe_screen.dart';
 import 'package:frontend/screens/grocery_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -24,7 +21,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? userId;
-
+  String? avatarUrl;
+  List<dynamic> randomRecipes = [];
+  List<dynamic> popularRecipes = [];
+  List<dynamic> recommendedRecipes = [];
+  Set<String> savedRecipeIds = {};
+  String? userName;
+  final TextEditingController _searchController = TextEditingController();
+  String searchQuery = '';
   final Map<String, Map<String, bool>> _filters = {
     'Calories': {'< 200': false, '200-400': false, '400+': false},
     'Type': {'Vegan': false, 'Desserts': false, 'Meat': false, 'Keto': false},
@@ -36,14 +40,166 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserId();
+    _loadUserData();
   }
 
-  Future<void> _loadUserId() async {
+  void _showRecipeModal(
+    String title,
+    String description,
+    List<dynamic> ingredients,
+    int calories,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      isScrollControlled: true,
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "🔥 Calories: $calories kcal",
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "📝 Description:",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(description.isNotEmpty ? description : 'No description'),
+              const SizedBox(height: 12),
+              const Text(
+                "🥬 Ingredients:",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(ingredients.isNotEmpty ? ingredients.join(', ') : 'N/A'),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString('userId');
     setState(() {
-      userId = prefs.getString('userId');
+      userId = id;
     });
+    if (userId != null) {
+      await fetchUserProfile();
+      await fetchRandomRecipes();
+      await fetchPopularRecipes();
+    }
+  }
+
+  Future<void> fetchUserProfile() async {
+    final url = Uri.parse('http://192.168.68.59:3000/api/profile/$userId');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        avatarUrl = data['avatar'];
+        savedRecipeIds = Set<String>.from(data['recipes'] ?? []);
+        userName = data['name']; // ✅ Add this
+      });
+    }
+  }
+
+  Future<void> fetchRandomRecipes() async {
+    final url = Uri.parse('http://192.168.68.59:3000/api/recipes');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final allRecipes = jsonDecode(response.body);
+      allRecipes.shuffle();
+      setState(() {
+        randomRecipes = allRecipes.take(5).toList();
+      });
+    }
+  }
+
+  Future<void> _saveRecipe(String recipeId) async {
+    final url = Uri.parse(
+      'http://192.168.68.59:3000/api/users/$userId/saveRecipe',
+    );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'recipeId': recipeId}),
+    );
+    if (response.statusCode == 200) {
+      setState(() => savedRecipeIds.add(recipeId));
+    }
+  }
+
+  Future<void> _unsaveRecipe(String recipeId) async {
+    final url = Uri.parse(
+      'http://192.168.68.59:3000/api/users/$userId/unsaveRecipe',
+    );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'recipeId': recipeId}),
+    );
+    if (response.statusCode == 200) {
+      setState(() => savedRecipeIds.remove(recipeId));
+    }
+  }
+
+  Future<void> fetchPopularRecipes() async {
+    final url = Uri.parse('http://192.168.68.59:3000/api/recipes');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final allRecipes = jsonDecode(response.body);
+
+      allRecipes.sort((a, b) {
+        final aRatings = (a['ratings'] as List?)?.cast<num>() ?? [];
+        final bRatings = (b['ratings'] as List?)?.cast<num>() ?? [];
+
+        final aAvg =
+            aRatings.isNotEmpty
+                ? aRatings.reduce((x, y) => x + y) / aRatings.length
+                : 0.0;
+        final bAvg =
+            bRatings.isNotEmpty
+                ? bRatings.reduce((x, y) => x + y) / bRatings.length
+                : 0.0;
+
+        return bAvg.compareTo(aAvg); // ✅ no .toInt() needed
+      });
+
+      final updatedRecipes =
+          allRecipes.take(6).map((recipe) {
+            final image = recipe['image'];
+            final imagePath =
+                (image != null && image.isNotEmpty)
+                    ? 'http://192.168.68.59:3000/images/$image'
+                    : 'assets/placeholder.png'; // default fallback
+
+            return {
+              ...recipe,
+              'imagePath': imagePath, // ✅ added this field
+            };
+          }).toList();
+
+      setState(() {
+        popularRecipes = updatedRecipes;
+      });
+    }
   }
 
   @override
@@ -91,13 +247,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             }
                           },
-                          child: const CircleAvatar(
+                          child: CircleAvatar(
                             radius: 24,
-                            backgroundImage: AssetImage('assets/profile.jpg'),
+                            backgroundColor: Colors.grey[200],
+                            backgroundImage:
+                                avatarUrl != null && avatarUrl!.isNotEmpty
+                                    ? MemoryImage(
+                                      base64Decode(avatarUrl!.split(',').last),
+                                    )
+                                    : const AssetImage('assets/profile.jpg')
+                                        as ImageProvider,
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Column(
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -105,8 +268,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: TextStyle(fontSize: 16),
                             ),
                             Text(
-                              'FOODIE FRIEND',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              userName ?? 'FOODIE FRIEND',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -118,53 +283,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Search recipes...',
-                              prefixIcon: const Icon(Icons.search),
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.filter_list, color: maroon),
-                          onPressed: () => Scaffold.of(context).openEndDrawer(),
-                        ),
-                      ],
-                    ),
+                    _buildSearchBar(),
                     const SizedBox(height: 20),
-                    SizedBox(
-                      height: 80,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          categoryButton('Vegan', LucideIcons.leaf),
-                          categoryButton('Desserts', LucideIcons.cupSoda),
-                          categoryButton('Quick Meals', LucideIcons.timer),
-                          categoryButton('Breakfast', LucideIcons.sun),
-                          categoryButton('Soups', LucideIcons.utensilsCrossed),
-                          categoryButton('Community', LucideIcons.users),
-                          categoryButton(
-                            'More',
-                            LucideIcons.moreHorizontal,
-                            color: Colors.white,
-                            bgColor: Colors.grey[200],
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildCategoryList(),
                     const SizedBox(height: 12),
                     const Text(
                       'Recommendation',
@@ -174,24 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      height: 150,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          placeCard(
-                            'BERRY PARFAIT',
-                            'By SweetHeaven',
-                            'assets/Yogurt-Parfait.jpg',
-                          ),
-                          placeCard(
-                            'VEGAN BURGER',
-                            'By GreenEats',
-                            'assets/vegan-burger.jpg',
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildRecommendations(),
                     const SizedBox(height: 20),
                     const Text(
                       'Popular Recipes',
@@ -201,22 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      children: [
-                        popularRecipeButton('PASTA BAKE', 'assets/pasta.png'),
-                        popularRecipeButton(
-                          'GARLIC-BUTTER RIB ROAST',
-                          'assets/meat.jpg',
-                        ),
-                        popularRecipeButton('CEASER SALAD', 'assets/salad.jpg'),
-                        popularRecipeButton('LASAGNA', 'assets/Lasagna.jpg'),
-                      ],
-                    ),
+                    _buildPopularRecipes(),
                   ],
                 ),
               ),
@@ -224,58 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          height: 60,
-          decoration: BoxDecoration(
-            color: maroon,
-            borderRadius: BorderRadius.circular(40),
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromARGB(25, 0, 0, 0),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              bottomNavItem(Icons.home, 'Home', () {}),
-              bottomNavItem(LucideIcons.users, 'Community', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CommunityScreen()),
-                );
-              }),
-              bottomNavItem(LucideIcons.calendar, 'Meal Plan', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MealPlannerScreen()),
-                );
-              }),
-              bottomNavItem(Icons.shopping_cart, 'Groceries', () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const GroceryScreen()),
-                );
-              }),
-              bottomNavItem(Icons.person, 'Profile', () {
-                if (userId != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProfileScreen(userId: userId!),
-                    ),
-                  );
-                }
-              }),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -283,35 +321,200 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 12),
         Text(
           title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        ...options.entries.map((entry) {
-          return CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            activeColor: maroon,
-            value: entry.value,
-            onChanged:
-                (val) => setState(() => _filters[title]![entry.key] = val!),
-            title: Text(entry.key),
-          );
-        }).toList(),
+        ...options.entries
+            .map(
+              (entry) => CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                activeColor: maroon,
+                value: entry.value,
+                onChanged:
+                    (val) => setState(() => _filters[title]![entry.key] = val!),
+                title: Text(entry.key),
+              ),
+            )
+            .toList(),
       ],
     );
   }
 
-  Widget bottomNavItem(IconData icon, String text, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildSearchBar() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              setState(() {
+                searchQuery = value.trim().toLowerCase();
+              });
+            },
+            decoration: InputDecoration(
+              hintText: 'Search recipes...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.filter_list, color: maroon),
+          onPressed: () => Scaffold.of(context).openEndDrawer(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryList() {
+    return SizedBox(
+      height: 80,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
         children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(height: 4),
-          Text(text, style: const TextStyle(color: Colors.white, fontSize: 10)),
+          categoryButton('Vegan', LucideIcons.leaf),
+          categoryButton('Desserts', LucideIcons.cupSoda),
+          categoryButton('Quick Meals', LucideIcons.timer),
+          categoryButton('Breakfast', LucideIcons.sun),
+          categoryButton('Soups', LucideIcons.utensilsCrossed),
+          categoryButton('Community', LucideIcons.users),
+          categoryButton(
+            'More',
+            LucideIcons.moreHorizontal,
+            color: Colors.white,
+            bgColor: Colors.grey[200],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendations() {
+    return SizedBox(
+      height: 150,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: recommendedRecipes.length,
+        itemBuilder: (context, index) {
+          final recipe = recommendedRecipes[index];
+          return placeCard(
+            recipe['title'],
+            recipe['author'] ?? 'Unknown',
+            recipe['image'] ?? 'assets/placeholder.png',
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPopularRecipes() {
+    final filtered =
+        popularRecipes.where((recipe) {
+          final title = (recipe['title'] ?? '').toString().toLowerCase();
+          return title.contains(searchQuery);
+        }).toList();
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      children: List.generate(filtered.length, (index) {
+        final recipe = filtered[index];
+        final rawPath = recipe['image'] ?? '';
+        final imagePath =
+            rawPath.startsWith('/images/')
+                ? 'http://192.168.68.59:3000$rawPath'
+                : rawPath;
+
+        final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];
+        final avgRating =
+            ratings.isNotEmpty
+                ? ratings.reduce((x, y) => x + y) / ratings.length
+                : 0.0;
+
+        final isSaved = savedRecipeIds.contains(recipe['_id']);
+
+        return popularRecipeButton(
+          recipe['title'] ?? '',
+          imagePath,
+          avgRating,
+          recipe['_id'],
+          isSaved,
+          description: recipe['description'] ?? '',
+          ingredients: recipe['ingredients'] ?? [],
+          calories: recipe['calories'] ?? 0,
+        );
+      }),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: 60,
+        decoration: BoxDecoration(
+          color: maroon,
+          borderRadius: BorderRadius.circular(40),
+          boxShadow: [
+            BoxShadow(
+              color: const Color.fromARGB(25, 0, 0, 0),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            bottomNavItem(Icons.home, 'Home', () {}),
+            bottomNavItem(
+              LucideIcons.users,
+              'Community',
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CommunityScreen()),
+              ),
+            ),
+            bottomNavItem(
+              LucideIcons.calendar,
+              'Meal Plan',
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MealPlannerScreen()),
+              ),
+            ),
+            bottomNavItem(
+              Icons.shopping_cart,
+              'Groceries',
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GroceryScreen()),
+              ),
+            ),
+            bottomNavItem(Icons.person, 'Profile', () {
+              if (userId != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProfileScreen(userId: userId!),
+                  ),
+                );
+              }
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -349,130 +552,168 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget placeCard(String title, String subtitle, String imagePath) {
+  Widget popularRecipeButton(
+    String title,
+    String imagePath,
+    double avgRating,
+    String recipeId,
+    bool isSaved, {
+    String description = '',
+    List<dynamic> ingredients = const [],
+    int calories = 0,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        _showRecipeModal(title, description, ingredients, calories);
+      },
+      child: placeCard(
+        title,
+        '',
+        imagePath,
+        rating: avgRating,
+        onSave: () {
+          if (isSaved) {
+            _unsaveRecipe(recipeId);
+          } else {
+            _saveRecipe(recipeId);
+          }
+        },
+        isSaved: isSaved,
+      ),
+    );
+  }
+
+  Widget bottomNavItem(IconData icon, String text, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(height: 4),
+          Text(text, style: const TextStyle(color: Colors.white, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget placeCard(
+    String title,
+    String subtitle,
+    String imagePath, {
+    double rating = 0.0,
+    VoidCallback? onSave,
+    bool isSaved = false,
+  }) {
+    final isNetwork = imagePath.startsWith('http');
+
     return Stack(
       children: [
         Container(
           width: 250,
+          height: 300,
           margin: const EdgeInsets.only(right: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            image: DecorationImage(
-              image: AssetImage(imagePath),
-              fit: BoxFit.cover,
-            ),
+            color: Colors.grey[300],
           ),
-          child: Container(
-            alignment: Alignment.bottomLeft,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Color.fromARGB(153, 0, 0, 0), Colors.transparent],
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                isNetwork
+                    ? Image.network(
+                      imagePath,
+                      width: 250,
+                      height: 300,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(Icons.broken_image, size: 48),
+                        );
+                      },
+                    )
+                    : Image.asset(
+                      imagePath,
+                      width: 250,
+                      height: 300,
+                      fit: BoxFit.cover,
+                    ),
+
+                // 📌 Save button
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.bookmark,
+                      color: isSaved ? Colors.black : Colors.white,
+                    ),
+                    onPressed: onSave ?? () {},
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.person, color: Colors.white, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
+
+                // 🔻 Gradient & Info
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Color.fromARGB(153, 0, 0, 0),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
-                  ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              size: 14,
+                              color: Colors.amber,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
         ),
-        Positioned(
-          top: 10,
-          right: 20,
-          child: IconButton(
-            icon: const Icon(Icons.bookmark_border, color: Colors.white),
-            onPressed: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("Recipe saved!")));
-            },
-          ),
-        ),
       ],
-    );
-  }
-
-  Widget popularCard(String name, String imagePath) {
-    return Stack(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            image: DecorationImage(
-              image: AssetImage(imagePath),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            alignment: Alignment.bottomLeft,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Color.fromARGB(153, 0, 0, 0), Colors.transparent],
-              ),
-            ),
-            child: Text(
-              '🍽️ $name',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 10,
-          right: 10,
-          child: IconButton(
-            icon: const Icon(Icons.bookmark_border, color: Colors.white),
-            onPressed: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("Recipe saved!")));
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget popularRecipeButton(String name, String imagePath) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const RecipeScreen()),
-        );
-      },
-      child: popularCard(name, imagePath),
     );
   }
 }
+
+// END HOME SCREEN
