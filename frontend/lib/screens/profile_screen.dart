@@ -12,6 +12,7 @@ import 'package:frontend/screens/grocery_screen.dart';
 import 'package:frontend/screens/meal_plan_screen.dart';
 import 'package:image/image.dart' as img;
 import 'package:frontend/screens/saved_recipes_screen.dart' as saved;
+import 'package:frontend/screens/my_recipes_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -267,7 +268,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icons.restaurant_menu,
             'My Recipes',
             'Add or manage your custom recipes',
-            () {},
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MyRecipesScreen(userId: widget.userId),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 10),
           _buildCard(

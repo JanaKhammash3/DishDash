@@ -9,7 +9,9 @@ const {
   uploadAvatar,
   saveRecipeToUser,
   unsaveRecipe,
-  getSavedRecipes
+  getSavedRecipes,
+  createCustomRecipe,
+  getMyRecipes
 } = require('../controllers/userController');
 
 router.post('/register', register);
@@ -22,4 +24,7 @@ router.put('/profile/:id/avatar', uploadAvatar); // For Base64 avatar update
 router.post('/:userId/saveRecipe', saveRecipeToUser);
 router.post('/:userId/unsaveRecipe', unsaveRecipe);
 router.get('/:id/savedRecipes', getSavedRecipes);
+router.post('/:userId/customRecipe', createCustomRecipe);
+router.get('/:userId/myRecipes', getMyRecipes);
+
 module.exports = router;

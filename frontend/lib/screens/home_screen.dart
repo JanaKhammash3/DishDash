@@ -192,7 +192,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
             return {
               ...recipe,
-              'imagePath': imagePath, // ✅ added this field
+              'imagePath': imagePath,
+              'authorName': recipe['author']?['name'],
+              'authorAvatar': recipe['author']?['avatar'], // ✅ added this field
             };
           }).toList();
 
@@ -453,6 +455,8 @@ class _HomeScreenState extends State<HomeScreen> {
           description: recipe['description'] ?? '',
           ingredients: recipe['ingredients'] ?? [],
           calories: recipe['calories'] ?? 0,
+          authorName: recipe['author']?['name'],
+          authorAvatar: recipe['author']?['avatar'],
         );
       }),
     );
@@ -561,6 +565,8 @@ class _HomeScreenState extends State<HomeScreen> {
     String description = '',
     List<dynamic> ingredients = const [],
     int calories = 0,
+    String? authorName,
+    String? authorAvatar,
   }) {
     return GestureDetector(
       onTap: () {
@@ -579,6 +585,8 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         },
         isSaved: isSaved,
+        authorName: authorName,
+        authorAvatar: authorAvatar,
       ),
     );
   }
@@ -604,8 +612,20 @@ class _HomeScreenState extends State<HomeScreen> {
     double rating = 0.0,
     VoidCallback? onSave,
     bool isSaved = false,
+    String? authorName,
+    String? authorAvatar,
   }) {
+    final isBase64 = imagePath.startsWith('/9j'); // simple base64 check
     final isNetwork = imagePath.startsWith('http');
+
+    ImageProvider imageProvider;
+    if (isBase64) {
+      imageProvider = MemoryImage(base64Decode(imagePath));
+    } else if (isNetwork) {
+      imageProvider = NetworkImage(imagePath);
+    } else {
+      imageProvider = const AssetImage('assets/placeholder.png');
+    }
 
     return Stack(
       children: [
@@ -621,30 +641,12 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(16),
             child: Stack(
               children: [
-                isNetwork
-                    ? Image.network(
-                      imagePath,
-                      width: 250,
-                      height: 300,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return const Center(child: CircularProgressIndicator());
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Icon(Icons.broken_image, size: 48),
-                        );
-                      },
-                    )
-                    : Image.asset(
-                      imagePath,
-                      width: 250,
-                      height: 300,
-                      fit: BoxFit.cover,
-                    ),
-
-                // 📌 Save button
+                Image(
+                  image: imageProvider,
+                  width: 250,
+                  height: 300,
+                  fit: BoxFit.cover,
+                ),
                 Positioned(
                   top: 10,
                   right: 10,
@@ -656,8 +658,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: onSave ?? () {},
                   ),
                 ),
-
-                // 🔻 Gradient & Info
                 Positioned(
                   bottom: 0,
                   left: 0,
@@ -703,6 +703,25 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
                         ),
+                        if (authorName != null && authorAvatar != null)
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 10,
+                                backgroundImage: MemoryImage(
+                                  base64Decode(authorAvatar),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                authorName,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),

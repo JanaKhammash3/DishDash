@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const Recipe = require('../models/Recipe');
 const multer = require('multer');
 const path = require('path');
 
@@ -182,4 +182,41 @@ exports.unsaveRecipe = async (req, res) => {
 exports.getSavedRecipes = async (req, res) => {
   const user = await User.findById(req.params.id).populate('recipes');
   res.json(user.recipes);
+};
+// POST /api/users/:userId/customRecipe
+exports.createCustomRecipe = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { title, ingredients, calories, description, image } = req.body;
+
+    const recipe = new Recipe({
+      title,
+      ingredients: ingredients.split(',').map(i => i.trim()),
+      calories,
+      description,
+      image,
+      author: userId,  // ✅ store reference to user
+      ratings: [],
+    });
+
+    await recipe.save();
+
+    const user = await User.findById(userId);
+    user.recipes.push(recipe._id); // ✅ add to user's recipes
+    user.save();
+
+    res.status(200).json({ message: 'Custom recipe created', recipe });
+  } catch (err) {
+    console.error('Custom recipe error:', err);
+    res.status(500).json({ error: 'Failed to create custom recipe' });
+  }
+};
+exports.getMyRecipes = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const recipes = await Recipe.find({ author: userId });
+    res.status(200).json(recipes);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch user recipes', error: err.message });
+  }
 };

@@ -10,6 +10,7 @@ const recipeSchema = new mongoose.Schema({
   type: String,     // e.g., 'Vegan', 'Dessert', etc.
   mealTime: String, // e.g., 'Breakfast', 'Dinner', etc.
   ratings: [Number], 
+  author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
 recipeSchema.virtual('averageRating').get(function () {

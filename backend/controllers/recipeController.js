@@ -8,13 +8,12 @@ exports.createRecipe = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-
-exports.getAllRecipes = async (req, res) => {
+const getAllRecipes = async (req, res) => {
   try {
-    const recipes = await Recipe.find();
+    const recipes = await Recipe.find().populate('author', 'name avatar');
     res.status(200).json(recipes);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ error: 'Failed to fetch recipes' });
   }
 };
 
@@ -113,4 +112,8 @@ exports.filterRecipes = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
+};
+exports.getAllRecipes = async (req, res) => {
+  const recipes = await Recipe.find().populate('author', 'name avatar');
+  res.json(recipes);
 };
