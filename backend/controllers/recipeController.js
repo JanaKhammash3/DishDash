@@ -38,12 +38,19 @@ exports.searchByIngredients = async (req, res) => {
 exports.rateRecipe = async (req, res) => {
   try {
     const { id } = req.params;
-    const { value } = req.body; // 🔥 Only value
+    const { rating } = req.body;
+
+    // Validate the rating
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Invalid rating value" });
+    }
 
     const recipe = await Recipe.findById(id);
-    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
 
-    recipe.ratings.push(value); // 🔥 Just push the number
+    recipe.ratings.push(rating); // ✅ push only if valid
     await recipe.save();
 
     res.status(200).json({ message: "Rating added", recipe });
@@ -51,6 +58,7 @@ exports.rateRecipe = async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 };
+
 
 // ✅ NEW: Get Popular Recipes
 exports.getPopularRecipes = async (req, res) => {

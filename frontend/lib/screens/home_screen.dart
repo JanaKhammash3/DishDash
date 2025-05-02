@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<String> savedRecipeIds = {};
   String? userName;
   final TextEditingController _searchController = TextEditingController();
+  int visibleRecipeCount = 4;
   String searchQuery = '';
   final Map<String, Map<String, bool>> _filters = {
     'Calories': {'< 200': false, '200-400': false, '400+': false},
@@ -108,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.68.59:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.68.60:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -121,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.68.59:3000/api/recipes');
+    final url = Uri.parse('http://192.168.68.60:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -134,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.59:3000/api/users/$userId/saveRecipe',
+      'http://192.168.68.60:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -148,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.59:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.68.60:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -161,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes() async {
-    final url = Uri.parse('http://192.168.68.59:3000/api/recipes');
+    final url = Uri.parse('http://192.168.68.60:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -183,11 +184,11 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       final updatedRecipes =
-          allRecipes.take(6).map((recipe) {
+          allRecipes.map((recipe) {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.59:3000/images/$image'
+                    ? 'http://192.168.68.60:3000/images/$image'
                     : 'assets/placeholder.png'; // default fallback
 
             return {
@@ -200,6 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         popularRecipes = updatedRecipes;
+        visibleRecipeCount = 4;
       });
     }
   }
@@ -424,41 +426,108 @@ class _HomeScreenState extends State<HomeScreen> {
           return title.contains(searchQuery);
         }).toList();
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      children: List.generate(filtered.length, (index) {
-        final recipe = filtered[index];
-        final rawPath = recipe['image'] ?? '';
-        final imagePath =
-            rawPath.startsWith('/images/')
-                ? 'http://192.168.68.59:3000$rawPath'
-                : rawPath;
+    return Column(
+      children: [
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.75,
+          children: List.generate(
+            filtered.length > visibleRecipeCount
+                ? visibleRecipeCount
+                : filtered.length,
+            (index) {
+              final recipe = filtered[index];
+              final rawPath = recipe['image'] ?? '';
+              final imagePath =
+                  rawPath.startsWith('/images/')
+                      ? 'http://192.168.68.60:3000$rawPath'
+                      : rawPath;
 
-        final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];
-        final avgRating =
-            ratings.isNotEmpty
-                ? ratings.reduce((x, y) => x + y) / ratings.length
-                : 0.0;
+              final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];
+              final avgRating =
+                  ratings.isNotEmpty
+                      ? ratings.reduce((x, y) => x + y) / ratings.length
+                      : 0.0;
 
-        final isSaved = savedRecipeIds.contains(recipe['_id']);
+              final isSaved = savedRecipeIds.contains(recipe['_id']);
 
-        return popularRecipeButton(
-          recipe['title'] ?? '',
-          imagePath,
-          avgRating,
-          recipe['_id'],
-          isSaved,
-          description: recipe['description'] ?? '',
-          ingredients: recipe['ingredients'] ?? [],
-          calories: recipe['calories'] ?? 0,
-          authorName: recipe['author']?['name'],
-          authorAvatar: recipe['author']?['avatar'],
-        );
-      }),
+              return popularRecipeButton(
+                recipe['title'] ?? '',
+                imagePath,
+                avgRating,
+                recipe['_id'],
+                isSaved,
+                description: recipe['description'] ?? '',
+                ingredients: recipe['ingredients'] ?? [],
+                calories: recipe['calories'] ?? 0,
+                authorName: recipe['author']?['name'],
+                authorAvatar: recipe['author']?['avatar'],
+              );
+            },
+          ),
+        ),
+        if (filtered.length > 4)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (visibleRecipeCount < filtered.length)
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        visibleRecipeCount += 4;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: maroon,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                    ),
+                    child: const Text(
+                      'Show More',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                if (visibleRecipeCount > 4) const SizedBox(width: 10),
+                if (visibleRecipeCount > 4)
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        visibleRecipeCount = (visibleRecipeCount - 4).clamp(
+                          4,
+                          filtered.length,
+                        );
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[300],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                    ),
+                    child: const Text(
+                      'Show Less',
+                      style: TextStyle(color: maroon),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -491,14 +560,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (_) => const CommunityScreen()),
               ),
             ),
-            bottomNavItem(
-              LucideIcons.calendar,
-              'Meal Plan',
-              () => Navigator.push(
+            bottomNavItem(LucideIcons.calendar, 'Meal Plan', () async {
+              final result = await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const MealPlannerScreen()),
-              ),
-            ),
+                MaterialPageRoute(
+                  builder: (_) => MealPlannerScreen(userId: userId!),
+                ),
+              );
+              if (result == 'refresh') {
+                await fetchPopularRecipes();
+              }
+            }),
             bottomNavItem(
               Icons.shopping_cart,
               'Groceries',

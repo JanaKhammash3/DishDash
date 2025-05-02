@@ -23,7 +23,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
 
   Future<void> fetchSavedRecipes() async {
     final url = Uri.parse(
-      'http://192.168.68.59:3000/api/users/${widget.userId}/savedRecipes',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/savedRecipes',
     );
 
     final response = await http.get(url);

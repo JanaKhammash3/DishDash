@@ -27,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String name = '';
   String email = '';
   String? avatarBase64;
+
   bool isDarkMode = true;
 
   final ImagePicker _picker = ImagePicker();
@@ -39,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.68.59:3000/api/profile/${widget.userId}',
+      'http://192.168.68.60:3000/api/profile/${widget.userId}',
     );
 
     try {
@@ -89,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final base64String = base64Encode(compressedBytes);
 
       final url = Uri.parse(
-        'http://192.168.68.59:3000/api/profile/${widget.userId}/avatar',
+        'http://192.168.68.60:3000/api/profile/${widget.userId}/avatar',
       );
 
       final response = await http.put(
@@ -197,7 +198,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               navIcon(Icons.calendar_today, () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const MealPlannerScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => MealPlannerScreen(userId: widget.userId),
+                  ),
                 );
               }),
               navIcon(Icons.shopping_cart, () {

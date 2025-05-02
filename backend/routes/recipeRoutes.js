@@ -21,5 +21,6 @@ router.get('/search/:ingredients', searchByIngredients); // Search by ingredient
 router.post('/filter', filterRecipes);
 router.get('/:id', getRecipeById);
 router.post('/:id/rate', rateRecipe);
+router.patch('/rate/:id', rateRecipe);
 
 module.exports = router;

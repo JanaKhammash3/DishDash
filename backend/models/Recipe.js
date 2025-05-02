@@ -9,7 +9,10 @@ const recipeSchema = new mongoose.Schema({
   calories: Number, // ✅ for calorie filtering
   type: String,     // e.g., 'Vegan', 'Dessert', etc.
   mealTime: String, // e.g., 'Breakfast', 'Dinner', etc.
-  ratings: [Number], 
+  ratings: {
+    type: [Number],
+    default: [],
+  },
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
