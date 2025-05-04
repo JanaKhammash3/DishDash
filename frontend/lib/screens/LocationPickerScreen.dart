@@ -75,7 +75,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               ),
               child: const Text(
                 'Confirm Location',
-                style: TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16, color: Colors.white),
               ),
             ),
           ),

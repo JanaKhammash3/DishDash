@@ -40,13 +40,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userId', data['user']['_id']); // ✅ Save user ID
+        final userId = data['user']['_id']; // ✅ Extract from response
+        await prefs.setString('userId', userId); // ✅ Save
 
         // ignore: use_build_context_synchronously
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const HomeScreen(),
+            builder: (_) => HomeScreen(userId: userId),
           ), // no need to pass userId
         );
       } else {

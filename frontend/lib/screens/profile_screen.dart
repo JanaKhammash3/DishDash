@@ -137,11 +137,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: maroon,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-            );
+          onPressed: () async {
+            final prefs = await SharedPreferences.getInstance();
+            final userId = prefs.getString('userId');
+            if (userId != null) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => HomeScreen(userId: userId)),
+              );
+            }
           },
         ),
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
@@ -182,11 +186,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              navIcon(Icons.home, () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HomeScreen()),
-                );
+              navIcon(Icons.home, () async {
+                final prefs = await SharedPreferences.getInstance();
+                final userId = prefs.getString('userId');
+                if (userId != null) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => HomeScreen(userId: userId),
+                    ),
+                  );
+                }
               }),
               navIcon(Icons.people, () {
                 Navigator.push(

@@ -16,6 +16,17 @@ class MyRecipesScreen extends StatefulWidget {
 class _MyRecipesScreenState extends State<MyRecipesScreen> {
   List<dynamic> userRecipes = [];
   Uint8List? imageBytes;
+  ImageProvider _getImageProvider(String? image) {
+    if (image != null && image.startsWith('http')) {
+      return NetworkImage(image);
+    } else if (image != null && image.startsWith('/9j')) {
+      return MemoryImage(base64Decode(image));
+    } else if (image != null && image.isNotEmpty) {
+      return NetworkImage('http://192.168.68.60:3000/images/$image');
+    } else {
+      return const AssetImage('assets/placeholder.png');
+    }
+  }
 
   @override
   void initState() {
@@ -247,10 +258,10 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               horizontal: 16,
                               vertical: 12,
                             ),
-                            leading: const Icon(
-                              Icons.kitchen,
-                              color: maroon,
-                              size: 28,
+                            leading: CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Colors.grey[200],
+                              backgroundImage: _getImageProvider(r['image']),
                             ),
                             title: Text(
                               r['title'] ?? 'Untitled',

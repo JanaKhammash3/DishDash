@@ -1,9 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
+import 'package:http/http.dart' as http;
 import 'home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AllergyScreen extends StatefulWidget {
-  const AllergyScreen({super.key});
+  final String userId;
+
+  const AllergyScreen({super.key, required this.userId});
 
   @override
   State<AllergyScreen> createState() => _AllergyScreenState();
@@ -21,22 +27,43 @@ class _AllergyScreenState extends State<AllergyScreen> {
   void _goToHomeScreen() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
+      MaterialPageRoute(
+        builder: (context) => HomeScreen(userId: widget.userId),
+      ),
     );
   }
 
-  void _saveAllergies() {
+  void _saveAllergies() async {
     List<String> allergies =
         _allergyControllers
             .map((controller) => controller.text.trim())
             .where((text) => text.isNotEmpty)
             .toList();
 
-    // Print or send allergies to backend here
-    // ignore: avoid_print
-    print("Saved Allergies: $allergies");
+    if (allergies.isEmpty) {
+      _goToHomeScreen();
+      return;
+    }
 
-    _goToHomeScreen();
+    final response = await http.patch(
+      Uri.parse(
+        'http://192.168.68.60:3000/api/users/updateAllergies/${widget.userId}',
+      ),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'allergies': allergies}),
+    );
+
+    if (response.statusCode == 200) {
+      // ✅ Save userId to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userId', widget.userId);
+
+      _goToHomeScreen();
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to save allergies")));
+    }
   }
 
   @override

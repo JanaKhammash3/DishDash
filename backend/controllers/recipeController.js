@@ -16,6 +16,15 @@ const getAllRecipes = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch recipes' });
   }
 };
+exports.deleteRecipe = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Recipe.findByIdAndDelete(id);
+    res.status(200).json({ message: 'Recipe deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete recipe' });
+  }
+};
 
 exports.getRecipeById = async (req, res) => {
   try {

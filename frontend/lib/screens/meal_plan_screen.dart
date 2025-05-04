@@ -50,104 +50,189 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     selectedRecipeTitle = null;
     selectedDate = null;
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder:
           (_) => StatefulBuilder(
             builder:
-                (context, setStateDialog) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                (context, setStateDialog) => Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                    left: 20,
+                    right: 20,
+                    top: 20,
                   ),
-                  title: const Text("Add Meal"),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Autocomplete<String>(
-                        optionsBuilder: (TextEditingValue textEditingValue) {
-                          return savedRecipes
-                              .map((e) => e['title'] as String)
-                              .where(
-                                (option) => option.toLowerCase().contains(
-                                  textEditingValue.text.toLowerCase(),
-                                ),
-                              )
-                              .toList();
-                        },
-                        onSelected: (String selection) {
-                          setStateDialog(() {
-                            selectedRecipeTitle = selection;
-                            selectedRecipe = savedRecipes.firstWhere(
-                              (recipe) => recipe['title'] == selection,
-                            );
-                          });
-                        },
-                        fieldViewBuilder: (
-                          context,
-                          controller,
-                          focusNode,
-                          onEditingComplete,
-                        ) {
-                          return TextField(
-                            controller: controller,
-                            focusNode: focusNode,
-                            decoration: const InputDecoration(
-                              labelText: 'Search Recipe',
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.calendar_today),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: maroon,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Add Meal",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now().subtract(
-                              const Duration(days: 1),
-                            ),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 365),
-                            ),
-                          );
-                          if (picked != null) {
-                            setStateDialog(() => selectedDate = picked);
-                          }
-                        },
-                        label: Text(
-                          selectedDate == null
-                              ? 'Select Date'
-                              : '${selectedDate!.year}-${selectedDate!.month}-${selectedDate!.day}',
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      child: const Text("Cancel"),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: maroon),
-                      child: const Text("Add"),
-                      onPressed: () {
-                        if (selectedRecipe != null && selectedDate != null) {
-                          setState(() {
-                            plannedMeals.add({
-                              'recipe': selectedRecipe!,
-                              'date': selectedDate,
-                              'done': false,
+                        const SizedBox(height: 16),
+
+                        Autocomplete<String>(
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            return savedRecipes
+                                .map((e) => e['title'] as String)
+                                .where(
+                                  (option) => option.toLowerCase().contains(
+                                    textEditingValue.text.toLowerCase(),
+                                  ),
+                                )
+                                .toList();
+                          },
+                          onSelected: (String selection) {
+                            setStateDialog(() {
+                              selectedRecipeTitle = selection;
+                              selectedRecipe = savedRecipes.firstWhere(
+                                (recipe) => recipe['title'] == selection,
+                              );
                             });
-                          });
-                          Navigator.pop(context);
-                        }
-                      },
+                          },
+                          fieldViewBuilder: (
+                            context,
+                            controller,
+                            focusNode,
+                            onEditingComplete,
+                          ) {
+                            return TextField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              decoration: const InputDecoration(
+                                labelText: 'Search Recipe',
+                              ),
+                            );
+                          },
+                          optionsViewBuilder: (context, onSelected, options) {
+                            return Align(
+                              alignment: Alignment.topCenter,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Container(
+                                  width:
+                                      MediaQuery.of(context).size.width -
+                                      40, // match modal width
+                                  margin: const EdgeInsets.only(top: 8),
+                                  decoration: BoxDecoration(
+                                    color: maroon,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Colors.black26,
+                                        blurRadius: 6,
+                                      ),
+                                    ],
+                                  ),
+                                  child: ListView.builder(
+                                    padding: EdgeInsets.zero,
+                                    shrinkWrap: true,
+                                    itemCount: options.length,
+                                    itemBuilder: (context, index) {
+                                      final option = options.elementAt(index);
+                                      return ListTile(
+                                        title: Text(
+                                          option,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        onTap: () => onSelected(option),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        ElevatedButton.icon(
+                          icon: const Icon(
+                            Icons.calendar_today,
+                            color: Colors.white,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: maroon,
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 1),
+                              ),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 365),
+                              ),
+                            );
+                            if (picked != null) {
+                              setStateDialog(() => selectedDate = picked);
+                            }
+                          },
+                          label: Text(
+                            selectedDate == null
+                                ? 'Select Date'
+                                : '${selectedDate!.year}-${selectedDate!.month}-${selectedDate!.day}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            TextButton(
+                              child: const Text("Cancel"),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: maroon,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              child: const Text(
+                                "Add",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              onPressed: () {
+                                if (selectedRecipe != null &&
+                                    selectedDate != null) {
+                                  setState(() {
+                                    plannedMeals.add({
+                                      'recipe': selectedRecipe!,
+                                      'date': selectedDate,
+                                      'done': false,
+                                    });
+                                  });
+                                  Navigator.pop(context);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
           ),
     );

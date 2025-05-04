@@ -55,9 +55,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
+        final userId = data['userId']; // ✅ from your controller
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const AllergyScreen()),
+          MaterialPageRoute(
+            builder: (_) => AllergyScreen(userId: userId), // ✅ pass userId
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -176,12 +179,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _buildLabel('LOCATION'),
                     ElevatedButton.icon(
                       onPressed: _pickLocation,
-                      icon: const Icon(Icons.location_on),
+                      icon: const Icon(Icons.location_on, color: Colors.white),
                       label: Text(
                         latitude != null && longitude != null
                             ? 'Location Selected'
                             : 'Pick Location',
-                        style: const TextStyle(fontSize: 16),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: maroon,

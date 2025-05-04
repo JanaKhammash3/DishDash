@@ -21,6 +21,22 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
     fetchSavedRecipes();
   }
 
+  Future<void> unsaveRecipe(String recipeId) async {
+    final url = Uri.parse(
+      'http://192.168.68.60:3000/api/users/${widget.userId}/unsaveRecipe',
+    );
+    await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'recipeId': recipeId}),
+    );
+  }
+
+  Future<void> deleteRecipe(String recipeId) async {
+    final url = Uri.parse('http://192.168.68.60:3000/api/recipes/$recipeId');
+    await http.delete(url);
+  }
+
   Future<void> fetchSavedRecipes() async {
     final url = Uri.parse(
       'http://192.168.68.60:3000/api/users/${widget.userId}/savedRecipes',
@@ -34,6 +50,10 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   }
 
   void _showRecipeModal(BuildContext context, Map recipe) {
+    final dynamic author = recipe['author'];
+    final String? authorId = author is Map ? author['_id'] : author?.toString();
+    final bool isUserRecipe = authorId == widget.userId;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -95,25 +115,44 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-              Align(
-                alignment: Alignment.center,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: maroon,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: maroon,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                    onPressed: () async {
+                      Navigator.pop(context); // close modal
+                      if (isUserRecipe) {
+                        await deleteRecipe(recipe['_id']);
+                      } else {
+                        await unsaveRecipe(recipe['_id']);
+                      }
+                      fetchSavedRecipes(); // refresh list
+                    },
+                    child: Text(
+                      isUserRecipe ? 'Delete Recipe' : 'Unsave Recipe',
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(color: Colors.white),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[300],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close', style: TextStyle(color: maroon)),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -144,6 +183,19 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   }
 
   Widget _buildRecipeCard(Map recipe) {
+    final String? image = recipe['image'];
+    late ImageProvider imageProvider;
+
+    if (image != null && image.startsWith('http')) {
+      imageProvider = NetworkImage(image);
+    } else if (image != null && image.startsWith('/9j')) {
+      imageProvider = MemoryImage(base64Decode(image));
+    } else if (image != null && image.isNotEmpty) {
+      imageProvider = NetworkImage('http://192.168.68.60:3000/images/$image');
+    } else {
+      imageProvider = const AssetImage('assets/placeholder.png');
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       color: Colors.white,
@@ -154,7 +206,11 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
           horizontal: 20,
           vertical: 14,
         ),
-        leading: const Icon(Icons.bookmark, color: maroon, size: 28),
+        leading: CircleAvatar(
+          radius: 22,
+          backgroundImage: imageProvider,
+          backgroundColor: Colors.grey[200],
+        ),
         title: Text(
           recipe['title'] ?? 'Untitled',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),

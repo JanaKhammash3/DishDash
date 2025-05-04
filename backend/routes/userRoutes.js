@@ -19,7 +19,7 @@ router.post('/login', login);
 router.get('/profile/:id', getUserProfile);
 router.put('/profile/:id', updateProfile);
 router.get('/profile/:id', getUserProfile);
-router.put('/profile/:id/allergies', updateAllergies); // For allergy update
+router.patch('/updateAllergies/:id', updateAllergies);
 router.put('/profile/:id/avatar', uploadAvatar); // For Base64 avatar update
 router.post('/:userId/saveRecipe', saveRecipeToUser);
 router.post('/:userId/unsaveRecipe', unsaveRecipe);

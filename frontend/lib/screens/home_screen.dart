@@ -13,7 +13,8 @@ import 'package:frontend/screens/grocery_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String userId;
+  const HomeScreen({super.key, required this.userId});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();

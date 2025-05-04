@@ -98,22 +98,15 @@ exports.updateProfile = async (req, res) => {
 // Update allergies
 exports.updateAllergies = async (req, res) => {
   try {
+    const { id } = req.params;
     const { allergies } = req.body;
-    if (!Array.isArray(allergies)) {
-      return res.status(400).json({ message: 'Allergies must be an array' });
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { allergies },
-      { new: true }
-    );
-
-    res.status(200).json(updatedUser);
+    await User.findByIdAndUpdate(id, { allergies });
+    res.status(200).json({ message: 'Allergies updated' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ message: 'Failed to update allergies', error: err.message });
   }
 };
+
 
 // Controller for Upload Avatar (base64)
 exports.uploadAvatar = async (req, res) => {

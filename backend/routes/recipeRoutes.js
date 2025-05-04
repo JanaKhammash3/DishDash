@@ -9,7 +9,8 @@ const {
   getPopularRecipes,
   getRecommendedRecipes,
   searchRecipes,
-  filterRecipes
+  filterRecipes,
+  deleteRecipe
 } = require('../controllers/recipeController');
 
 router.post('/', createRecipe);
@@ -22,5 +23,7 @@ router.post('/filter', filterRecipes);
 router.get('/:id', getRecipeById);
 router.post('/:id/rate', rateRecipe);
 router.patch('/rate/:id', rateRecipe);
+router.delete('/:id', deleteRecipe);
+
 
 module.exports = router;
