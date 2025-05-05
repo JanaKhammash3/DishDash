@@ -14,16 +14,18 @@ const {
 } = require('../controllers/recipeController');
 
 router.post('/', createRecipe);
-router.get('/', getAllRecipes);
 router.get('/popular', getPopularRecipes);
 router.get('/recommendations', getRecommendedRecipes);
-router.get('/search', searchRecipes); // Search by query string
-router.get('/search/:ingredients', searchByIngredients); // Search by ingredients
-router.post('/filter', filterRecipes);
-router.get('/:id', getRecipeById);
+router.get('/search', searchRecipes);
+router.get('/search/:ingredients', searchByIngredients);
+router.get('/filter', filterRecipes);
+router.get('/', getAllRecipes);
 router.post('/:id/rate', rateRecipe);
 router.patch('/rate/:id', rateRecipe);
 router.delete('/:id', deleteRecipe);
+
+// ✅ This must be last
+router.get('/:id', getRecipeById);
 
 
 module.exports = router;

@@ -2,20 +2,70 @@ const Recipe = require('../models/Recipe');
 
 exports.createRecipe = async (req, res) => {
   try {
-    const newRecipe = await Recipe.create(req.body);
+    const {
+      title,
+      description,
+      ingredients,
+      instructions,
+      image,
+      calories,
+      diet,        // ✅ NEW
+      mealType,    // ✅ NEW
+      prepTime,    // ✅ NEW
+      tags,        // ✅ NEW (array)
+      author
+    } = req.body;
+
+    const newRecipe = await Recipe.create({
+      title,
+      description,
+      ingredients,
+      instructions,
+      image,
+      calories,
+      diet,
+      mealType,
+      prepTime,
+      tags,
+      author
+    });
+
     res.status(201).json(newRecipe);
+  } catch (err) {
+    res.status(500).json({ message: 'Error creating recipe', error: err.message });
+  }
+};
+
+// GET /api/recipes
+exports.getAllRecipes = async (req, res) => {
+  const { diet, mealTime, tag, minCalories, maxCalories, maxPrepTime } = req.query;
+
+  
+  let filter = {};
+
+  if (diet) filter.diet = diet;
+  if (mealTime) filter.mealTime = mealTime;
+  if (tag) filter.tags = { $in: [tag] };
+  if (minCalories || maxCalories) {
+    filter.calories = {};
+    if (minCalories) filter.calories.$gte = Number(minCalories);
+    if (maxCalories) filter.calories.$lte = Number(maxCalories);
+  }
+  if (maxPrepTime) filter.prepTime = { $lte: Number(maxPrepTime) };
+
+  
+
+  try {
+    const recipes = await Recipe.find(filter).populate('author', 'name avatar');
+    res.json(recipes);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-const getAllRecipes = async (req, res) => {
-  try {
-    const recipes = await Recipe.find().populate('author', 'name avatar');
-    res.status(200).json(recipes);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch recipes' });
-  }
-};
+
+
+
+
 exports.deleteRecipe = async (req, res) => {
   try {
     const { id } = req.params;
@@ -109,27 +159,34 @@ exports.searchRecipes = async (req, res) => {
   }
 };
 
-// ✅ NEW: Filter Recipes by type, calories, mealTime
+
 exports.filterRecipes = async (req, res) => {
   try {
-    const { type, mealTime, calories } = req.body;
+    const { diet, mealTime, minCalories, maxCalories, maxPrepTime, tags } = req.query;
+
     const filter = {};
 
-    if (type) filter.type = { $in: type };
-    if (mealTime) filter.mealTime = { $in: mealTime };
-    if (calories && calories.length) {
-      filter.calories = {
-        $gte: calories[0],
-        $lte: calories[1],
-      };
+    if (diet) filter.diet = diet;
+    if (mealTime) filter.mealTime = mealTime;
+    if (minCalories || maxCalories) {
+      filter.calories = {};
+      if (minCalories) filter.calories.$gte = Number(minCalories);
+      if (maxCalories) filter.calories.$lte = Number(maxCalories);
+    }
+    if (maxPrepTime) filter.prepTime = { $lte: Number(maxPrepTime) };
+    if (tags) {
+      // If tags are comma-separated like ?tags=gluten-free,spicy
+      const tagArray = tags.split(',').map(t => t.trim());
+      filter.tags = { $all: tagArray };
     }
 
-    const recipes = await Recipe.find(filter);
+    const recipes = await Recipe.find(filter).populate('author', 'name avatar');
     res.status(200).json(recipes);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ message: 'Failed to filter recipes', error: err.message });
   }
 };
+
 exports.getAllRecipes = async (req, res) => {
   const recipes = await Recipe.find().populate('author', 'name avatar');
   res.json(recipes);

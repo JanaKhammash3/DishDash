@@ -11,6 +11,7 @@ import 'package:frontend/screens/meal_plan_screen.dart';
 import 'package:frontend/screens/recipe_screen.dart';
 import 'package:frontend/screens/grocery_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import './category_filters.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userId;
@@ -21,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String selectedCategory = '';
   String? userId;
   String? avatarUrl;
   List<dynamic> randomRecipes = [];
@@ -162,8 +164,42 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> fetchPopularRecipes() async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/recipes');
+  Future<void> fetchPopularRecipes({String? category}) async {
+    String baseUrl = 'http://192.168.68.60:3000/api/recipes/filter';
+    Uri url;
+
+    if (category != null && category.isNotEmpty) {
+      final encodedCategory = Uri.encodeQueryComponent(category);
+
+      const dietList = [
+        'Vegan',
+        'Keto',
+        'Low-Carb',
+        'Paleo',
+        'Vegetarian',
+        'None',
+      ];
+      const mealTimeList = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'];
+      List<String> queryParams = [];
+
+      final isDiet = dietList.contains(category);
+      final isMealTime = mealTimeList.contains(category);
+
+      if (isDiet) {
+        queryParams.add('diet=$encodedCategory');
+      } else if (isMealTime) {
+        queryParams.add('mealTime=$encodedCategory');
+      } else {
+        queryParams.add('tag=$encodedCategory');
+      }
+
+      url = Uri.parse('$baseUrl?${queryParams.join('&')}');
+    } else {
+      url = Uri.parse(baseUrl); // no filters
+    }
+
+    print('Requesting: $url'); // ✅ Debug print
+
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -171,7 +207,6 @@ class _HomeScreenState extends State<HomeScreen> {
       allRecipes.sort((a, b) {
         final aRatings = (a['ratings'] as List?)?.cast<num>() ?? [];
         final bRatings = (b['ratings'] as List?)?.cast<num>() ?? [];
-
         final aAvg =
             aRatings.isNotEmpty
                 ? aRatings.reduce((x, y) => x + y) / aRatings.length
@@ -180,8 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
             bRatings.isNotEmpty
                 ? bRatings.reduce((x, y) => x + y) / bRatings.length
                 : 0.0;
-
-        return bAvg.compareTo(aAvg); // ✅ no .toInt() needed
+        return bAvg.compareTo(aAvg);
       });
 
       final updatedRecipes =
@@ -190,13 +224,13 @@ class _HomeScreenState extends State<HomeScreen> {
             final imagePath =
                 (image != null && image.isNotEmpty)
                     ? 'http://192.168.68.60:3000/images/$image'
-                    : 'assets/placeholder.png'; // default fallback
+                    : 'assets/placeholder.png';
 
             return {
               ...recipe,
               'imagePath': imagePath,
               'authorName': recipe['author']?['name'],
-              'authorAvatar': recipe['author']?['avatar'], // ✅ added this field
+              'authorAvatar': recipe['author']?['avatar'],
             };
           }).toList();
 
@@ -204,6 +238,8 @@ class _HomeScreenState extends State<HomeScreen> {
         popularRecipes = updatedRecipes;
         visibleRecipeCount = 4;
       });
+    } else {
+      print('Error fetching recipes: ${response.statusCode}');
     }
   }
 
@@ -336,9 +372,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 contentPadding: EdgeInsets.zero,
                 activeColor: maroon,
                 value: entry.value,
-                onChanged:
-                    (val) => setState(() => _filters[title]![entry.key] = val!),
-                title: Text(entry.key),
+                onChanged: (val) {
+                  setState(() {
+                    // Reset all other options in the same category group to false
+                    _filters[title]!.updateAll((key, value) => false);
+                    _filters[title]![entry.key] = val!;
+                  });
+
+                  if (val == true) {
+                    fetchPopularRecipes(
+                      category: entry.key,
+                    ); // Only one active filter at a time
+                  } else {
+                    fetchPopularRecipes(); // fallback to all
+                  }
+                },
               ),
             )
             .toList(),
@@ -380,25 +428,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategoryList() {
-    return SizedBox(
-      height: 80,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          categoryButton('Vegan', LucideIcons.leaf),
-          categoryButton('Desserts', LucideIcons.cupSoda),
-          categoryButton('Quick Meals', LucideIcons.timer),
-          categoryButton('Breakfast', LucideIcons.sun),
-          categoryButton('Soups', LucideIcons.utensilsCrossed),
-          categoryButton('Community', LucideIcons.users),
-          categoryButton(
-            'More',
-            LucideIcons.moreHorizontal,
-            color: Colors.white,
-            bgColor: Colors.grey[200],
-          ),
-        ],
-      ),
+    return CategoryFilters(
+      selectedCategory: selectedCategory,
+      onCategorySelected: (category) {
+        setState(() {
+          selectedCategory = category;
+        });
+        fetchPopularRecipes(category: category); // ✅ Trigger data reload
+      },
     );
   }
 
@@ -424,7 +461,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final filtered =
         popularRecipes.where((recipe) {
           final title = (recipe['title'] ?? '').toString().toLowerCase();
-          return title.contains(searchQuery);
+          final diet = (recipe['diet'] ?? '').toString().toLowerCase();
+          final mealTime = (recipe['mealTime'] ?? '').toString().toLowerCase();
+
+          final matchesSearch = title.contains(searchQuery);
+          final matchesCategory =
+              selectedCategory.isEmpty ||
+              diet == selectedCategory.toLowerCase() ||
+              mealTime == selectedCategory.toLowerCase();
+
+          return matchesSearch && matchesCategory;
         }).toList();
 
     return Column(
