@@ -46,15 +46,20 @@ exports.getAllRecipes = async (req, res) => {
   if (diet) filter.diet = diet;
   if (mealTime) filter.mealTime = mealTime;
   if (tag) filter.tags = { $in: [tag] };
-  if (minCalories || maxCalories) {
-    filter.calories = {};
-    if (minCalories) filter.calories.$gte = Number(minCalories);
-    if (maxCalories) filter.calories.$lte = Number(maxCalories);
-  }
-  if (maxPrepTime) filter.prepTime = { $lte: Number(maxPrepTime) };
-
+  if (minPrepTime || maxPrepTime) {
+    filter.prepTime = {};
+    if (minPrepTime) filter.prepTime.$gte = Number(minPrepTime);
+    if (maxPrepTime) filter.prepTime.$lte = Number(maxPrepTime);
   
-
+    // Cleanup: If $gte > $lte, it's invalid
+    if (
+      filter.prepTime.$gte !== undefined &&
+      filter.prepTime.$lte !== undefined &&
+      filter.prepTime.$gte > filter.prepTime.$lte
+    ) {
+      delete filter.prepTime; // remove invalid filter
+    }
+  }
   try {
     const recipes = await Recipe.find(filter).populate('author', 'name avatar');
     res.json(recipes);

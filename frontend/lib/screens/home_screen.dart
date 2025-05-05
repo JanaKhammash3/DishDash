@@ -35,11 +35,11 @@ class _HomeScreenState extends State<HomeScreen> {
   String searchQuery = '';
   final Map<String, Map<String, bool>> _filters = {
     'Calories': {'< 200': false, '200-400': false, '400+': false},
-    'Type': {'Vegan': false, 'Desserts': false, 'Meat': false, 'Keto': false},
-    'Meal Time': {'Breakfast': false, 'Lunch': false, 'Dinner': false},
-    'Quick Meals': {'< 15 min': false, '< 30 min': false},
-    'Soups': {'Veg Soup': false, 'Chicken Soup': false},
+    'Prep Time': {'< 15 min': false, '< 30 min': false, '30+ min': false},
+    'Tags': {'gluten-free': false, 'lactose-free': false, 'spicy': false},
   };
+
+  String customTag = '';
 
   @override
   void initState() {
@@ -96,6 +96,98 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  void _applyFilters() {
+    final Map<String, String> queryParams = {};
+
+    // ✅ Add selectedCategory to query params
+    const dietList = [
+      'Vegan',
+      'Keto',
+      'Low-Carb',
+      'Paleo',
+      'Vegetarian',
+      'None',
+    ];
+    const mealTimeList = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'];
+
+    if (selectedCategory.isNotEmpty) {
+      if (dietList.contains(selectedCategory)) {
+        queryParams['diet'] = selectedCategory;
+      } else if (mealTimeList.contains(selectedCategory)) {
+        queryParams['mealTime'] = selectedCategory;
+      } else {
+        queryParams['tag'] = selectedCategory;
+      }
+    }
+    // Calories
+    if (_filters['Calories'] != null) {
+      final selected =
+          _filters['Calories']!.entries
+              .where((e) => e.value)
+              .map((e) => e.key)
+              .toList();
+      if (selected.contains('< 200')) queryParams['maxCalories'] = '199';
+      if (selected.contains('200-400')) {
+        queryParams['minCalories'] = '200';
+        queryParams['maxCalories'] = '400';
+      }
+      if (selected.contains('400+')) queryParams['minCalories'] = '401';
+    }
+
+    // Prep Time
+    if (_filters['Prep Time'] != null) {
+      final selected =
+          _filters['Prep Time']!.entries
+              .where((e) => e.value)
+              .map((e) => e.key)
+              .toList();
+
+      // Clear any previous values
+      queryParams.remove('minPrepTime');
+      queryParams.remove('maxPrepTime');
+
+      if (selected.contains('< 15 min')) {
+        queryParams['maxPrepTime'] = '14';
+      } else if (selected.contains('< 30 min')) {
+        queryParams['minPrepTime'] = '15';
+        queryParams['maxPrepTime'] = '29';
+      } else if (selected.contains('30+ min')) {
+        queryParams['minPrepTime'] = '30';
+      }
+    }
+    // Tags
+    if (_filters['Tags'] != null) {
+      final tagList =
+          _filters['Tags']!.entries
+              .where((e) => e.value)
+              .map((e) => e.key)
+              .toList();
+      if (tagList.isNotEmpty) {
+        queryParams['tags'] = tagList.join(',');
+      }
+    }
+
+    fetchFilteredRecipes(queryParams);
+  }
+
+  Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
+    final uri = Uri.http(
+      '192.168.68.60:3000',
+      '/api/recipes/filter',
+      queryParams,
+    );
+    print('Applying filters: $uri');
+
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        popularRecipes = data;
+        visibleRecipeCount = 4;
+      });
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -372,6 +464,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 contentPadding: EdgeInsets.zero,
                 activeColor: maroon,
                 value: entry.value,
+                title: Text(
+                  entry.key,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black, // ✅ Force visible color
+                  ),
+                ),
                 onChanged: (val) {
                   setState(() {
                     // Reset all other options in the same category group to false
@@ -379,17 +478,36 @@ class _HomeScreenState extends State<HomeScreen> {
                     _filters[title]![entry.key] = val!;
                   });
 
-                  if (val == true) {
-                    fetchPopularRecipes(
-                      category: entry.key,
-                    ); // Only one active filter at a time
-                  } else {
-                    fetchPopularRecipes(); // fallback to all
-                  }
+                  _applyFilters();
                 },
               ),
             )
             .toList(),
+        if (title == 'Tags')
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: TextField(
+              decoration: const InputDecoration(
+                labelText: 'Add custom tag',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  customTag = value.trim().toLowerCase();
+                });
+              },
+              onSubmitted: (value) {
+                if (value.trim().isNotEmpty &&
+                    !_filters['Tags']!.containsKey(value.trim())) {
+                  setState(() {
+                    _filters['Tags']![value.trim()] = true;
+                    customTag = '';
+                  });
+                }
+              },
+            ),
+          ),
       ],
     );
   }
@@ -419,9 +537,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.filter_list, color: maroon),
-          onPressed: () => Scaffold.of(context).openEndDrawer(),
+        Builder(
+          builder:
+              (context) => IconButton(
+                icon: const Icon(Icons.filter_list, color: maroon),
+                onPressed: () => Scaffold.of(context).openEndDrawer(),
+              ),
         ),
       ],
     );
@@ -432,9 +553,15 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedCategory: selectedCategory,
       onCategorySelected: (category) {
         setState(() {
-          selectedCategory = category;
+          // Toggle selection: unselect if same category clicked again
+          if (selectedCategory == category) {
+            selectedCategory = '';
+          } else {
+            selectedCategory = category;
+          }
         });
-        fetchPopularRecipes(category: category); // ✅ Trigger data reload
+
+        _applyFilters(); // Use unified filter logic including category
       },
     );
   }
