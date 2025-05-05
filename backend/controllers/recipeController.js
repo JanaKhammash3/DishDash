@@ -1,6 +1,6 @@
 const Recipe = require('../models/Recipe');
 
-exports.createRecipe = async (req, res) => {
+exports.createCustomRecipe = async (req, res) => {
   try {
     const {
       title,
@@ -9,32 +9,48 @@ exports.createRecipe = async (req, res) => {
       instructions,
       image,
       calories,
-      diet,        // ✅ NEW
-      mealType,    // ✅ NEW
-      prepTime,    // ✅ NEW
-      tags,        // ✅ NEW (array)
+      diet,
+      mealTime,
+      prepTime,
+      tags,
       author
     } = req.body;
+
+    // Safely normalize ingredients
+    const safeIngredients = Array.isArray(ingredients)
+    ? ingredients.flatMap(i => i.split(',').map(x => x.trim()))
+    : typeof ingredients === 'string'
+      ? ingredients.split(',').map(i => i.trim())
+      : [];
+
+    // Safely normalize tags
+    const safeTags = Array.isArray(tags)
+      ? tags
+      : typeof tags === 'string' && tags.trim() !== ''
+        ? [tags.trim()]
+        : [];
 
     const newRecipe = await Recipe.create({
       title,
       description,
-      ingredients,
+      ingredients: safeIngredients,
       instructions,
       image,
       calories,
       diet,
-      mealType,
+      mealTime,
       prepTime,
-      tags,
+      tags: safeTags,
       author
     });
 
     res.status(201).json(newRecipe);
   } catch (err) {
-    res.status(500).json({ message: 'Error creating recipe', error: err.message });
+    console.error('❌ Custom recipe error:', err);
+    res.status(500).json({ message: 'Error creating custom recipe', error: err.message });
   }
 };
+
 
 // GET /api/recipes
 exports.getAllRecipes = async (req, res) => {

@@ -25,6 +25,19 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     fetchSavedRecipes();
   }
 
+  Future<void> markMealAsDoneBackend(
+    String planId,
+    String date,
+    String recipeId,
+  ) async {
+    final url = Uri.parse('http://192.168.68.60:3000/api/mealplans/mark-done');
+    await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'planId': planId, 'date': date, 'recipeId': recipeId}),
+    );
+  }
+
   Future<void> fetchSavedRecipes() async {
     final url = Uri.parse(
       'http://192.168.68.60:3000/api/users/${widget.userId}/savedRecipes',
@@ -214,17 +227,106 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                                 "Add",
                                 style: TextStyle(color: Colors.white),
                               ),
-                              onPressed: () {
+                              onPressed: () async {
                                 if (selectedRecipe != null &&
                                     selectedDate != null) {
-                                  setState(() {
-                                    plannedMeals.add({
-                                      'recipe': selectedRecipe!,
-                                      'date': selectedDate,
-                                      'done': false,
-                                    });
-                                  });
-                                  Navigator.pop(context);
+                                  print(
+                                    '✅ Add button pressed. Recipe and date selected.',
+                                  );
+
+                                  final planResponse = await http.get(
+                                    Uri.parse(
+                                      'http://192.168.68.60:3000/api/mealplans/user/${widget.userId}',
+                                    ),
+                                  );
+
+                                  print(
+                                    '📥 Plan response status: ${planResponse.statusCode}',
+                                  );
+                                  if (planResponse.statusCode == 200) {
+                                    final plans = jsonDecode(planResponse.body);
+                                    var plan =
+                                        plans.isNotEmpty ? plans.last : null;
+
+                                    if (plan == null) {
+                                      // 👇 Create a new meal plan if none exists
+                                      final createResponse = await http.post(
+                                        Uri.parse(
+                                          'http://192.168.68.60:3000/api/mealplans',
+                                        ),
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: jsonEncode({
+                                          'userId': widget.userId,
+                                          'weekStartDate': DateTime.now()
+                                              .toIso8601String()
+                                              .substring(0, 10), // optional
+                                        }),
+                                      );
+
+                                      if (createResponse.statusCode == 201) {
+                                        final createdPlan = jsonDecode(
+                                          createResponse.body,
+                                        );
+                                        plan = createdPlan;
+                                        print(
+                                          '🆕 Meal plan created with ID: ${plan['_id']}',
+                                        );
+                                      } else {
+                                        print(
+                                          '❌ Failed to create new meal plan',
+                                        );
+                                        return;
+                                      }
+                                    }
+
+                                    if (plan != null) {
+                                      final planId = plan['_id'];
+                                      final formattedDate =
+                                          '${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}';
+
+                                      final addResponse = await http.put(
+                                        Uri.parse(
+                                          'http://192.168.68.60:3000/api/mealplans/$planId/add-recipe',
+                                        ),
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: jsonEncode({
+                                          'recipeId': selectedRecipe!['_id'],
+                                          'date': formattedDate,
+                                        }),
+                                      );
+
+                                      print(
+                                        '📤 Add recipe response: ${addResponse.statusCode}',
+                                      );
+                                      print(
+                                        '📤 Response body: ${addResponse.body}',
+                                      );
+
+                                      if (addResponse.statusCode == 200) {
+                                        setState(() {
+                                          plannedMeals.add({
+                                            'planId': planId,
+                                            'date': selectedDate,
+                                            'recipe': selectedRecipe!,
+                                            'done': false,
+                                          });
+                                        });
+                                        Navigator.pop(context);
+                                      } else {
+                                        print('❌ Failed to add recipe to plan');
+                                      }
+                                    } else {
+                                      print('⚠️ No meal plan found for user.');
+                                    }
+                                  } else {
+                                    print('❌ Failed to fetch user meal plans');
+                                  }
+                                } else {
+                                  print('⚠️ Missing recipe or date');
                                 }
                               },
                             ),
@@ -277,7 +379,10 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(backgroundColor: maroon),
-                      child: const Text("Rate"),
+                      child: const Text(
+                        "Rate",
+                        style: TextStyle(color: Colors.white),
+                      ),
                       onPressed: () async {
                         if (selectedRating > 0) {
                           await rateRecipe(recipe['_id'], selectedRating);
@@ -303,7 +408,16 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     setState(() {
       plannedMeals[index]['done'] = true;
     });
-    _showRatingModal(plannedMeals[index]['recipe']);
+
+    final meal = plannedMeals[index];
+    final planId = meal['planId'];
+    final date =
+        "${meal['date'].year}-${meal['date'].month.toString().padLeft(2, '0')}-${meal['date'].day.toString().padLeft(2, '0')}";
+    final recipeId = meal['recipe']['_id'];
+
+    markMealAsDoneBackend(planId, date, recipeId);
+
+    _showRatingModal(meal['recipe']);
   }
 
   void _removeMeal(int index) {

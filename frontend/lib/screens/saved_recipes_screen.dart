@@ -77,12 +77,13 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+
               Row(
                 children: [
                   const Text("📝 ", style: TextStyle(fontSize: 18)),
                   Expanded(
                     child: Text(
-                      recipe['description'] ?? 'No description.',
+                      recipe['instructions'] ?? 'No instructions provided.',
                       style: const TextStyle(fontSize: 14),
                     ),
                   ),

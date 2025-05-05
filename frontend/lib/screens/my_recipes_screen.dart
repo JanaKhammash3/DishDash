@@ -96,6 +96,12 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     String ingredients = '';
     String calories = '';
     String description = '';
+    String diet = 'None';
+    String mealTime = 'Breakfast';
+    String tagInput = '';
+    List<String> tags = [];
+    String prepTime = '';
+    String instructions = '';
 
     showDialog(
       context: context,
@@ -113,7 +119,9 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
               ),
               content: SingleChildScrollView(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Image Picker
                     GestureDetector(
                       onTap: () async {
                         final picker = ImagePicker();
@@ -122,9 +130,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                         );
                         if (picked != null) {
                           final bytes = await picked.readAsBytes();
-                          setModalState(() {
-                            imageBytes = bytes;
-                          });
+                          setModalState(() => imageBytes = bytes);
                         }
                       },
                       child: Container(
@@ -149,6 +155,8 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
+
+                    // Inputs
                     TextField(
                       decoration: const InputDecoration(labelText: 'Title'),
                       onChanged: (val) => title = val,
@@ -171,6 +179,112 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       maxLines: 3,
                       onChanged: (val) => description = val,
                     ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Instructions',
+                      ),
+                      maxLines: 3,
+                      onChanged: (val) => instructions = val,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Preparation Time (minutes)',
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (val) => prepTime = val,
+                    ),
+
+                    // Diet Dropdown
+                    DropdownButtonFormField<String>(
+                      value: diet,
+                      decoration: const InputDecoration(labelText: 'Diet'),
+                      items:
+                          [
+                                'None',
+                                'Vegan',
+                                'Keto',
+                                'Low-Carb',
+                                'Paleo',
+                                'Vegetarian',
+                              ]
+                              .map(
+                                (d) =>
+                                    DropdownMenuItem(value: d, child: Text(d)),
+                              )
+                              .toList(),
+                      onChanged: (val) => setModalState(() => diet = val!),
+                    ),
+
+                    // Meal Time Dropdown
+                    DropdownButtonFormField<String>(
+                      value: mealTime,
+                      decoration: const InputDecoration(labelText: 'Meal Time'),
+                      items:
+                          ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert']
+                              .map(
+                                (m) =>
+                                    DropdownMenuItem(value: m, child: Text(m)),
+                              )
+                              .toList(),
+                      onChanged: (val) => setModalState(() => mealTime = val!),
+                    ),
+
+                    // Tags Section
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      children:
+                          tags.map((tag) {
+                            return Chip(
+                              label: Text(tag),
+                              onDeleted:
+                                  () => setModalState(() => tags.remove(tag)),
+                            );
+                          }).toList(),
+                    ),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Add Tag',
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () {
+                            if (tagInput.isNotEmpty &&
+                                !tags.contains(tagInput)) {
+                              setModalState(() {
+                                tags.add(tagInput.trim());
+                                tagInput = '';
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      onChanged: (val) => tagInput = val,
+                      onSubmitted: (_) {
+                        if (tagInput.isNotEmpty && !tags.contains(tagInput)) {
+                          setModalState(() {
+                            tags.add(tagInput.trim());
+                            tagInput = '';
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      children:
+                          ['gluten-free', 'spicy', 'lactose-free'].map((
+                            suggestedTag,
+                          ) {
+                            return ActionChip(
+                              label: Text(suggestedTag),
+                              onPressed: () {
+                                if (!tags.contains(suggestedTag)) {
+                                  setModalState(() => tags.add(suggestedTag));
+                                }
+                              },
+                            );
+                          }).toList(),
+                    ),
                   ],
                 ),
               ),
@@ -190,11 +304,17 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
                     final body = {
                       'title': title,
-                      'ingredients': ingredients,
-                      'calories': calories,
+                      'ingredients':
+                          ingredients.split(',').map((e) => e.trim()).toList(),
+                      'calories': int.tryParse(calories) ?? 0,
                       'description': description,
+                      'instructions': instructions,
                       'image':
                           imageBytes != null ? base64Encode(imageBytes!) : '',
+                      'diet': diet,
+                      'mealTime': mealTime,
+                      'tags': tags,
+                      'prepTime': int.tryParse(prepTime) ?? 0,
                     };
 
                     final res = await http.post(
@@ -205,9 +325,11 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       body: jsonEncode(body),
                     );
 
-                    if (res.statusCode == 200) {
+                    if (res.statusCode == 201) {
                       Navigator.pop(context);
-                      fetchUserRecipes();
+                      setState(() {
+                        fetchUserRecipes(); // 🔄 Wrap in setState to trigger rebuild
+                      });
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Recipe added successfully!'),

@@ -183,10 +183,44 @@ class _HomeScreenState extends State<HomeScreen> {
     final response = await http.get(uri);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
+
+      // 🔥 Sort by average rating (same as fetchPopularRecipes)
+      data.sort((a, b) {
+        final aRatings = (a['ratings'] as List?)?.cast<num>() ?? [];
+        final bRatings = (b['ratings'] as List?)?.cast<num>() ?? [];
+        final aAvg =
+            aRatings.isNotEmpty
+                ? aRatings.reduce((x, y) => x + y) / aRatings.length
+                : 0.0;
+        final bAvg =
+            bRatings.isNotEmpty
+                ? bRatings.reduce((x, y) => x + y) / bRatings.length
+                : 0.0;
+        return bAvg.compareTo(aAvg);
+      });
+
+      final updatedRecipes =
+          data.map((recipe) {
+            final image = recipe['image'];
+            final imagePath =
+                (image != null && image.isNotEmpty)
+                    ? 'http://192.168.68.60:3000/images/$image'
+                    : 'assets/placeholder.png';
+
+            return {
+              ...recipe,
+              'imagePath': imagePath,
+              'authorName': recipe['author']?['name'],
+              'authorAvatar': recipe['author']?['avatar'],
+            };
+          }).toList();
+
       setState(() {
-        popularRecipes = data;
+        popularRecipes = updatedRecipes;
         visibleRecipeCount = 4;
       });
+    } else {
+      print('Error fetching filtered recipes: ${response.statusCode}');
     }
   }
 

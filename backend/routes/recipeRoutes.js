@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
-  createRecipe,
+  createCustomRecipe,
   getAllRecipes,
   getRecipeById,
   searchByIngredients,
@@ -13,7 +13,7 @@ const {
   deleteRecipe
 } = require('../controllers/recipeController');
 
-router.post('/', createRecipe);
+router.post('/', createCustomRecipe);
 router.get('/popular', getPopularRecipes);
 router.get('/recommendations', getRecommendedRecipes);
 router.get('/search', searchRecipes);

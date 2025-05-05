@@ -179,31 +179,65 @@ exports.getSavedRecipes = async (req, res) => {
 // POST /api/users/:userId/customRecipe
 exports.createCustomRecipe = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { title, ingredients, calories, description, image } = req.body;
+    const userId = req.params.userId;
 
-    const recipe = new Recipe({
+    const {
       title,
-      ingredients: ingredients.split(',').map(i => i.trim()),
-      calories,
       description,
+      ingredients,
+      instructions,
       image,
-      author: userId,  // ✅ store reference to user
-      ratings: [],
+      calories,
+      diet,
+      mealTime,
+      prepTime,
+      tags
+    } = req.body;
+
+    const safeIngredients = Array.isArray(ingredients)
+      ? ingredients
+      : typeof ingredients === 'string'
+        ? ingredients.split(',').map(i => i.trim())
+        : [];
+
+    const safeTags = Array.isArray(tags)
+      ? tags
+      : typeof tags === 'string' && tags.trim() !== ''
+        ? [tags.trim()]
+        : [];
+
+    const newRecipe = await Recipe.create({
+      title,
+      description,
+      ingredients: safeIngredients,
+      instructions,
+      image,
+      calories,
+      diet,
+      mealTime,
+      prepTime,
+      tags: safeTags,
+      author: userId  // ✅ this is now guaranteed
     });
 
-    await recipe.save();
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        recipes: newRecipe._id,        // ✅ For My Recipes
+        savedRecipes: newRecipe._id    // ✅ For Saved Recipes screen
+      }
+    });
 
-    const user = await User.findById(userId);
-    user.recipes.push(recipe._id); // ✅ add to user's recipes
-    user.save();
+    const populatedRecipe = await Recipe.findById(newRecipe._id).populate('author', 'name avatar');
 
-    res.status(200).json({ message: 'Custom recipe created', recipe });
+    res.status(201).json(populatedRecipe);
   } catch (err) {
-    console.error('Custom recipe error:', err);
-    res.status(500).json({ error: 'Failed to create custom recipe' });
+    console.error('❌ Custom recipe error:', err);
+    res.status(500).json({ message: 'Error creating custom recipe', error: err.message });
   }
 };
+
+
+
 exports.getMyRecipes = async (req, res) => {
   try {
     const userId = req.params.userId;

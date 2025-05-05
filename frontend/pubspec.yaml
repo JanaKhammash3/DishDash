@@ -24,6 +24,8 @@ dependencies:
   latlong2: 0.9.1
   image: ^4.0.17
   flutter_rating_bar: ^4.0.1
+  percent_indicator: ^4.2.2
+  fl_chart: ^0.64.0
 
 dev_dependencies:
   flutter_test:

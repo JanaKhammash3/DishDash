@@ -13,6 +13,7 @@ import 'package:frontend/screens/meal_plan_screen.dart';
 import 'package:image/image.dart' as img;
 import 'package:frontend/screens/saved_recipes_screen.dart' as saved;
 import 'package:frontend/screens/my_recipes_screen.dart';
+import 'package:frontend/screens/calory_score_screen.dart' as saved;
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -311,7 +312,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icons.fitness_center,
             'Calorie Score',
             'Track your nutritional progress',
-            () {},
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => saved.CaloryScoreScreen(userId: widget.userId),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 10),
           _buildCard(
