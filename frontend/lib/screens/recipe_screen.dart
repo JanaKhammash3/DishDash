@@ -4,7 +4,20 @@ import 'package:frontend/colors.dart';
 import 'package:frontend/screens/recipe_detailed_screen.dart';
 
 class RecipeScreen extends StatefulWidget {
-  const RecipeScreen({super.key});
+  final String title;
+  final String imagePath;
+  final double rating;
+  final List<String> ingredients;
+  final String description;
+
+  const RecipeScreen({
+    super.key,
+    required this.title,
+    required this.imagePath,
+    required this.rating,
+    required this.ingredients,
+    required this.description,
+  });
 
   @override
   State<RecipeScreen> createState() => _RecipeScreenState();
@@ -12,13 +25,24 @@ class RecipeScreen extends StatefulWidget {
 
 class _RecipeScreenState extends State<RecipeScreen> {
   bool isSaved = false;
-  double rating = 4;
+  late double rating;
+
+  @override
+  void initState() {
+    super.initState();
+    rating = widget.rating;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isNetwork = widget.imagePath.startsWith('http');
+    final imageProvider =
+        isNetwork
+            ? NetworkImage(widget.imagePath)
+            : const AssetImage('assets/placeholder.png') as ImageProvider;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
-
       appBar: AppBar(
         backgroundColor: maroon,
         elevation: 0,
@@ -38,14 +62,11 @@ class _RecipeScreenState extends State<RecipeScreen> {
               color: Colors.white,
             ),
             onPressed: () {
-              setState(() {
-                isSaved = !isSaved;
-              });
+              setState(() => isSaved = !isSaved);
             },
           ),
         ],
       ),
-
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -53,7 +74,18 @@ class _RecipeScreenState extends State<RecipeScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const RecipeDetailedScreen()),
+                MaterialPageRoute(
+                  builder:
+                      (_) => RecipeDetailedScreen(
+                        title: widget.title,
+                        imagePath: widget.imagePath,
+                        description: widget.description,
+                        ingredients: widget.ingredients,
+                        prepTime: '25 min', // Use actual data if available
+                        difficulty: 'Easy', // Use actual data if available
+                        rating: rating,
+                      ),
+                ),
               );
             },
             child: Card(
@@ -66,14 +98,11 @@ class _RecipeScreenState extends State<RecipeScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 70,
-                      backgroundImage: const AssetImage('assets/salad.jpg'),
-                    ),
+                    CircleAvatar(radius: 70, backgroundImage: imageProvider),
                     const SizedBox(height: 12),
-                    const Text(
-                      "Apple In Hot Toffee",
-                      style: TextStyle(
+                    Text(
+                      widget.title,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -97,10 +126,15 @@ class _RecipeScreenState extends State<RecipeScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vides, quid faciat.",
+                    Text(
+                      widget.description.isNotEmpty
+                          ? widget.description
+                          : 'No description provided.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.black87),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     const Row(
@@ -118,27 +152,20 @@ class _RecipeScreenState extends State<RecipeScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 24),
           const Text(
             "Ingredients",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 10),
-
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children: [
-              _ingredientTextBox("Romaine Lettuce"),
-              _ingredientTextBox("Olives"),
-              _ingredientTextBox("Tomatoes"),
-              _ingredientTextBox("Greens"),
-              _ingredientTextBox("Feta Cheese"),
-              _ingredientTextBox("Dressing"),
-            ],
+            children:
+                widget.ingredients
+                    .map((item) => _ingredientTextBox(item))
+                    .toList(),
           ),
-
           const SizedBox(height: 30),
         ],
       ),

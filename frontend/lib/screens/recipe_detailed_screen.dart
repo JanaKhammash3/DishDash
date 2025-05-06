@@ -2,13 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
 
 class RecipeDetailedScreen extends StatelessWidget {
-  const RecipeDetailedScreen({super.key});
+  final String title;
+  final String imagePath;
+  final String description;
+  final List<String> ingredients;
+  final String prepTime;
+  final String difficulty;
+  final double rating;
+
+  const RecipeDetailedScreen({
+    super.key,
+    required this.title,
+    required this.imagePath,
+    required this.description,
+    required this.ingredients,
+    required this.prepTime,
+    required this.difficulty,
+    required this.rating,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isNetwork = imagePath.startsWith('http');
+    final imageProvider =
+        isNetwork
+            ? NetworkImage(imagePath)
+            : const AssetImage('assets/placeholder.png') as ImageProvider;
+
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         backgroundColor: maroon,
         elevation: 0,
@@ -22,28 +44,21 @@ class RecipeDetailedScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // 🍲 Recipe Image
+          // 🍲 Image
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: Image.asset(
-              'assets/salad.jpg',
-              height: 200,
-              fit: BoxFit.cover,
-            ),
+            child: Image(image: imageProvider, height: 200, fit: BoxFit.cover),
           ),
-
           const SizedBox(height: 16),
 
           // 🧾 Title
-          const Text(
-            "Spicy Hot Pot",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 8),
 
           // 📄 Description
@@ -52,8 +67,8 @@ class RecipeDetailedScreen extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
-          const Text(
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Totum mi di externum est.",
+          Text(
+            description.isNotEmpty ? description : 'No description provided.',
           ),
 
           const SizedBox(height: 20),
@@ -61,26 +76,26 @@ class RecipeDetailedScreen extends StatelessWidget {
           // ⏱ Info Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Row(
                 children: [
-                  Icon(Icons.schedule, color: Colors.grey),
-                  SizedBox(width: 5),
-                  Text("25 min"),
+                  const Icon(Icons.schedule, color: Colors.grey),
+                  const SizedBox(width: 5),
+                  Text(prepTime),
                 ],
               ),
               Row(
                 children: [
-                  Icon(Icons.local_fire_department, color: Colors.grey),
-                  SizedBox(width: 5),
-                  Text("Easy"),
+                  const Icon(Icons.local_fire_department, color: Colors.grey),
+                  const SizedBox(width: 5),
+                  Text(difficulty),
                 ],
               ),
               Row(
                 children: [
-                  Icon(Icons.star, color: Colors.amber),
-                  SizedBox(width: 5),
-                  Text("4.5"),
+                  const Icon(Icons.star, color: Colors.amber),
+                  const SizedBox(width: 5),
+                  Text(rating.toStringAsFixed(1)),
                 ],
               ),
             ],
@@ -94,13 +109,15 @@ class RecipeDetailedScreen extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 8),
-          const Text(
-            "• 2 cups chopped vegetables\n"
-            "• 1 tbsp olive oil\n"
-            "• 1 tsp chili flakes\n"
-            "• Salt and pepper to taste\n"
-            "• Fresh herbs for garnish",
-            style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
+          Text(
+            ingredients.isNotEmpty
+                ? ingredients.map((e) => "• $e").join("\n")
+                : "N/A",
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+              height: 1.5,
+            ),
           ),
 
           const SizedBox(height: 30),
