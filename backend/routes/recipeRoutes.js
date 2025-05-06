@@ -10,7 +10,8 @@ const {
   getRecommendedRecipes,
   searchRecipes,
   filterRecipes,
-  deleteRecipe
+  deleteRecipe,
+  toggleLike
 } = require('../controllers/recipeController');
 
 router.post('/', createCustomRecipe);
@@ -23,8 +24,7 @@ router.get('/', getAllRecipes);
 router.post('/:id/rate', rateRecipe);
 router.patch('/rate/:id', rateRecipe);
 router.delete('/:id', deleteRecipe);
-
-// ✅ This must be last
+router.post('/:id/like', toggleLike); 
 router.get('/:id', getRecipeById);
 
 

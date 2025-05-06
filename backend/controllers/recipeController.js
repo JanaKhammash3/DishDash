@@ -212,3 +212,36 @@ exports.getAllRecipes = async (req, res) => {
   const recipes = await Recipe.find().populate('author', 'name avatar');
   res.json(recipes);
 };
+
+// Toggle like/unlike
+exports.toggleLike = async (req, res) => {
+  const { userId } = req.body;
+  const recipeId = req.params.id;
+
+  try {
+    const recipe = await Recipe.findById(recipeId);
+    if (!recipe) return res.status(404).json({ message: 'Recipe not found' });
+
+    const alreadyLiked = recipe.likes.includes(userId);
+
+    if (alreadyLiked) {
+      recipe.likes = recipe.likes.filter(id => id.toString() !== userId);
+    } else {
+      recipe.likes.push(userId);
+    }
+
+    await recipe.save();
+
+    res.status(200).json({
+      message: alreadyLiked ? 'Unliked' : 'Liked',
+      liked: !alreadyLiked,
+      likesCount: recipe.likes.length,
+      likes: recipe.likes, // ✅ add this
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+};
+
+

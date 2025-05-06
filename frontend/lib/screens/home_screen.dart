@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/profile_screen.dart';
-import 'package:frontend/screens/community_screen.dart';
+import 'package:frontend/screens/community_screen.dart' as saved;
 import 'package:frontend/screens/meal_plan_screen.dart';
 import 'package:frontend/screens/recipe_screen.dart';
 import 'package:frontend/screens/grocery_screen.dart';
@@ -765,7 +765,9 @@ class _HomeScreenState extends State<HomeScreen> {
               'Community',
               () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CommunityScreen()),
+                MaterialPageRoute(
+                  builder: (_) => saved.CommunityScreen(userId: widget.userId),
+                ),
               ),
             ),
             bottomNavItem(LucideIcons.calendar, 'Meal Plan', () async {

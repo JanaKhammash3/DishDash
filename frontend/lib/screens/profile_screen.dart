@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/home_screen.dart';
 import 'package:frontend/screens/login_screen.dart';
-import 'package:frontend/screens/community_screen.dart';
+import 'package:frontend/screens/community_screen.dart' as saved;
 import 'package:frontend/screens/grocery_screen.dart';
 import 'package:frontend/screens/meal_plan_screen.dart';
 import 'package:image/image.dart' as img;
@@ -202,7 +202,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               navIcon(Icons.people, () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CommunityScreen()),
+                  MaterialPageRoute(
+                    builder:
+                        (_) => saved.CommunityScreen(userId: widget.userId),
+                  ),
                 );
               }),
               const SizedBox(width: 40), // space for FAB
