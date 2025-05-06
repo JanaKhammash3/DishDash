@@ -674,6 +674,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 calories: recipe['calories'] ?? 0,
                 authorName: recipe['author']?['name'],
                 authorAvatar: recipe['author']?['avatar'],
+                prepTime: recipe['prepTime'] ?? 0,
+                difficulty: recipe['difficulty'] ?? 'Easy',
               );
             },
           ),
@@ -849,6 +851,8 @@ class _HomeScreenState extends State<HomeScreen> {
     int calories = 0,
     String? authorName,
     String? authorAvatar,
+    int prepTime = 0,
+    String difficulty = 'Easy',
   }) {
     return GestureDetector(
       onTap: () {
@@ -864,6 +868,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ingredients.map((e) => e.toString()),
                   ),
                   description: description,
+                  prepTime: prepTime,
+                  difficulty: difficulty,
                 ),
           ),
         );

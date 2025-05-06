@@ -9,6 +9,8 @@ class RecipeScreen extends StatefulWidget {
   final double rating;
   final List<String> ingredients;
   final String description;
+  final int prepTime;
+  final String difficulty;
 
   const RecipeScreen({
     super.key,
@@ -17,6 +19,8 @@ class RecipeScreen extends StatefulWidget {
     required this.rating,
     required this.ingredients,
     required this.description,
+    required this.prepTime,
+    required this.difficulty,
   });
 
   @override
@@ -81,8 +85,8 @@ class _RecipeScreenState extends State<RecipeScreen> {
                         imagePath: widget.imagePath,
                         description: widget.description,
                         ingredients: widget.ingredients,
-                        prepTime: '25 min', // Use actual data if available
-                        difficulty: 'Easy', // Use actual data if available
+                        prepTime: '${widget.prepTime} min',
+                        difficulty: widget.difficulty,
                         rating: rating,
                       ),
                 ),
@@ -161,10 +165,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children:
-                widget.ingredients
-                    .map((item) => _ingredientTextBox(item))
-                    .toList(),
+            children: widget.ingredients.map(_ingredientTextBox).toList(),
           ),
           const SizedBox(height: 30),
         ],

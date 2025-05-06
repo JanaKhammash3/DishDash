@@ -16,6 +16,7 @@ class MyRecipesScreen extends StatefulWidget {
 class _MyRecipesScreenState extends State<MyRecipesScreen> {
   List<dynamic> userRecipes = [];
   Uint8List? imageBytes;
+
   ImageProvider _getImageProvider(String? image) {
     if (image != null && image.startsWith('http')) {
       return NetworkImage(image);
@@ -57,6 +58,8 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
               ),
               const SizedBox(height: 12),
               Text("🔥 Calories: ${recipe['calories']} kcal"),
+              const SizedBox(height: 8),
+              Text("⚙ Difficulty: ${recipe['difficulty'] ?? 'N/A'}"),
               const SizedBox(height: 12),
               const Text(
                 "📝 Description:",
@@ -92,16 +95,17 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   }
 
   void _openCreateModal() {
-    String title = '';
-    String ingredients = '';
-    String calories = '';
-    String description = '';
-    String diet = 'None';
-    String mealTime = 'Breakfast';
-    String tagInput = '';
+    String title = '',
+        ingredients = '',
+        calories = '',
+        description = '',
+        diet = 'None';
+    String mealTime = 'Breakfast',
+        tagInput = '',
+        prepTime = '',
+        instructions = '',
+        difficulty = 'Easy';
     List<String> tags = [];
-    String prepTime = '';
-    String instructions = '';
 
     showDialog(
       context: context,
@@ -121,7 +125,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image Picker
                     GestureDetector(
                       onTap: () async {
                         final picker = ImagePicker();
@@ -155,8 +158,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-
-                    // Inputs
                     TextField(
                       decoration: const InputDecoration(labelText: 'Title'),
                       onChanged: (val) => title = val,
@@ -194,7 +195,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       onChanged: (val) => prepTime = val,
                     ),
 
-                    // Diet Dropdown
                     DropdownButtonFormField<String>(
                       value: diet,
                       decoration: const InputDecoration(labelText: 'Diet'),
@@ -214,8 +214,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               .toList(),
                       onChanged: (val) => setModalState(() => diet = val!),
                     ),
-
-                    // Meal Time Dropdown
                     DropdownButtonFormField<String>(
                       value: mealTime,
                       decoration: const InputDecoration(labelText: 'Meal Time'),
@@ -228,19 +226,36 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               .toList(),
                       onChanged: (val) => setModalState(() => mealTime = val!),
                     ),
+                    DropdownButtonFormField<String>(
+                      value: difficulty,
+                      decoration: const InputDecoration(
+                        labelText: 'Difficulty',
+                      ),
+                      items:
+                          ['Easy', 'Medium', 'Hard']
+                              .map(
+                                (d) =>
+                                    DropdownMenuItem(value: d, child: Text(d)),
+                              )
+                              .toList(),
+                      onChanged:
+                          (val) => setModalState(() => difficulty = val!),
+                    ),
 
-                    // Tags Section
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 6,
                       children:
-                          tags.map((tag) {
-                            return Chip(
-                              label: Text(tag),
-                              onDeleted:
-                                  () => setModalState(() => tags.remove(tag)),
-                            );
-                          }).toList(),
+                          tags
+                              .map(
+                                (tag) => Chip(
+                                  label: Text(tag),
+                                  onDeleted:
+                                      () =>
+                                          setModalState(() => tags.remove(tag)),
+                                ),
+                              )
+                              .toList(),
                     ),
                     TextField(
                       decoration: InputDecoration(
@@ -315,6 +330,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       'mealTime': mealTime,
                       'tags': tags,
                       'prepTime': int.tryParse(prepTime) ?? 0,
+                      'difficulty': difficulty,
                     };
 
                     final res = await http.post(
@@ -327,9 +343,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
                     if (res.statusCode == 201) {
                       Navigator.pop(context);
-                      setState(() {
-                        fetchUserRecipes(); // 🔄 Wrap in setState to trigger rebuild
-                      });
+                      setState(() => fetchUserRecipes());
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Recipe added successfully!'),
@@ -391,7 +405,9 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            subtitle: Text('${r['calories']} calories'),
+                            subtitle: Text(
+                              '${r['calories']} cal • ${r['difficulty'] ?? 'N/A'}',
+                            ),
                             trailing: const Icon(
                               Icons.arrow_forward_ios,
                               size: 16,
