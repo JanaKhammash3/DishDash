@@ -1,4 +1,3 @@
-// lib/widgets/category_filters.dart
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../colors.dart';
@@ -37,35 +36,39 @@ class CategoryFilters extends StatelessWidget {
         itemBuilder: (_, index) {
           final category = categories[index];
           final isSelected = selectedCategory == category['label'];
+          final Color bgColor = isSelected ? Colors.white : maroon;
+          final Color textColor = isSelected ? maroon : Colors.white;
+
           return GestureDetector(
             onTap: () => onCategorySelected(category['label']! as String),
             child: Container(
+              width: 90,
               margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.black : maroon,
+                color: bgColor,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: maroon),
               ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      category['icon'] as IconData,
-                      color: Colors.white,
-                      size: 20,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    category['icon'] as IconData,
+                    color: textColor,
+                    size: 20,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    category['label'] as String,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      category['label'] as String,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           );
