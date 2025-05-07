@@ -247,3 +247,45 @@ exports.getMyRecipes = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch user recipes', error: err.message });
   }
 };
+// Toggle follow/unfollow
+exports.toggleFollow = async (req, res) => {
+  const { userId, targetUserId } = req.body;
+
+  if (userId === targetUserId) {
+    return res.status(400).json({ message: "Cannot follow yourself" });
+  }
+
+  const user = await User.findById(userId);
+  const target = await User.findById(targetUserId);
+
+  if (!user || !target) return res.status(404).json({ message: "User not found" });
+
+  const isFollowing = user.following.includes(targetUserId);
+
+  if (isFollowing) {
+    user.following.pull(targetUserId);
+  } else {
+    user.following.push(targetUserId);
+  }
+
+  await user.save();
+
+  const followers = await User.countDocuments({ following: targetUserId });
+
+  res.json({
+    following: user.following,
+    isFollowing: !isFollowing,
+    followers
+  });
+};
+exports.getFollowerCount = async (req, res) => {
+  try {
+    const { id } = req.params; // id of profile being viewed
+    const count = await User.countDocuments({ following: id }); // 🔥 correct query
+    res.json({ count });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch follower count' });
+  }
+};
+

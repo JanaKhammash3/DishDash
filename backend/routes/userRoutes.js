@@ -11,7 +11,9 @@ const {
   unsaveRecipe,
   getSavedRecipes,
   createCustomRecipe,
-  getMyRecipes
+  getMyRecipes,
+  toggleFollow,
+  getFollowerCount
 } = require('../controllers/userController');
 
 router.post('/register', register);
@@ -26,5 +28,17 @@ router.post('/:userId/unsaveRecipe', unsaveRecipe);
 router.get('/:id/savedRecipes', getSavedRecipes);
 router.post('/:userId/customRecipe', createCustomRecipe);
 router.get('/:userId/myRecipes', getMyRecipes);
-
+router.post('/toggleFollow', toggleFollow);
+// routes/userRoutes.js
+router.get('/followers/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const allUsers = await User.find({ following: userId });
+    res.json({ followers: allUsers.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router;
+router.get('/:id/followers/count', getFollowerCount);
+
