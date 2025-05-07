@@ -11,6 +11,7 @@ class RecipeScreen extends StatefulWidget {
   final String description;
   final int prepTime;
   final String difficulty;
+  final String instructions;
 
   const RecipeScreen({
     super.key,
@@ -21,6 +22,7 @@ class RecipeScreen extends StatefulWidget {
     required this.description,
     required this.prepTime,
     required this.difficulty,
+    required this.instructions,
   });
 
   @override
@@ -88,6 +90,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
                         prepTime: '${widget.prepTime} min',
                         difficulty: widget.difficulty,
                         rating: rating,
+                        instructions: widget.instructions,
                       ),
                 ),
               );
@@ -124,9 +127,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
                           (context, _) =>
                               const Icon(Icons.star, color: Colors.amber),
                       onRatingUpdate: (newRating) {
-                        setState(() {
-                          rating = newRating;
-                        });
+                        setState(() => rating = newRating);
                       },
                     ),
                     const SizedBox(height: 12),

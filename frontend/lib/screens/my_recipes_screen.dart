@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
+import 'package:frontend/screens/recipe_screen.dart';
 
 class MyRecipesScreen extends StatefulWidget {
   final String userId;
@@ -35,62 +36,13 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     fetchUserRecipes();
   }
 
-  void _showRecipeModal(dynamic recipe) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                recipe['title'] ?? '',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text("🔥 Calories: ${recipe['calories']} kcal"),
-              const SizedBox(height: 8),
-              Text("⚙ Difficulty: ${recipe['difficulty'] ?? 'N/A'}"),
-              const SizedBox(height: 12),
-              const Text(
-                "📝 Description:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(recipe['description'] ?? 'No description'),
-              const SizedBox(height: 12),
-              const Text(
-                "🥬 Ingredients:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                (recipe['ingredients'] as List<dynamic>?)?.join(', ') ?? 'N/A',
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> fetchUserRecipes() async {
     final url = Uri.parse(
       'http://192.168.0.103:3000/api/users/${widget.userId}/myRecipes',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
-      setState(() {
-        userRecipes = jsonDecode(res.body);
-      });
+      setState(() => userRecipes = jsonDecode(res.body));
     }
   }
 
@@ -194,7 +146,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       keyboardType: TextInputType.number,
                       onChanged: (val) => prepTime = val,
                     ),
-
                     DropdownButtonFormField<String>(
                       value: diet,
                       decoration: const InputDecoration(labelText: 'Diet'),
@@ -241,22 +192,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       onChanged:
                           (val) => setModalState(() => difficulty = val!),
                     ),
-
                     const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      children:
-                          tags
-                              .map(
-                                (tag) => Chip(
-                                  label: Text(tag),
-                                  onDeleted:
-                                      () =>
-                                          setModalState(() => tags.remove(tag)),
-                                ),
-                              )
-                              .toList(),
-                    ),
                     TextField(
                       decoration: InputDecoration(
                         labelText: 'Add Tag',
@@ -283,23 +219,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                         }
                       },
                     ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      children:
-                          ['gluten-free', 'spicy', 'lactose-free'].map((
-                            suggestedTag,
-                          ) {
-                            return ActionChip(
-                              label: Text(suggestedTag),
-                              onPressed: () {
-                                if (!tags.contains(suggestedTag)) {
-                                  setModalState(() => tags.add(suggestedTag));
-                                }
-                              },
-                            );
-                          }).toList(),
-                    ),
                   ],
                 ),
               ),
@@ -316,7 +235,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                   ),
                   onPressed: () async {
                     if (title.isEmpty || calories.isEmpty) return;
-
                     final body = {
                       'title': title,
                       'ingredients':
@@ -332,7 +250,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       'prepTime': int.tryParse(prepTime) ?? 0,
                       'difficulty': difficulty,
                     };
-
                     final res = await http.post(
                       Uri.parse(
                         'http://192.168.0.103:3000/api/users/${widget.userId}/customRecipe',
@@ -340,7 +257,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
                     );
-
                     if (res.statusCode == 201) {
                       Navigator.pop(context);
                       setState(() => fetchUserRecipes());
@@ -412,7 +328,28 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               Icons.arrow_forward_ios,
                               size: 16,
                             ),
-                            onTap: () => _showRecipeModal(r),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => RecipeScreen(
+                                        title: r['title'] ?? 'Untitled',
+                                        imagePath: r['image'] ?? '',
+                                        rating: 0.0,
+                                        ingredients: List<String>.from(
+                                          (r['ingredients'] ?? []).map(
+                                            (e) => e.toString(),
+                                          ),
+                                        ),
+                                        description: r['description'] ?? '',
+                                        prepTime: r['prepTime'] ?? 0,
+                                        difficulty: r['difficulty'] ?? 'Easy',
+                                        instructions: r['instructions'] ?? '',
+                                      ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },

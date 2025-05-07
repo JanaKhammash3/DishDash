@@ -676,6 +676,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 authorAvatar: recipe['author']?['avatar'],
                 prepTime: recipe['prepTime'] ?? 0,
                 difficulty: recipe['difficulty'] ?? 'Easy',
+                instructions: recipe['instructions'] ?? '',
               );
             },
           ),
@@ -853,6 +854,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String? authorAvatar,
     int prepTime = 0,
     String difficulty = 'Easy',
+    String instructions = '',
   }) {
     return GestureDetector(
       onTap: () {
@@ -870,6 +872,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   description: description,
                   prepTime: prepTime,
                   difficulty: difficulty,
+                  instructions: instructions,
                 ),
           ),
         );
