@@ -26,6 +26,7 @@ dependencies:
   flutter_rating_bar: ^4.0.1
   percent_indicator: ^4.2.2
   fl_chart: ^0.64.0
+  socket_io_client: ^2.0.3
 
 dev_dependencies:
   flutter_test:

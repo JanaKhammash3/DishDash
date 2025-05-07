@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+
+late IO.Socket socket;
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -20,19 +23,55 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool isFollowing = false;
   int followerCount = 0;
   final String baseUrl = 'http://192.168.68.60:3000';
-
+  List<dynamic> messages = [];
+  TextEditingController _chatController = TextEditingController();
   @override
   void initState() {
     super.initState();
     loadUserData();
+    initSocket();
   }
 
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     userId = prefs.getString('userId');
-    await fetchUser();
-    await fetchUserProfile(); // fetch saved recipes
-    await fetchUserPosts();
+
+    await fetchUser(); // loads profile info
+    await fetchFollowerCount(); // loads the follower count
+    await fetchIsFollowing(); // loads follow/unfollow status
+    await fetchUserProfile(); // loads saved recipes
+    await fetchUserPosts(); // fetch their posts
+  }
+
+  Future<void> fetchFollowerCount() async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/users/${widget.userId}/followers/count'),
+    );
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      setState(() {
+        followerCount = data['count'] ?? 0;
+      });
+    }
+  }
+
+  Future<void> fetchIsFollowing() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentUserId = prefs.getString('userId');
+    userId = currentUserId;
+
+    if (currentUserId == null) return;
+
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/profile/$currentUserId'),
+    );
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      final List following = data['following'] ?? [];
+      setState(() {
+        isFollowing = following.contains(widget.userId);
+      });
+    }
   }
 
   Future<void> fetchUserProfile() async {
@@ -58,6 +97,28 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         posts[index]['likes'] = result['likes'];
       });
     }
+  }
+
+  void initSocket() {
+    socket = IO.io(baseUrl, <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+    });
+
+    socket.connect();
+
+    socket.onConnect((_) {
+      print('✅ Socket connected');
+      socket.emit('join', userId);
+    });
+    socket.on('receive_message', (data) {
+      print('📥 Received: $data');
+      setState(() {
+        messages.add(data);
+      });
+    });
+
+    socket.onDisconnect((_) => print('🔌 Disconnected'));
   }
 
   Future<void> toggleSave(String recipeId) async {
@@ -262,7 +323,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() {
         user = data;
       });
-      fetchFollowerData(); // ✅ fetch following state
     }
   }
 
@@ -281,15 +341,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     // Count followers (how many follow widget.userId)
-    final countRes = await http.get(Uri.parse('$baseUrl/api/users'));
+    final countRes = await http.get(
+      Uri.parse('$baseUrl/api/users/${widget.userId}/followers/count'),
+    );
     if (countRes.statusCode == 200) {
-      final allUsers = json.decode(countRes.body);
-      int count =
-          allUsers
-              .where((u) => (u['following'] as List).contains(widget.userId))
-              .length;
+      final data = json.decode(countRes.body);
       setState(() {
-        followerCount = count;
+        followerCount = data['count'];
       });
     }
   }
@@ -305,8 +363,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final result = json.decode(res.body);
       setState(() {
         isFollowing = result['isFollowing'];
-        followerCount = result['followers'];
       });
+
+      // 🔁 refetch follower count
+      await fetchFollowerData();
     }
   }
 
@@ -335,27 +395,197 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  void openChatModal() {
+  void openChatModal() async {
+    messages.clear();
+
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/chats/$userId/${widget.userId}'),
+    );
+    if (res.statusCode == 200) {
+      messages = json.decode(res.body);
+    }
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      isScrollControlled: true,
       builder:
-          (_) => Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Text(
-                  'Chat',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          (_) => StatefulBuilder(
+            builder: (context, setModalState) {
+              // Prevent duplicate listeners on rebuild
+              socket.off('receive_message');
+              socket.on('receive_message', (data) {
+                setModalState(() {
+                  messages.add(data);
+                });
+              });
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                  top: 16,
                 ),
-                SizedBox(height: 12),
-                Text('Chat feature coming soon...'),
-              ],
-            ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Chat',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 400,
+                      child: ListView.builder(
+                        itemCount: messages.length,
+                        itemBuilder: (_, index) {
+                          final msg = messages[index];
+                          final isMe = msg['senderId']['_id'] == userId;
+                          final time = DateTime.tryParse(
+                            msg['timestamp'] ?? '',
+                          );
+                          final formattedTime =
+                              time != null
+                                  ? '${time.hour}:${time.minute.toString().padLeft(2, '0')}'
+                                  : '';
+
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment:
+                                isMe
+                                    ? MainAxisAlignment.end
+                                    : MainAxisAlignment.start,
+                            children: [
+                              if (!isMe)
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundImage: _getImageProvider(
+                                    msg['senderId']?['avatar'],
+                                  ),
+                                ),
+                              if (!isMe) const SizedBox(width: 8),
+
+                              Flexible(
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isMe ? maroon : Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 250,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        msg['senderId']?['name'] ?? 'User',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              isMe
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        msg['message'],
+                                        style: TextStyle(
+                                          color:
+                                              isMe
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Align(
+                                        alignment: Alignment.bottomRight,
+                                        child: Text(
+                                          formattedTime,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color:
+                                                isMe
+                                                    ? Colors.white70
+                                                    : Colors.black54,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              if (isMe) const SizedBox(width: 8),
+                              if (isMe)
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundImage: _getImageProvider(
+                                    msg['senderId']?['avatar'],
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const Divider(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _chatController,
+                            decoration: const InputDecoration(
+                              hintText: 'Type a message...',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            final message = _chatController.text.trim();
+                            if (message.isEmpty) return;
+
+                            final msgData = {
+                              'senderId': userId,
+                              'receiverId': widget.userId,
+                              'message': message,
+                            };
+
+                            socket.emit('send_message', msgData);
+                            _chatController
+                                .clear(); // just clear, don’t add message manually
+                          },
+
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: maroon,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                          ),
+                          child: const Text('Send'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
     );
   }

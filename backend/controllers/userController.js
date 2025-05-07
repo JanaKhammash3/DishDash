@@ -278,4 +278,14 @@ exports.toggleFollow = async (req, res) => {
     followers
   });
 };
+exports.getFollowerCount = async (req, res) => {
+  try {
+    const { id } = req.params; // id of profile being viewed
+    const count = await User.countDocuments({ following: id }); // 🔥 correct query
+    res.json({ count });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch follower count' });
+  }
+};
 
