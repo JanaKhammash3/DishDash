@@ -33,10 +33,28 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   int visibleRecipeCount = 4;
   String searchQuery = '';
+
+  List<String> selectedIngredients = [];
+  final List<Map<String, String>> allIngredients = [
+    {'name': 'Egg', 'image': 'assets/ingredients/egg.jpg'},
+    {'name': 'Chicken', 'image': 'assets/ingredients/chicken.jpg'},
+    {'name': 'Pasta', 'image': 'assets/ingredients/pasta.png'},
+    {'name': 'Rice', 'image': 'assets/ingredients/rice.png'},
+    {'name': 'Meat', 'image': 'assets/ingredients/meat.png'},
+    {'name': 'Broccoli', 'image': 'assets/ingredients/broccoli.jpg'},
+    {'name': 'Cheese', 'image': 'assets/ingredients/cheese.png'},
+    {'name': 'Salmon', 'image': 'assets/ingredients/salmon.png'},
+    {'name': 'Lettuce', 'image': 'assets/ingredients/lettuce.png'},
+    {'name': 'Milk', 'image': 'assets/ingredients/milk.jpg'},
+    {'name': 'Mushroom', 'image': 'assets/ingredients/mushroom.png'},
+    {'name': 'Canned Tomato', 'image': 'assets/ingredients/canned_tomato.png'},
+  ];
+
   final Map<String, Map<String, bool>> _filters = {
     'Calories': {'< 200': false, '200-400': false, '400+': false},
     'Prep Time': {'< 15 min': false, '< 30 min': false, '30+ min': false},
     'Tags': {'gluten-free': false, 'lactose-free': false, 'spicy': false},
+    'Difficulty': {'Easy': false, 'Medium': false, 'Hard': false},
   };
 
   String customTag = '';
@@ -168,13 +186,24 @@ class _HomeScreenState extends State<HomeScreen> {
         queryParams['tags'] = tagList.join(',');
       }
     }
+    if (_filters['Difficulty'] != null) {
+      final diff =
+          _filters['Difficulty']!.entries
+              .firstWhere((e) => e.value, orElse: () => MapEntry('', false))
+              .key;
+      if (diff.isNotEmpty) queryParams['difficulty'] = diff;
+    }
+
+    if (selectedIngredients.isNotEmpty) {
+      queryParams['ingredients'] = selectedIngredients.join(',');
+    }
 
     fetchFilteredRecipes(queryParams);
   }
 
   Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
     final uri = Uri.http(
-      '192.168.0.103:3000',
+      '192.168.1.4:3000',
       '/api/recipes/filter',
       queryParams,
     );
@@ -204,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.0.103:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -238,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.0.103:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.1.4:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -251,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.0.103:3000/api/recipes');
+    final url = Uri.parse('http://192.168.1.4:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -264,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.0.103:3000/api/users/$userId/saveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -278,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.0.103:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -291,7 +320,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes({String? category}) async {
-    String baseUrl = 'http://192.168.0.103:3000/api/recipes/filter';
+    String baseUrl = 'http://192.168.1.4:3000/api/recipes/filter';
     Uri url;
 
     if (category != null && category.isNotEmpty) {
@@ -349,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.0.103:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -378,6 +407,155 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
+              'Search by Ingredients',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: maroon,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            if (selectedIngredients.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Selected',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children:
+                        selectedIngredients.map((name) {
+                          final imagePath =
+                              allIngredients.firstWhere(
+                                (ing) => ing['name'] == name,
+                                orElse:
+                                    () => {'image': 'assets/placeholder.png'},
+                              )['image']!;
+
+                          return Stack(
+                            alignment: Alignment.topRight,
+                            children: [
+                              Column(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 24,
+                                    backgroundImage: AssetImage(imagePath),
+                                    backgroundColor: Colors.white,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  SizedBox(
+                                    width: 70,
+                                    child: Text(
+                                      name,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(fontSize: 13),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Positioned(
+                                right: -2,
+                                top: -2,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedIngredients.remove(name);
+                                      _applyFilters();
+                                    });
+                                  },
+                                  child: const CircleAvatar(
+                                    radius: 10,
+                                    backgroundColor: Colors.white,
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 12,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedIngredients.clear();
+                          _applyFilters();
+                        });
+                      },
+                      child: const Text(
+                        'Clear all',
+                        style: TextStyle(
+                          color: maroon, // ✅ Set the text color
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                ],
+              ),
+
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.center,
+              children:
+                  allIngredients.map((ingredient) {
+                    final name = ingredient['name']!;
+                    final imagePath = ingredient['image']!;
+                    final isSelected = selectedIngredients.contains(name);
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            selectedIngredients.remove(name);
+                          } else {
+                            selectedIngredients.add(name);
+                          }
+                          _applyFilters();
+                        });
+                      },
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: Colors.white,
+                            backgroundImage: AssetImage(imagePath),
+                          ),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: 60,
+                            child: Text(
+                              name,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 11),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+            ),
+
+            const SizedBox(height: 24),
+            const Divider(),
+            const Text(
               'Filter Recipes',
               style: TextStyle(
                 fontSize: 20,
@@ -385,7 +563,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: maroon,
               ),
             ),
-            const Divider(),
+            const SizedBox(height: 8),
             for (var category in _filters.entries)
               _buildFilterCategory(category.key, category.value),
           ],
@@ -542,7 +720,170 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
+        const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildFilterDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Search by Ingredients',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: maroon,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (selectedIngredients.isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Selected',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children:
+                      selectedIngredients.map((name) {
+                        final imagePath =
+                            allIngredients.firstWhere(
+                              (ing) => ing['name'] == name,
+                              orElse: () => {'image': 'assets/placeholder.png'},
+                            )['image']!;
+
+                        return Stack(
+                          alignment: Alignment.topRight,
+                          children: [
+                            Column(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundImage: AssetImage(imagePath),
+                                ),
+                                const SizedBox(height: 4),
+                                SizedBox(
+                                  width: 60,
+                                  child: Text(
+                                    name,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 11),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Positioned(
+                              right: -2,
+                              top: -2,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedIngredients.remove(name);
+                                    _applyFilters();
+                                  });
+                                },
+                                child: const CircleAvatar(
+                                  radius: 10,
+                                  backgroundColor: Colors.white,
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 12,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        selectedIngredients.clear();
+                        _applyFilters();
+                      });
+                    },
+                    child: const Text('Clear all'),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+
+          const Text('Popular', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            alignment: WrapAlignment.center,
+            children:
+                allIngredients.map((ingredient) {
+                  final name = ingredient['name']!;
+                  final imagePath = ingredient['image']!;
+                  final isSelected = selectedIngredients.contains(name);
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          selectedIngredients.remove(name);
+                        } else {
+                          selectedIngredients.add(name);
+                        }
+                        _applyFilters();
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.white,
+                          backgroundImage: AssetImage(imagePath),
+                        ),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: 60,
+                          child: Text(
+                            name,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+          ),
+
+          const SizedBox(height: 24),
+          const Divider(),
+          const Text(
+            'Filter Recipes',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: maroon,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (var category in _filters.entries)
+            _buildFilterCategory(category.key, category.value),
+        ],
+      ),
     );
   }
 
@@ -652,7 +993,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final rawPath = recipe['image'] ?? '';
               final imagePath =
                   rawPath.startsWith('/images/')
-                      ? 'http://192.168.0.103:3000$rawPath'
+                      ? 'http://192.168.1.4:3000$rawPath'
                       : rawPath;
 
               final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];

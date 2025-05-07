@@ -1,5 +1,5 @@
 const MealPlan = require('../models/MealPlan');
-const Recipe = require('../models/Recipe'); 
+const Recipe = require('../models/Recipe');
 
 exports.createMealPlan = async (req, res) => {
   try {
@@ -9,6 +9,7 @@ exports.createMealPlan = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 exports.markMealAsDone = async (req, res) => {
   const { planId, date, recipeId } = req.body;
   try {
@@ -30,15 +31,37 @@ exports.markMealAsDone = async (req, res) => {
 exports.addRecipeToPlan = async (req, res) => {
   const { planId } = req.params;
   const { date, recipeId } = req.body;
+
   try {
     const plan = await MealPlan.findById(planId);
+    const recipe = await Recipe.findById(recipeId);
+    if (!plan || !recipe) {
+      return res.status(404).json({ message: 'Plan or Recipe not found' });
+    }
+
     const day = plan.days.find(d => d.date === date);
 
+    // 🔁 Prevent duplicates
     if (day) {
+      const alreadyExists = day.meals.some(
+        m => m.recipe.toString() === recipeId
+      );
+      if (alreadyExists) {
+        return res.status(409).json({ message: 'Recipe already exists for this day' });
+      }
       day.meals.push({ recipe: recipeId, done: false });
     } else {
       plan.days.push({ date, meals: [{ recipe: recipeId, done: false }] });
     }
+
+    // ✅ Add ingredients to groceryList
+    const ingredientsToAdd = recipe.ingredients || [];
+    if (!Array.isArray(plan.groceryList)) plan.groceryList = [];
+    ingredientsToAdd.forEach(ing => {
+      if (!plan.groceryList.includes(ing)) {
+        plan.groceryList.push(ing);
+      }
+    });
 
     await plan.save();
     res.status(200).json(plan);
@@ -47,6 +70,7 @@ exports.addRecipeToPlan = async (req, res) => {
   }
 };
 
+
 exports.getWeeklyCalories = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -54,10 +78,8 @@ exports.getWeeklyCalories = async (req, res) => {
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
 
-    // Get plans as plain JS objects
     const plans = await MealPlan.find({ userId }).lean();
 
-    // Fetch all recipe IDs in the week that are marked as done
     const recipeIdsToLoad = [];
 
     plans.forEach(plan => {
@@ -73,7 +95,6 @@ exports.getWeeklyCalories = async (req, res) => {
       });
     });
 
-    // Get recipe calorie values
     const recipes = await Recipe.find({ _id: { $in: recipeIdsToLoad } }).lean();
     const recipeMap = {};
     recipes.forEach(r => {
@@ -108,18 +129,13 @@ exports.getWeeklyCalories = async (req, res) => {
 
 exports.getGroceryList = async (req, res) => {
   try {
-    const plan = await MealPlan.findById(req.params.planId).populate('days.meals');
-    const ingredients = new Set();
-    plan.days.forEach(day => {
-      day.meals.forEach(recipe => {
-        recipe.ingredients.forEach(ing => ingredients.add(ing));
-      });
-    });
-    res.status(200).json([...ingredients]);
+    const plan = await MealPlan.findById(req.params.planId);
+    res.status(200).json(plan.groceryList || []);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 exports.getMealPlanByUser = async (req, res) => {
   try {
     const plans = await MealPlan.find({ userId: req.params.userId });
@@ -128,3 +144,34 @@ exports.getMealPlanByUser = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+// controllers/mealPlanController.js
+exports.removeRecipeFromPlan = async (req, res) => {
+  const { planId } = req.params;
+  const { date, recipeId } = req.body;
+
+  try {
+    const plan = await MealPlan.findById(planId);
+    if (!plan) return res.status(404).json({ message: 'Plan not found' });
+
+    const day = plan.days.find(d => d.date === date);
+    if (!day) return res.status(404).json({ message: 'Date not found in plan' });
+
+    day.meals = day.meals.filter(m => m.recipe.toString() !== recipeId);
+
+    // Update grocery list
+    const allRecipeIds = plan.days.flatMap(d => d.meals.map(m => m.recipe.toString()));
+    const remainingRecipes = await Recipe.find({ _id: { $in: allRecipeIds } });
+    const remainingIngredients = new Set(
+      remainingRecipes.flatMap(r => r.ingredients)
+    );
+    plan.groceryList = plan.groceryList.filter(ing => remainingIngredients.has(ing));
+
+    await plan.save();
+    res.status(200).json(plan);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+

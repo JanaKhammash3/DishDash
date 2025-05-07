@@ -16,7 +16,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   List<String> savedRecipeIds = [];
   String? userId;
 
-  final String baseUrl = 'http://192.168.0.103:3000'; // Adjust for your setup
+  final String baseUrl = 'http://192.168.1.4:3000'; // Adjust for your setup
 
   @override
   void initState() {
