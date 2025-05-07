@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
     final uri = Uri.http(
-      '192.168.68.60:3000',
+      '192.168.0.103:3000',
       '/api/recipes/filter',
       queryParams,
     );
@@ -204,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.60:3000/images/$image'
+                    ? 'http://192.168.0.103:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -238,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.0.103:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -251,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/recipes');
+    final url = Uri.parse('http://192.168.0.103:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -264,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/$userId/saveRecipe',
+      'http://192.168.0.103:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -278,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.0.103:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -291,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes({String? category}) async {
-    String baseUrl = 'http://192.168.68.60:3000/api/recipes/filter';
+    String baseUrl = 'http://192.168.0.103:3000/api/recipes/filter';
     Uri url;
 
     if (category != null && category.isNotEmpty) {
@@ -349,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.60:3000/images/$image'
+                    ? 'http://192.168.0.103:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -652,7 +652,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final rawPath = recipe['image'] ?? '';
               final imagePath =
                   rawPath.startsWith('/images/')
-                      ? 'http://192.168.68.60:3000$rawPath'
+                      ? 'http://192.168.0.103:3000$rawPath'
                       : rawPath;
 
               final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];
@@ -674,6 +674,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 calories: recipe['calories'] ?? 0,
                 authorName: recipe['author']?['name'],
                 authorAvatar: recipe['author']?['avatar'],
+                prepTime: recipe['prepTime'] ?? 0,
+                difficulty: recipe['difficulty'] ?? 'Easy',
+                instructions: recipe['instructions'] ?? '',
               );
             },
           ),
@@ -849,10 +852,30 @@ class _HomeScreenState extends State<HomeScreen> {
     int calories = 0,
     String? authorName,
     String? authorAvatar,
+    int prepTime = 0,
+    String difficulty = 'Easy',
+    String instructions = '',
   }) {
     return GestureDetector(
       onTap: () {
-        _showRecipeModal(title, description, ingredients, calories);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => RecipeScreen(
+                  title: title,
+                  imagePath: imagePath,
+                  rating: avgRating,
+                  ingredients: List<String>.from(
+                    ingredients.map((e) => e.toString()),
+                  ),
+                  description: description,
+                  prepTime: prepTime,
+                  difficulty: difficulty,
+                  instructions: instructions,
+                ),
+          ),
+        );
       },
       child: placeCard(
         title,
@@ -934,8 +957,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   right: 10,
                   child: IconButton(
                     icon: Icon(
-                      Icons.bookmark,
-                      color: isSaved ? Colors.black : Colors.white,
+                      isSaved ? Icons.bookmark : Icons.bookmark_border,
+                      color: Colors.white,
                     ),
                     onPressed: onSave ?? () {},
                   ),

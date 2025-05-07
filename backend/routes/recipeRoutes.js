@@ -14,6 +14,7 @@ const {
   toggleLike
 } = require('../controllers/recipeController');
 
+// ✅ Specific routes first
 router.post('/', createCustomRecipe);
 router.get('/popular', getPopularRecipes);
 router.get('/recommendations', getRecommendedRecipes);
@@ -24,8 +25,7 @@ router.get('/', getAllRecipes);
 router.post('/:id/rate', rateRecipe);
 router.patch('/rate/:id', rateRecipe);
 router.delete('/:id', deleteRecipe);
-router.post('/:id/like', toggleLike); 
+router.post('/:id/like', toggleLike);
 router.get('/:id', getRecipeById);
-
 
 module.exports = router;

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
+import 'package:frontend/screens/recipe_screen.dart';
 
 class MyRecipesScreen extends StatefulWidget {
   final String userId;
@@ -16,13 +17,14 @@ class MyRecipesScreen extends StatefulWidget {
 class _MyRecipesScreenState extends State<MyRecipesScreen> {
   List<dynamic> userRecipes = [];
   Uint8List? imageBytes;
+
   ImageProvider _getImageProvider(String? image) {
     if (image != null && image.startsWith('http')) {
       return NetworkImage(image);
     } else if (image != null && image.startsWith('/9j')) {
       return MemoryImage(base64Decode(image));
     } else if (image != null && image.isNotEmpty) {
-      return NetworkImage('http://192.168.68.60:3000/images/$image');
+      return NetworkImage('http://192.168.0.103:3000/images/$image');
     } else {
       return const AssetImage('assets/placeholder.png');
     }
@@ -34,74 +36,28 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     fetchUserRecipes();
   }
 
-  void _showRecipeModal(dynamic recipe) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                recipe['title'] ?? '',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text("🔥 Calories: ${recipe['calories']} kcal"),
-              const SizedBox(height: 12),
-              const Text(
-                "📝 Description:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(recipe['description'] ?? 'No description'),
-              const SizedBox(height: 12),
-              const Text(
-                "🥬 Ingredients:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                (recipe['ingredients'] as List<dynamic>?)?.join(', ') ?? 'N/A',
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> fetchUserRecipes() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/myRecipes',
+      'http://192.168.0.103:3000/api/users/${widget.userId}/myRecipes',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
-      setState(() {
-        userRecipes = jsonDecode(res.body);
-      });
+      setState(() => userRecipes = jsonDecode(res.body));
     }
   }
 
   void _openCreateModal() {
-    String title = '';
-    String ingredients = '';
-    String calories = '';
-    String description = '';
-    String diet = 'None';
-    String mealTime = 'Breakfast';
-    String tagInput = '';
+    String title = '',
+        ingredients = '',
+        calories = '',
+        description = '',
+        diet = 'None';
+    String mealTime = 'Breakfast',
+        tagInput = '',
+        prepTime = '',
+        instructions = '',
+        difficulty = 'Easy';
     List<String> tags = [];
-    String prepTime = '';
-    String instructions = '';
 
     showDialog(
       context: context,
@@ -121,7 +77,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image Picker
                     GestureDetector(
                       onTap: () async {
                         final picker = ImagePicker();
@@ -155,8 +110,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-
-                    // Inputs
                     TextField(
                       decoration: const InputDecoration(labelText: 'Title'),
                       onChanged: (val) => title = val,
@@ -193,8 +146,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       keyboardType: TextInputType.number,
                       onChanged: (val) => prepTime = val,
                     ),
-
-                    // Diet Dropdown
                     DropdownButtonFormField<String>(
                       value: diet,
                       decoration: const InputDecoration(labelText: 'Diet'),
@@ -214,8 +165,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               .toList(),
                       onChanged: (val) => setModalState(() => diet = val!),
                     ),
-
-                    // Meal Time Dropdown
                     DropdownButtonFormField<String>(
                       value: mealTime,
                       decoration: const InputDecoration(labelText: 'Meal Time'),
@@ -228,20 +177,22 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               .toList(),
                       onChanged: (val) => setModalState(() => mealTime = val!),
                     ),
-
-                    // Tags Section
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      children:
-                          tags.map((tag) {
-                            return Chip(
-                              label: Text(tag),
-                              onDeleted:
-                                  () => setModalState(() => tags.remove(tag)),
-                            );
-                          }).toList(),
+                    DropdownButtonFormField<String>(
+                      value: difficulty,
+                      decoration: const InputDecoration(
+                        labelText: 'Difficulty',
+                      ),
+                      items:
+                          ['Easy', 'Medium', 'Hard']
+                              .map(
+                                (d) =>
+                                    DropdownMenuItem(value: d, child: Text(d)),
+                              )
+                              .toList(),
+                      onChanged:
+                          (val) => setModalState(() => difficulty = val!),
                     ),
+                    const SizedBox(height: 10),
                     TextField(
                       decoration: InputDecoration(
                         labelText: 'Add Tag',
@@ -268,23 +219,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                         }
                       },
                     ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      children:
-                          ['gluten-free', 'spicy', 'lactose-free'].map((
-                            suggestedTag,
-                          ) {
-                            return ActionChip(
-                              label: Text(suggestedTag),
-                              onPressed: () {
-                                if (!tags.contains(suggestedTag)) {
-                                  setModalState(() => tags.add(suggestedTag));
-                                }
-                              },
-                            );
-                          }).toList(),
-                    ),
                   ],
                 ),
               ),
@@ -301,7 +235,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                   ),
                   onPressed: () async {
                     if (title.isEmpty || calories.isEmpty) return;
-
                     final body = {
                       'title': title,
                       'ingredients':
@@ -315,21 +248,18 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       'mealTime': mealTime,
                       'tags': tags,
                       'prepTime': int.tryParse(prepTime) ?? 0,
+                      'difficulty': difficulty,
                     };
-
                     final res = await http.post(
                       Uri.parse(
-                        'http://192.168.68.60:3000/api/users/${widget.userId}/customRecipe',
+                        'http://192.168.0.103:3000/api/users/${widget.userId}/customRecipe',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
                     );
-
                     if (res.statusCode == 201) {
                       Navigator.pop(context);
-                      setState(() {
-                        fetchUserRecipes(); // 🔄 Wrap in setState to trigger rebuild
-                      });
+                      setState(() => fetchUserRecipes());
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Recipe added successfully!'),
@@ -391,12 +321,35 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            subtitle: Text('${r['calories']} calories'),
+                            subtitle: Text(
+                              '${r['calories']} cal • ${r['difficulty'] ?? 'N/A'}',
+                            ),
                             trailing: const Icon(
                               Icons.arrow_forward_ios,
                               size: 16,
                             ),
-                            onTap: () => _showRecipeModal(r),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => RecipeScreen(
+                                        title: r['title'] ?? 'Untitled',
+                                        imagePath: r['image'] ?? '',
+                                        rating: 0.0,
+                                        ingredients: List<String>.from(
+                                          (r['ingredients'] ?? []).map(
+                                            (e) => e.toString(),
+                                          ),
+                                        ),
+                                        description: r['description'] ?? '',
+                                        prepTime: r['prepTime'] ?? 0,
+                                        difficulty: r['difficulty'] ?? 'Easy',
+                                        instructions: r['instructions'] ?? '',
+                                      ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
