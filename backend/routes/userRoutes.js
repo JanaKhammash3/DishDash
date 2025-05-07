@@ -11,7 +11,8 @@ const {
   unsaveRecipe,
   getSavedRecipes,
   createCustomRecipe,
-  getMyRecipes
+  getMyRecipes,
+  toggleFollow
 } = require('../controllers/userController');
 
 router.post('/register', register);
@@ -26,5 +27,6 @@ router.post('/:userId/unsaveRecipe', unsaveRecipe);
 router.get('/:id/savedRecipes', getSavedRecipes);
 router.post('/:userId/customRecipe', createCustomRecipe);
 router.get('/:userId/myRecipes', getMyRecipes);
+router.post('/toggleFollow', toggleFollow);
 
 module.exports = router;

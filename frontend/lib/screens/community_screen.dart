@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:frontend/colors.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/screens/userprofile-screen.dart';
 
 class CommunityScreen extends StatefulWidget {
   final String userId;
@@ -15,6 +17,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
   List<dynamic> posts = [];
   List<String> savedRecipeIds = [];
   String? userId;
+  String _formatTimestamp(String? isoString) {
+    if (isoString == null) return '';
+    final date = DateTime.tryParse(isoString);
+    if (date == null) return '';
+    return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
 
   final String baseUrl = 'http://192.168.68.60:3000'; // Adjust for your setup
 
@@ -39,6 +47,176 @@ class _CommunityScreenState extends State<CommunityScreen> {
     } catch (_) {
       return const AssetImage('assets/placeholder.png');
     }
+  }
+
+  void openCommentModal(String recipeId) async {
+    final TextEditingController _controller = TextEditingController();
+    List<dynamic> comments = [];
+
+    // Fetch existing comments
+    final res = await http.get(Uri.parse('$baseUrl/api/comments/$recipeId'));
+    if (res.statusCode == 200) {
+      comments = json.decode(res.body);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: MediaQuery.of(context).viewInsets,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Comments',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 12),
+                if (comments.isEmpty)
+                  const Text('No comments yet.')
+                else
+                  SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      itemCount: comments.length,
+                      itemBuilder: (_, index) {
+                        final c = comments[index];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: _getImageProvider(
+                              c['userId']?['avatar'],
+                            ),
+                          ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  c['userId']?['name'] ?? 'User',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                _formatTimestamp(c['createdAt']),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          subtitle: Text(c['content']),
+                          trailing:
+                              c['userId']?['_id'] == userId
+                                  ? IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () async {
+                                      final res = await http.delete(
+                                        Uri.parse(
+                                          '$baseUrl/api/comments/${c['_id']}',
+                                        ),
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: json.encode({'userId': userId}),
+                                      );
+
+                                      if (res.statusCode == 200) {
+                                        Navigator.pop(context);
+                                        openCommentModal(
+                                          recipeId,
+                                        ); // Refresh modal
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Comment deleted'),
+                                          ),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Delete failed'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  )
+                                  : null,
+                        );
+                      },
+                    ),
+                  ),
+                const Divider(),
+                TextField(
+                  controller: _controller,
+                  decoration: const InputDecoration(
+                    hintText: 'Add a comment...',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: maroon, // Maroon
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                  ),
+                  onPressed: () async {
+                    final content = _controller.text.trim();
+                    if (content.isEmpty) return;
+
+                    final res = await http.post(
+                      Uri.parse('$baseUrl/api/comments/$recipeId'),
+                      headers: {'Content-Type': 'application/json'},
+                      body: json.encode({'userId': userId, 'content': content}),
+                    );
+
+                    if (res.statusCode == 201) {
+                      // ✅ increment commentCount in local post
+                      final postIndex = posts.indexWhere(
+                        (p) => p['_id'] == recipeId,
+                      );
+                      if (postIndex != -1) {
+                        setState(() {
+                          posts[postIndex]['commentCount'] =
+                              (posts[postIndex]['commentCount'] ?? 0) + 1;
+                        });
+                      }
+
+                      Navigator.pop(context);
+                      openCommentModal(recipeId); // refresh modal contents
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Comment added')),
+                      );
+                    }
+                  },
+                  child: const Text('Post Comment'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> fetchUserProfile() async {
@@ -66,6 +244,25 @@ class _CommunityScreenState extends State<CommunityScreen> {
     if (res.statusCode == 200) {
       final List data = json.decode(res.body);
       final userPosts = data.where((r) => r['author'] != null).toList();
+
+      // Fetch comment counts for each recipe
+      for (final post in userPosts) {
+        final commentsRes = await http.get(
+          Uri.parse('$baseUrl/api/comments/${post['_id']}'),
+        );
+        if (commentsRes.statusCode == 200) {
+          final comments = json.decode(commentsRes.body);
+          post['commentCount'] = comments.length;
+        } else {
+          post['commentCount'] = 0;
+        }
+      }
+
+      // ✅ Sort by number of likes (descending)
+      userPosts.sort(
+        (a, b) => (b['likes']?.length ?? 0).compareTo(a['likes']?.length ?? 0),
+      );
+
       setState(() {
         posts = userPosts;
       });
@@ -133,7 +330,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           'Our Community',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.red.shade900,
+        backgroundColor: maroon,
         centerTitle: true,
         foregroundColor: Colors.white,
       ),
@@ -169,9 +366,53 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               author?['avatar'],
                             ),
                           ),
-                          title: Text(
-                            author?['name'] ?? 'Unknown',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  author?['name'] ?? 'Unknown',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (author?['_id'] != userId)
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => UserProfileScreen(
+                                              userId: author?['_id'] ?? '',
+                                            ),
+                                      ),
+                                    );
+                                    // Refresh posts after returning
+                                    await fetchPosts();
+                                    await fetchUserProfile();
+                                  },
+
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: maroon,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 6,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: const Text(
+                                    'Profile',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         ClipRRect(
@@ -220,6 +461,19 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 onPressed: () => toggleLike(recipeId, index),
                               ),
                               Text('${post['likes']?.length ?? 0}'),
+
+                              const SizedBox(width: 12), // spacing
+
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.comment,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () => openCommentModal(recipeId),
+                              ),
+                              Text(
+                                '${post['commentCount'] ?? 0}',
+                              ), // ✅ Show comment count
                               const Spacer(),
                               IconButton(
                                 icon: Icon(
