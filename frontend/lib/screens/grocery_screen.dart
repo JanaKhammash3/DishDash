@@ -32,10 +32,33 @@ class _GroceryScreenState extends State<GroceryScreen> {
                 (name) => {
                   'name': name,
                   'price': _getPrice(name.toLowerCase()),
-                  'image': _getImagePath(name.toLowerCase()),
+                  'icon': _getIcon(name.toLowerCase()),
                 },
               )
               .toList();
+    });
+  }
+
+  Future<void> _saveIngredients() async {
+    final prefs = await SharedPreferences.getInstance();
+    final updated = groceryItems.map((item) => item['name'] as String).toList();
+    await prefs.setStringList('groceryIngredients', updated);
+  }
+
+  void _removeIngredient(String name) {
+    setState(() {
+      groceryItems.removeWhere((item) => item['name'] == name);
+      availableIngredients.remove(name);
+    });
+    _saveIngredients();
+  }
+
+  void _clearAllIngredients() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('groceryIngredients');
+    setState(() {
+      groceryItems.clear();
+      availableIngredients.clear();
     });
   }
 
@@ -59,23 +82,23 @@ class _GroceryScreenState extends State<GroceryScreen> {
     }
   }
 
-  String _getImagePath(String name) {
+  IconData _getIcon(String name) {
     switch (name) {
       case 'tomato':
-        return 'assets/tomato.png';
+        return Icons.local_pizza;
       case 'onion':
-        return 'assets/onion.png';
+        return Icons.restaurant;
       case 'potato':
-        return 'assets/potato.png';
+        return Icons.eco;
       case 'carrot':
-        return 'assets/carrot.png';
-      case 'peppers':
+        return Icons.spa;
       case 'pepper':
-        return 'assets/peppers.png';
+      case 'peppers':
+        return Icons.whatshot;
       case 'eggplant':
-        return 'assets/eggplant.png';
+        return Icons.grass;
       default:
-        return 'assets/placeholder.png';
+        return Icons.shopping_bag;
     }
   }
 
@@ -105,8 +128,36 @@ class _GroceryScreenState extends State<GroceryScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: maroon),
-            onPressed: () {},
+            icon: const Icon(Icons.delete_sweep, color: maroon),
+            tooltip: 'Clear All',
+            onPressed:
+                groceryItems.isEmpty
+                    ? null
+                    : () {
+                      showDialog(
+                        context: context,
+                        builder:
+                            (_) => AlertDialog(
+                              title: const Text("Clear All?"),
+                              content: const Text(
+                                "This will remove all ingredients.",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text("Cancel"),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    _clearAllIngredients();
+                                  },
+                                  child: const Text("Clear All"),
+                                ),
+                              ],
+                            ),
+                      );
+                    },
           ),
         ],
       ),
@@ -138,60 +189,44 @@ class _GroceryScreenState extends State<GroceryScreen> {
                       ),
                       elevation: 3,
                       child: ListTile(
-                        leading: ColorFiltered(
-                          colorFilter:
-                              isAvailable
-                                  ? const ColorFilter.mode(
-                                    Colors.grey,
-                                    BlendMode.saturation,
-                                  )
-                                  : const ColorFilter.mode(
-                                    Colors.transparent,
-                                    BlendMode.multiply,
-                                  ),
-                          child: Image.asset(item['image'], height: 50),
+                        leading: Icon(
+                          item['icon'],
+                          size: 36,
+                          color: isAvailable ? Colors.grey : maroon,
                         ),
                         title: Text(
                           item['name'],
                           style: const TextStyle(color: Colors.black),
                         ),
-                        subtitle: Text(
-                          '\$${item['price'].toStringAsFixed(2)}',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
+
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Theme(
-                              data: Theme.of(
-                                context,
-                              ).copyWith(unselectedWidgetColor: Colors.grey),
-                              child: Transform.scale(
-                                scale: 1.2,
-                                child: Checkbox(
-                                  shape: const CircleBorder(),
-                                  value: isAvailable,
-                                  activeColor: Colors.green,
-                                  onChanged:
-                                      (_) => toggleAvailability(item['name']),
-                                ),
-                              ),
+                            Checkbox(
+                              shape: const CircleBorder(),
+                              value: isAvailable,
+                              activeColor: Colors.green,
+                              onChanged:
+                                  (_) => toggleAvailability(item['name']),
                             ),
-                            if (!isAvailable)
-                              IconButton(
-                                icon: const Icon(Icons.store, color: maroon),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => StorePriceScreen(
-                                            itemName: item['name'],
-                                          ),
-                                    ),
-                                  );
-                                },
-                              ),
+                            IconButton(
+                              icon: const Icon(Icons.store, color: maroon),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => StorePriceScreen(
+                                          itemName: item['name'],
+                                        ),
+                                  ),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: maroon),
+                              onPressed: () => _removeIngredient(item['name']),
+                            ),
                           ],
                         ),
                       ),
@@ -205,12 +240,11 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
 class StorePriceScreen extends StatelessWidget {
   final String itemName;
-
   const StorePriceScreen({super.key, required this.itemName});
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> storePrices = [
+    final storePrices = [
       {'store': 'Store A', 'price': 1.50},
       {'store': 'Store B', 'price': 1.40},
       {'store': 'Store C', 'price': 1.60},
@@ -228,7 +262,7 @@ class StorePriceScreen extends StatelessWidget {
           final store = storePrices[index];
           return ListTile(
             leading: const Icon(Icons.store, color: maroon),
-            title: Text(store['store']),
+            title: Text(store['store']?.toString() ?? 'Unknown Store'),
             trailing: Text(
               '\$${store['price']}',
               style: const TextStyle(color: Colors.black),
