@@ -8,7 +8,8 @@ const {
   getGroceryList,
   getWeeklyCalories,
   markMealAsDone,
-  removeRecipeFromPlan, // ✅ New import
+  markMealAsUndone, 
+  removeRecipeFromPlan, 
 } = require('../controllers/mealPlanController');
 
 // 🗓️ Meal Plan creation
@@ -22,6 +23,9 @@ router.put('/:planId/remove-recipe', removeRecipeFromPlan); // ✅ Use correct p
 
 // 🔁 Mark a recipe as done
 router.put('/mark-done', markMealAsDone);
+
+router.put('/mark-undone', markMealAsUndone); // ✅ Add this line
+
 
 // 📅 Get meal plans by user
 router.get('/user/:userId', getMealPlanByUser);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MealPlannerScreen extends StatefulWidget {
   final String userId;
@@ -23,6 +24,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
   void initState() {
     super.initState();
     fetchSavedRecipes();
+    loadMealsFromBackend();
   }
 
   Future<void> markMealAsDoneBackend(
@@ -56,6 +58,129 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'rating': rating}),
     );
+  }
+
+  Future<void> saveIngredientsToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> allIngredients = [];
+
+    for (var meal in plannedMeals) {
+      if (meal['ingredients'] != null && meal['ingredients'] is List) {
+        allIngredients.addAll(List<String>.from(meal['ingredients']));
+      }
+    }
+
+    await prefs.setStringList(
+      'groceryIngredients',
+      allIngredients.toSet().toList(),
+    );
+  }
+
+  Future<void> loadMealsFromBackend() async {
+    final res = await http.get(
+      Uri.parse('http://192.168.1.4:3000/api/mealplans/user/${widget.userId}'),
+    );
+
+    if (res.statusCode == 200) {
+      final plans = jsonDecode(res.body);
+      if (plans.isNotEmpty) {
+        final plan = plans.last;
+        final planId = plan['_id'];
+        final days = List<Map<String, dynamic>>.from(plan['days'] ?? []);
+
+        final List<Map<String, dynamic>> loaded = [];
+
+        for (var day in days) {
+          final date = DateTime.parse(day['date']);
+          final meals = List<Map<String, dynamic>>.from(day['meals']);
+
+          for (var meal in meals) {
+            final recipeId = meal['recipe'];
+            final done = meal['done'] ?? false;
+
+            // Fetch full recipe details
+            final recipeRes = await http.get(
+              Uri.parse('http://192.168.1.4:3000/api/recipes/$recipeId'),
+            );
+
+            if (recipeRes.statusCode == 200) {
+              final recipe = jsonDecode(recipeRes.body);
+
+              loaded.add({
+                'planId': planId,
+                'date': date,
+                'recipe': recipe,
+                'done': done,
+              });
+            }
+          }
+        }
+
+        setState(() => plannedMeals = loaded);
+        await saveMealPlan(); // ✅ Sync SharedPreferences
+        await saveIngredientsToPrefs(); // ✅ Sync grocery list
+        print('✅ Meal plan loaded and synced from backend.');
+      }
+    } else {
+      print('❌ Failed to load meal plan from backend');
+      // Optional fallback:
+      await loadMealPlan(); // load from SharedPreferences if backend fails
+    }
+  }
+
+  Future<void> loadMealPlan() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString('mealPlan');
+
+    if (data != null) {
+      final decoded = jsonDecode(data);
+      setState(() {
+        plannedMeals = List<Map<String, dynamic>>.from(
+          decoded.map((meal) {
+            return {
+              ...meal,
+              'date': DateTime.parse(meal['date']), // ensure it's DateTime
+            };
+          }),
+        );
+      });
+      print('✅ Meal plan loaded from SharedPreferences.');
+    }
+  }
+
+  Future<void> saveMealPlan() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final encoded = jsonEncode(
+      plannedMeals.map((meal) {
+        return {
+          ...meal,
+          'date':
+              (meal['date'] is DateTime)
+                  ? meal['date'].toIso8601String()
+                  : meal['date'], // fallback if already a string
+        };
+      }).toList(),
+    );
+
+    await prefs.setString('mealPlan', encoded);
+    print('✅ Meal plan saved to SharedPreferences.');
+  }
+
+  void addMealToPlan() {
+    if (selectedRecipe != null && selectedDate != null) {
+      setState(() {
+        plannedMeals.add({
+          'date': selectedDate.toString(),
+          'recipeId': selectedRecipe!['_id'],
+          'title': selectedRecipe!['title'],
+          'ingredients': selectedRecipe!['ingredients'] ?? [],
+        });
+      });
+
+      saveMealPlan(); // ✅ Persist the meal plan
+      saveIngredientsToPrefs(); // ✅ Already done
+    }
   }
 
   void _addMeal() async {
@@ -417,13 +542,36 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
     markMealAsDoneBackend(planId, date, recipeId);
 
+    saveMealPlan(); // ✅ Persist updated 'done' status
     _showRatingModal(meal['recipe']);
   }
 
-  void _removeMeal(int index) {
-    setState(() {
-      plannedMeals.removeAt(index);
-    });
+  void _removeMeal(int index) async {
+    final meal = plannedMeals[index];
+    final planId = meal['planId'];
+    final date = meal['date'].toIso8601String().split('T')[0];
+    final recipeId = meal['recipe']['_id'];
+
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/mealplans/$planId/remove-recipe',
+    );
+
+    final res = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'date': date, 'recipeId': recipeId}),
+    );
+
+    if (res.statusCode == 200) {
+      setState(() {
+        plannedMeals.removeAt(index);
+      });
+      await saveMealPlan();
+      await saveIngredientsToPrefs();
+      print('✅ Meal removed from backend and UI');
+    } else {
+      print('❌ Failed to remove meal from backend');
+    }
   }
 
   @override
@@ -490,10 +638,54 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                 children: [
                   IconButton(
                     icon: Icon(
-                      Icons.check_circle,
+                      meal['done']
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
                       color: meal['done'] ? Colors.green : Colors.grey,
                     ),
-                    onPressed: meal['done'] ? null : () => _markAsDone(index),
+                    onPressed: () async {
+                      final bool willBeDone = !meal['done'];
+                      final planId = meal['planId'];
+                      final date = meal['date'].toIso8601String().split('T')[0];
+                      final recipeId = meal['recipe']['_id'];
+
+                      print('➡️ Toggling done: $willBeDone');
+                      print('Plan ID: $planId');
+                      print('Date: $date');
+                      print('Recipe ID: $recipeId');
+
+                      final url = Uri.parse(
+                        'http://192.168.1.4:3000/api/mealplans/${willBeDone ? 'mark-done' : 'mark-undone'}',
+                      );
+
+                      final response = await http.put(
+                        url,
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({
+                          'planId': planId,
+                          'date': date,
+                          'recipeId': recipeId,
+                        }),
+                      );
+
+                      print('Backend response: ${response.statusCode}');
+                      print('Body: ${response.body}');
+
+                      if (response.statusCode == 200) {
+                        final updatedMeal = {
+                          ...plannedMeals[index],
+                          'done': willBeDone,
+                        };
+                        setState(() {
+                          plannedMeals[index] = updatedMeal;
+                          plannedMeals = List.from(plannedMeals);
+                        });
+                        await saveMealPlan();
+                        print('✅ Done status updated');
+                      } else {
+                        print('❌ Failed to update done status in backend');
+                      }
+                    },
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),

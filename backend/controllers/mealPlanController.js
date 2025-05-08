@@ -28,6 +28,27 @@ exports.markMealAsDone = async (req, res) => {
   }
 };
 
+exports.markMealAsUndone = async (req, res) => {
+  const { planId, date, recipeId } = req.body;
+  try {
+    const plan = await MealPlan.findById(planId);
+    if (!plan) return res.status(404).json({ message: 'Meal plan not found' });
+
+    const day = plan.days.find(d => d.date === date);
+    if (!day) return res.status(404).json({ message: 'Date not found in plan' });
+
+    const meal = day.meals.find(m => m.recipe.toString() === recipeId);
+    if (!meal) return res.status(404).json({ message: 'Meal not found for this date' });
+
+    meal.done = false;
+    await plan.save();
+    res.status(200).json({ message: 'Meal marked as undone', plan });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
 exports.addRecipeToPlan = async (req, res) => {
   const { planId } = req.params;
   const { date, recipeId } = req.body;
