@@ -65,8 +65,9 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     final List<String> allIngredients = [];
 
     for (var meal in plannedMeals) {
-      if (meal['ingredients'] != null && meal['ingredients'] is List) {
-        allIngredients.addAll(List<String>.from(meal['ingredients']));
+      final ingredients = meal['recipe']?['ingredients'];
+      if (ingredients != null && ingredients is List) {
+        allIngredients.addAll(List<String>.from(ingredients));
       }
     }
 
@@ -74,6 +75,8 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
       'groceryIngredients',
       allIngredients.toSet().toList(),
     );
+
+    print('✅ Grocery ingredients saved: ${allIngredients.toSet().toList()}');
   }
 
   Future<void> loadMealsFromBackend() async {
@@ -440,6 +443,13 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                                             'done': false,
                                           });
                                         });
+
+                                        await saveMealPlan(); // ✅ Save meal to prefs
+                                        await Future.delayed(
+                                          Duration(milliseconds: 50),
+                                        ); // Wait for setState
+                                        await saveIngredientsToPrefs();
+
                                         Navigator.pop(context);
                                       } else {
                                         print('❌ Failed to add recipe to plan');
