@@ -71,12 +71,26 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
       }
     }
 
-    await prefs.setStringList(
-      'groceryIngredients',
-      allIngredients.toSet().toList(),
+    final uniqueIngredients = allIngredients.toSet().toList();
+
+    await prefs.setStringList('groceryIngredients', uniqueIngredients);
+    print('✅ Grocery ingredients saved: $uniqueIngredients');
+
+    // 🔥 Save to backend
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
+    );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'ingredients': uniqueIngredients}),
     );
 
-    print('✅ Grocery ingredients saved: ${allIngredients.toSet().toList()}');
+    if (response.statusCode == 200) {
+      print('✅ Grocery ingredients saved to backend');
+    } else {
+      print('❌ Failed to save grocery list to backend');
+    }
   }
 
   Future<void> loadMealsFromBackend() async {
@@ -170,6 +184,22 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
     await prefs.setString('mealPlan', encoded);
     print('✅ Meal plan saved to SharedPreferences.');
+  }
+
+  ImageProvider _getImageProvider(dynamic image) {
+    if (image == null || image.isEmpty) {
+      return const AssetImage('assets/placeholder.png');
+    }
+    if (image is String && image.startsWith('/9j')) {
+      // Base64 image
+      return MemoryImage(base64Decode(image));
+    }
+    if (image is String && image.startsWith('http')) {
+      // Network image
+      return NetworkImage(image);
+    }
+    // Fallback to server path
+    return NetworkImage('http://192.168.1.4:3000/images/$image');
   }
 
   void addMealToPlan() {
@@ -613,27 +643,52 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
           final recipe = meal['recipe'];
           return Card(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            elevation: 3,
-            child: ListTile(
-              title: Text(
-                recipe['title'],
-                style: TextStyle(
-                  decoration: meal['done'] ? TextDecoration.lineThrough : null,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              subtitle: Column(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Planned for: ${meal['date'].year}-${meal['date'].month}-${meal['date'].day}',
+                  // 🖼️ Large Image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image(
+                      image: _getImageProvider(recipe['image']),
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
                   ),
+                  const SizedBox(height: 10),
+
+                  // 🏷️ Title and Date
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          recipe['title'],
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${meal['date'].year}-${meal['date'].month}-${meal['date'].day}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // ⭐ Rating
                   if (recipe['rating'] != null && recipe['rating'].isNotEmpty)
-                    Wrap(
-                      spacing: 4,
+                    Row(
                       children: List.generate(
                         recipe['rating'].last,
                         (i) => const Icon(
@@ -643,65 +698,72 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                         ),
                       ),
                     ),
-                ],
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      meal['done']
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: meal['done'] ? Colors.green : Colors.grey,
-                    ),
-                    onPressed: () async {
-                      final bool willBeDone = !meal['done'];
-                      final planId = meal['planId'];
-                      final date = meal['date'].toIso8601String().split('T')[0];
-                      final recipeId = meal['recipe']['_id'];
 
-                      print('➡️ Toggling done: $willBeDone');
-                      print('Plan ID: $planId');
-                      print('Date: $date');
-                      print('Recipe ID: $recipeId');
+                  const SizedBox(height: 10),
 
-                      final url = Uri.parse(
-                        'http://192.168.68.60:3000/api/mealplans/${willBeDone ? 'mark-done' : 'mark-undone'}',
-                      );
+                  // ✅ Action Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          meal['done']
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                          color: meal['done'] ? Colors.green : Colors.grey,
+                        ),
+                        onPressed: () async {
+                          final bool willBeDone = !meal['done'];
+                          final planId = meal['planId'];
+                          final date =
+                              meal['date'].toIso8601String().split('T')[0];
+                          final recipeId = meal['recipe']['_id'];
 
-                      final response = await http.put(
-                        url,
-                        headers: {'Content-Type': 'application/json'},
-                        body: jsonEncode({
-                          'planId': planId,
-                          'date': date,
-                          'recipeId': recipeId,
-                        }),
-                      );
+                          print('➡️ Toggling done: $willBeDone');
+                          print('Plan ID: $planId');
+                          print('Date: $date');
+                          print('Recipe ID: $recipeId');
 
-                      print('Backend response: ${response.statusCode}');
-                      print('Body: ${response.body}');
+                          final url = Uri.parse(
+                            'http://192.168.68.60:3000/api/mealplans/${willBeDone ? 'mark-done' : 'mark-undone'}',
+                          );
 
-                      if (response.statusCode == 200) {
-                        final updatedMeal = {
-                          ...plannedMeals[index],
-                          'done': willBeDone,
-                        };
-                        setState(() {
-                          plannedMeals[index] = updatedMeal;
-                          plannedMeals = List.from(plannedMeals);
-                        });
-                        await saveMealPlan();
-                        print('✅ Done status updated');
-                      } else {
-                        print('❌ Failed to update done status in backend');
-                      }
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _removeMeal(index),
+                          final response = await http.put(
+                            url,
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({
+                              'planId': planId,
+                              'date': date,
+                              'recipeId': recipeId,
+                            }),
+                          );
+
+                          if (response.statusCode == 200) {
+                            final updatedMeal = {
+                              ...plannedMeals[index],
+                              'done': willBeDone,
+                            };
+                            setState(() {
+                              plannedMeals[index] = updatedMeal;
+                              plannedMeals = List.from(plannedMeals);
+                            });
+                            await saveMealPlan();
+                            print('✅ Done status updated');
+
+                            // 👇 Show rating modal only if just marked as done
+                            if (willBeDone) {
+                              _showRatingModal(meal['recipe']);
+                            }
+                          } else {
+                            print('❌ Failed to update done status in backend');
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: maroon),
+                        onPressed: () => _removeMeal(index),
+                      ),
+                    ],
                   ),
                 ],
               ),
