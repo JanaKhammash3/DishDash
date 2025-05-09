@@ -220,7 +220,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               navIcon(Icons.shopping_cart, () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const GroceryScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => GroceryScreen(userId: widget.userId),
+                  ),
                 );
               }),
             ],

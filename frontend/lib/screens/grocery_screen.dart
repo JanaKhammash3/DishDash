@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert'; // ✅ Add this
 import 'package:frontend/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GroceryScreen extends StatefulWidget {
-  const GroceryScreen({super.key});
+  final String userId;
+  const GroceryScreen({super.key, required this.userId});
 
   @override
   State<GroceryScreen> createState() => _GroceryScreenState();
@@ -20,29 +23,52 @@ class _GroceryScreenState extends State<GroceryScreen> {
   }
 
   Future<void> _loadIngredients() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> ingredients =
-        prefs.getStringList('groceryIngredients') ?? [];
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
+    );
+    final response = await http.get(url);
 
-    setState(() {
-      groceryItems =
-          ingredients
-              .toSet()
-              .map(
-                (name) => {
-                  'name': name,
-                  'price': _getPrice(name.toLowerCase()),
-                  'icon': _getIcon(name.toLowerCase()),
-                },
-              )
-              .toList();
-    });
+    if (response.statusCode == 200) {
+      final List<String> ingredients = List<String>.from(
+        jsonDecode(response.body),
+      );
+      if (ingredients.isEmpty) {
+        print('🟡 Grocery list is empty');
+      }
+      setState(() {
+        groceryItems =
+            ingredients
+                .toSet()
+                .map(
+                  (name) => {
+                    'name': name,
+                    'price': _getPrice(name.toLowerCase()),
+                    'icon': _getIcon(name.toLowerCase()),
+                  },
+                )
+                .toList();
+      });
+    } else {
+      print('❌ Failed to load grocery list from backend');
+    }
   }
 
   Future<void> _saveIngredients() async {
-    final prefs = await SharedPreferences.getInstance();
-    final updated = groceryItems.map((item) => item['name'] as String).toList();
-    await prefs.setStringList('groceryIngredients', updated);
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
+    );
+    final ingredients =
+        groceryItems.map((item) => item['name'] as String).toList();
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'ingredients': ingredients}),
+    );
+
+    if (response.statusCode != 200) {
+      print('❌ Failed to save grocery list to backend');
+    }
   }
 
   void _removeIngredient(String name) {

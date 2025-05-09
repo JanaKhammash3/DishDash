@@ -71,12 +71,26 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
       }
     }
 
-    await prefs.setStringList(
-      'groceryIngredients',
-      allIngredients.toSet().toList(),
+    final uniqueIngredients = allIngredients.toSet().toList();
+
+    await prefs.setStringList('groceryIngredients', uniqueIngredients);
+    print('✅ Grocery ingredients saved: $uniqueIngredients');
+
+    // 🔥 Save to backend
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
+    );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'ingredients': uniqueIngredients}),
     );
 
-    print('✅ Grocery ingredients saved: ${allIngredients.toSet().toList()}');
+    if (response.statusCode == 200) {
+      print('✅ Grocery ingredients saved to backend');
+    } else {
+      print('❌ Failed to save grocery list to backend');
+    }
   }
 
   Future<void> loadMealsFromBackend() async {

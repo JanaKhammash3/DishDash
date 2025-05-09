@@ -1124,14 +1124,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 await fetchPopularRecipes();
               }
             }),
-            bottomNavItem(
-              Icons.shopping_cart,
-              'Groceries',
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const GroceryScreen()),
-              ),
-            ),
+            bottomNavItem(Icons.shopping_cart, 'Groceries', () {
+              if (userId != null && userId!.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GroceryScreen(userId: userId!),
+                  ),
+                );
+              } else {
+                print('❌ No userId found. Cannot open GroceryScreen.');
+              }
+            }),
+
             bottomNavItem(Icons.person, 'Profile', () {
               if (userId != null) {
                 Navigator.push(

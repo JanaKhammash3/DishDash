@@ -13,23 +13,29 @@ const {
   createCustomRecipe,
   getMyRecipes,
   toggleFollow,
-  getFollowerCount
+  getFollowerCount,
+  getGroceryList,
+  saveGroceryList
 } = require('../controllers/userController');
 
+// Auth & profile
 router.post('/register', register);
 router.post('/login', login);
 router.get('/profile/:id', getUserProfile);
 router.put('/profile/:id', updateProfile);
-router.get('/profile/:id', getUserProfile);
 router.patch('/updateAllergies/:id', updateAllergies);
-router.put('/profile/:id/avatar', uploadAvatar); // For Base64 avatar update
+router.put('/profile/:id/avatar', uploadAvatar);
+
+// Recipe-related
 router.post('/:userId/saveRecipe', saveRecipeToUser);
 router.post('/:userId/unsaveRecipe', unsaveRecipe);
 router.get('/:id/savedRecipes', getSavedRecipes);
 router.post('/:userId/customRecipe', createCustomRecipe);
 router.get('/:userId/myRecipes', getMyRecipes);
+
+// Follow system
 router.post('/toggleFollow', toggleFollow);
-// routes/userRoutes.js
+router.get('/:id/followers/count', getFollowerCount);
 router.get('/followers/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -39,6 +45,9 @@ router.get('/followers/:userId', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-module.exports = router;
-router.get('/:id/followers/count', getFollowerCount);
 
+// ✅ Grocery list
+router.get('/:userId/grocery-list', getGroceryList);
+router.post('/:userId/grocery-list', saveGroceryList);
+
+module.exports = router;
