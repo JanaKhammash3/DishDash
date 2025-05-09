@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'Chicken', 'image': 'assets/ingredients/chicken.jpg'},
     {'name': 'Pasta', 'image': 'assets/ingredients/pasta.png'},
     {'name': 'Rice', 'image': 'assets/ingredients/rice.png'},
-    {'name': 'Meat', 'image': 'assets/ingredients/meat.png'},
+    {'name': 'Beef', 'image': 'assets/ingredients/meat.png'},
     {'name': 'Broccoli', 'image': 'assets/ingredients/broccoli.jpg'},
     {'name': 'Cheese', 'image': 'assets/ingredients/cheese.png'},
     {'name': 'Salmon', 'image': 'assets/ingredients/salmon.png'},
@@ -47,6 +47,14 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'Milk', 'image': 'assets/ingredients/milk.jpg'},
     {'name': 'Mushroom', 'image': 'assets/ingredients/mushroom.png'},
     {'name': 'Canned Tomato', 'image': 'assets/ingredients/canned_tomato.png'},
+    {'name': 'Onion', 'image': 'assets/ingredients/onion.jpg'},
+    {'name': 'Garlic', 'image': 'assets/ingredients/garlic.png'},
+    {'name': 'Tomato', 'image': 'assets/ingredients/tomato.png'},
+    {'name': 'Pepper', 'image': 'assets/ingredients/pepper.png'},
+    {'name': 'Zucchini', 'image': 'assets/ingredients/zucchini.jpg'},
+    {'name': 'Spinach', 'image': 'assets/ingredients/spinach.png'},
+    {'name': 'Carrot', 'image': 'assets/ingredients/carrot.png'},
+    {'name': 'Tofu', 'image': 'assets/ingredients/tofu.png'},
   ];
 
   final Map<String, Map<String, bool>> _filters = {
@@ -442,7 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Column(
                                 children: [
                                   CircleAvatar(
-                                    radius: 24,
+                                    radius: 22,
                                     backgroundImage: AssetImage(imagePath),
                                     backgroundColor: Colors.white,
                                   ),
@@ -508,7 +516,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
             Wrap(
-              spacing: 16,
+              spacing: 10,
               runSpacing: 16,
               alignment: WrapAlignment.center,
               children:
@@ -531,7 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         children: [
                           CircleAvatar(
-                            radius: 24,
+                            radius: 22,
                             backgroundColor: Colors.white,
                             backgroundImage: AssetImage(imagePath),
                           ),

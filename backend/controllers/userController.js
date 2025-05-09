@@ -291,11 +291,9 @@ exports.getFollowerCount = async (req, res) => {
 
 // GET grocery list
 exports.getGroceryList = async (req, res) => {
-  console.log('📥 GET /grocery-list hit with userId:', req.params.userId);
   try {
     const user = await User.findById(req.params.userId);
     if (!user) return res.status(404).send('User not found');
-    console.log('🧾 Grocery list found:', user.currentGroceryList);
     res.status(200).json(user.currentGroceryList || []);
   } catch (err) {
     console.error('❌ Error in getGroceryList:', err.message);

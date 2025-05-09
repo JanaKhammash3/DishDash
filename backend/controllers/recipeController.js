@@ -112,9 +112,20 @@ exports.filterRecipes = async (req, res) => {
     }
 
     if (ingredients) {
-      const ingredientArray = ingredients.split(',').map(i => i.trim());
-      filter.ingredients = { $all: ingredientArray };
+      const ingredientArray = ingredients
+        .split(',')
+        .map(i => i.trim().toLowerCase())
+        .filter(Boolean);
+    
+      filter.$and = ingredientArray.map(kw => ({
+        ingredients: {
+          $elemMatch: {
+            $regex: new RegExp(kw, 'i'),
+          },
+        },
+      }));
     }
+    
 
     const recipes = await Recipe.find(filter).populate('author', 'name avatar');
     res.status(200).json(recipes);
@@ -125,13 +136,28 @@ exports.filterRecipes = async (req, res) => {
 
 exports.searchByIngredients = async (req, res) => {
   try {
-    const ingredients = req.params.ingredients.split(',');
-    const recipes = await Recipe.find({ ingredients: { $in: ingredients } });
+    const keywords = req.params.ingredients
+      .split(',')
+      .map(word => word.trim().toLowerCase())
+      .filter(Boolean);
+
+    // Build an $or query with $regex for each keyword
+    const regexQueries = keywords.map(kw => ({
+      ingredients: { $elemMatch: { $regex: kw, $options: 'i' } },
+    }));
+
+    const recipes = await Recipe.find({
+      $or: regexQueries,
+    });
+
     res.status(200).json(recipes);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+
 
 exports.getRecipeById = async (req, res) => {
   try {
