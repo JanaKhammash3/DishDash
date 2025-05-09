@@ -4,6 +4,9 @@ const jwt = require('jsonwebtoken');
 const Recipe = require('../models/Recipe');
 const multer = require('multer');
 const path = require('path');
+const User = require('../models/userModel');
+const Recipe = require('../models/recipeModel');
+const MealPlan = require('../models/mealPlanModel'); 
 
 // Setup storage for Multer
 const storage = multer.diskStorage({
@@ -288,4 +291,75 @@ exports.getFollowerCount = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch follower count' });
   }
 };
+exports.getRecommendations = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId).populate('recipes'); // saved recipes
 
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Fetch meal plans
+    const mealPlans = await MealPlan.find({ userId }).populate('days.meals.recipe');
+
+    // Determine current time of day
+    const hour = new Date().getHours();
+    let currentMeal = 'Breakfast';
+    if (hour >= 11 && hour < 15) currentMeal = 'Lunch';
+    else if (hour >= 15 && hour < 20) currentMeal = 'Dinner';
+    else if (hour >= 20 || hour < 6) currentMeal = 'Snack';
+
+    // === Gather user interaction data ===
+    const likedTags = {};
+    const likedIngredients = {};
+
+    const extractFromRecipe = recipe => {
+      if (!recipe) return;
+      (recipe.tags || []).forEach(tag => {
+        likedTags[tag] = (likedTags[tag] || 0) + 1;
+      });
+      (recipe.ingredients || []).forEach(ing => {
+        likedIngredients[ing.toLowerCase()] = (likedIngredients[ing.toLowerCase()] || 0) + 1;
+      });
+    };
+
+    // 1. From saved recipes
+    user.recipes.forEach(extractFromRecipe);
+
+    // 2. From meal plans
+    mealPlans.forEach(plan => {
+      plan.days.forEach(day => {
+        day.meals.forEach(meal => {
+          extractFromRecipe(meal.recipe);
+        });
+      });
+    });
+
+    // 3. From liked recipes
+    const likedRecipes = await Recipe.find({ likes: userId });
+    likedRecipes.forEach(extractFromRecipe);
+
+    // === Build recommendations ===
+    const topTags = Object.keys(likedTags);
+    const topIngredients = Object.keys(likedIngredients);
+    const savedIds = user.recipes.map(r => new mongoose.Types.ObjectId(r._id));
+    const likedIds = likedRecipes.map(r => new mongoose.Types.ObjectId(r._id));
+    const allExcludedIds = [...savedIds, ...likedIds];
+
+    const recommendations = await Recipe.find({
+      _id: { $nin: allExcludedIds },
+      $or: [
+        { mealTime: currentMeal }, // 🔥 Time-based first
+        { tags: { $in: topTags } },
+        { ingredients: { $in: topIngredients } },
+        { diet: user.diet },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.json(recommendations);
+  } catch (err) {
+    console.error('Recommendation error:', err);
+    res.status(500).json({ message: 'Recommendation failed' });
+  }
+};

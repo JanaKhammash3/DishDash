@@ -13,7 +13,8 @@ const {
   createCustomRecipe,
   getMyRecipes,
   toggleFollow,
-  getFollowerCount
+  getFollowerCount,
+  getRecommendations
 } = require('../controllers/userController');
 
 router.post('/register', register);
@@ -41,4 +42,6 @@ router.get('/followers/:userId', async (req, res) => {
 });
 module.exports = router;
 router.get('/:id/followers/count', getFollowerCount);
+router.get('/:id/recommendations', getRecommendations);
+
 
