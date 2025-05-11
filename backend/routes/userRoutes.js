@@ -16,7 +16,8 @@ const {
   getFollowerCount,
   getGroceryList,
   saveGroceryList,
-  getRecommendations
+  getRecommendations,
+  updateSurvey
 } = require('../controllers/userController');
 
 // Auth & profile
@@ -54,5 +55,7 @@ router.post('/:userId/grocery-list', saveGroceryList);
 module.exports = router;
 router.get('/:id/followers/count', getFollowerCount);
 router.get('/:id/recommendations', getRecommendations);
+router.put('/users/:id/survey', updateSurvey);
+
 
 

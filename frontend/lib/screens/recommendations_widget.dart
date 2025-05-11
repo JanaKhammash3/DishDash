@@ -27,7 +27,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
 
   Future<void> fetchRecommendations() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/recommendations',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/recommendations',
     );
     final res = await http.get(url);
 
@@ -53,7 +53,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
           final image = recipe['image'];
           final imagePath =
               (image != null && image.isNotEmpty)
-                  ? 'http://192.168.68.60:3000/images/$image'
+                  ? 'http://192.168.1.4:3000/images/$image'
                   : 'assets/placeholder.png';
 
           return placeCard(

@@ -8,12 +8,14 @@ const path = require('path');
 const chatRoutes = require('./routes/chatRoutes');
 const Chat = require('./models/chat');
 const User = require('./models/User');
+const storeRoutes = require('./routes/storeRoutes');
 
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
 
 // ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
@@ -34,6 +36,8 @@ app.use('/api/stores', require('./routes/storeRoutes'));
 app.use('/uploads', express.static('uploads'));
 app.use('/images', express.static(path.join(__dirname, './public/images')));
 app.use('/api/chats', chatRoutes);
+app.use(storeRoutes);
+
 
 // ✅ Create HTTP server and attach Socket.IO
 const server = http.createServer(app);

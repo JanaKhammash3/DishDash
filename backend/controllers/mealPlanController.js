@@ -95,18 +95,28 @@ exports.addRecipeToPlan = async (req, res) => {
 exports.getWeeklyCalories = async (req, res) => {
   try {
     const { userId } = req.params;
+
     const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
+
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+    startOfWeek.setHours(0, 0, 0, 0); // Start of Sunday
 
     const plans = await MealPlan.find({ userId }).lean();
 
     const recipeIdsToLoad = [];
 
+    // Collect recipes from 'done' meals within the current week
     plans.forEach(plan => {
       plan.days.forEach(day => {
-        const date = new Date(day.date);
-        if (date >= startOfWeek && date <= today) {
+        if (!day.date) return;
+
+        const [year, month, dayNum] = day.date.split('-').map(Number);
+        const parsedDate = new Date(year, month - 1, dayNum); // normalize
+        parsedDate.setHours(0, 0, 0, 0);
+
+        if (parsedDate >= startOfWeek && parsedDate <= today) {
           day.meals.forEach(meal => {
             if (meal.done && meal.recipe) {
               recipeIdsToLoad.push(meal.recipe.toString());
@@ -123,30 +133,42 @@ exports.getWeeklyCalories = async (req, res) => {
     });
 
     let totalCalories = 0;
-    const dailyCalories = Array(7).fill(0);
+    const dailyCalories = Array(7).fill(0); // Sunday to Saturday
 
     plans.forEach(plan => {
       plan.days.forEach(day => {
-        const date = new Date(day.date);
-        if (date >= startOfWeek && date <= today) {
-          const dayIndex = date.getDay();
+        if (!day.date) return;
+
+        const [year, month, dayNum] = day.date.split('-').map(Number);
+        const parsedDate = new Date(year, month - 1, dayNum);
+        parsedDate.setHours(0, 0, 0, 0);
+
+        if (parsedDate >= startOfWeek && parsedDate <= today) {
+          const dayIndex = parsedDate.getDay();
+
           day.meals.forEach(meal => {
             if (meal.done) {
               const kcal = recipeMap[meal.recipe?.toString()] || 0;
               dailyCalories[dayIndex] += kcal;
               totalCalories += kcal;
+              console.log(`✅ ${kcal} kcal added for recipe ${meal.recipe}`);
             }
           });
         }
       });
     });
 
+    console.log('📊 Final totalCalories:', totalCalories);
+    console.log('📆 dailyCalories:', dailyCalories);
+
     return res.json({ totalCalories, dailyCalories });
+
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error in getWeeklyCalories:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 exports.getGroceryList = async (req, res) => {
   try {

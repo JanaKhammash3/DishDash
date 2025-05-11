@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/profile/${widget.userId}',
+      'http://192.168.1.4:3000/api/profile/${widget.userId}',
     );
 
     try {
@@ -91,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final base64String = base64Encode(compressedBytes);
 
       final url = Uri.parse(
-        'http://192.168.68.60:3000/api/profile/${widget.userId}/avatar',
+        'http://192.168.1.4:3000/api/profile/${widget.userId}/avatar',
       );
 
       final response = await http.put(
@@ -154,20 +154,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: Container(
-        width: 64,
-        height: 64,
-        margin: const EdgeInsets.only(top: 10),
-        child: FloatingActionButton(
-          backgroundColor: Colors.white,
-          shape: const CircleBorder(),
-          onPressed: () {
-            // Add Recipe action
-          },
-          elevation: 6,
-          child: Icon(Icons.add, color: maroon, size: 32),
-        ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Transform.translate(
+            offset: const Offset(0, 20), // fine-tuned to sink it halfway
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child: FloatingActionButton(
+                backgroundColor: Colors.white,
+                shape: const CircleBorder(),
+                elevation: 6,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MyRecipesScreen(userId: widget.userId),
+                    ),
+                  );
+                },
+                child: Icon(Icons.add, color: maroon, size: 32),
+              ),
+            ),
+          ),
+          const SizedBox(height: 23),
+          const Text(
+            'Add Recipe',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white, // clearly white and visible on maroon
+            ),
+          ),
+        ],
       ),
+
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
         child: Container(
@@ -187,7 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              navIcon(Icons.home, () async {
+              navIcon(Icons.home, 'Home', () async {
                 final prefs = await SharedPreferences.getInstance();
                 final userId = prefs.getString('userId');
                 if (userId != null) {
@@ -199,7 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   );
                 }
               }),
-              navIcon(Icons.people, () {
+              navIcon(Icons.people, 'Community', () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -208,8 +229,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 );
               }),
-              const SizedBox(width: 40), // space for FAB
-              navIcon(Icons.calendar_today, () {
+              const SizedBox(width: 40), // space for center FAB
+              navIcon(Icons.calendar_today, 'Meal Plan', () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -217,7 +238,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 );
               }),
-              navIcon(Icons.shopping_cart, () {
+              navIcon(Icons.shopping_cart, 'Groceries', () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -365,8 +386,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget navIcon(IconData icon, VoidCallback onTap) {
-    return IconButton(icon: Icon(icon, color: Colors.white), onPressed: onTap);
+  Widget navIcon(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 10),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCard(

@@ -2,18 +2,17 @@
 const mongoose = require('mongoose');
 
 const storeSchema = new mongoose.Schema({
-    name: String,
-    location: {
-      lat: Number,
-      lng: Number
+  name: { type: String, required: true },
+  location: {
+    lat: { type: Number, required: true },
+    lng: { type: Number, required: true },
+  },
+  items: [
+    {
+      name: { type: String, required: true },
+      price: { type: Number, required: true },
     },
-    items: [
-      {
-        name: String,
-        price: Number
-      }
-    ]
-  });
-  
-  module.exports = mongoose.model('Store', storeSchema);
-  
+  ],
+});
+
+module.exports = mongoose.model('Store', storeSchema);

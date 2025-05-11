@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/calory_score_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:frontend/colors.dart';
@@ -32,7 +33,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     String date,
     String recipeId,
   ) async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/mealplans/mark-done');
+    final url = Uri.parse('http://192.168.1.4:3000/api/mealplans/mark-done');
     await http.put(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -42,7 +43,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
   Future<void> fetchSavedRecipes() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/savedRecipes',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/savedRecipes',
     );
 
     final response = await http.get(url);
@@ -54,7 +55,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
   Future<void> rateRecipe(String recipeId, int rating) async {
     await http.patch(
-      Uri.parse('http://192.168.68.60:3000/api/recipes/rate/$recipeId'),
+      Uri.parse('http://192.168.1.4:3000/api/recipes/rate/$recipeId'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'rating': rating}),
     );
@@ -95,9 +96,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
   Future<void> loadMealsFromBackend() async {
     final res = await http.get(
-      Uri.parse(
-        'http://192.168.68.60:3000/api/mealplans/user/${widget.userId}',
-      ),
+      Uri.parse('http://192.168.1.4:3000/api/mealplans/user/${widget.userId}'),
     );
 
     if (res.statusCode == 200) {
@@ -119,7 +118,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
             // Fetch full recipe details
             final recipeRes = await http.get(
-              Uri.parse('http://192.168.68.60:3000/api/recipes/$recipeId'),
+              Uri.parse('http://192.168.1.4:3000/api/recipes/$recipeId'),
             );
 
             if (recipeRes.statusCode == 200) {
@@ -396,7 +395,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
                                   final planResponse = await http.get(
                                     Uri.parse(
-                                      'http://192.168.68.60:3000/api/mealplans/user/${widget.userId}',
+                                      'http://192.168.1.4:3000/api/mealplans/user/${widget.userId}',
                                     ),
                                   );
 
@@ -412,7 +411,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                                       // 👇 Create a new meal plan if none exists
                                       final createResponse = await http.post(
                                         Uri.parse(
-                                          'http://192.168.68.60:3000/api/mealplans',
+                                          'http://192.168.1.4:3000/api/mealplans',
                                         ),
                                         headers: {
                                           'Content-Type': 'application/json',
@@ -448,7 +447,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
                                       final addResponse = await http.put(
                                         Uri.parse(
-                                          'http://192.168.68.60:3000/api/mealplans/$planId/add-recipe',
+                                          'http://192.168.1.4:3000/api/mealplans/$planId/add-recipe',
                                         ),
                                         headers: {
                                           'Content-Type': 'application/json',
@@ -507,10 +506,10 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     );
   }
 
-  void _showRatingModal(Map<String, dynamic> recipe) {
+  Future<void> _showRatingModal(Map<String, dynamic> recipe) async {
     int selectedRating = 0;
 
-    showDialog(
+    return showDialog(
       context: context,
       builder:
           (_) => StatefulBuilder(
@@ -553,15 +552,12 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                       onPressed: () async {
                         if (selectedRating > 0) {
                           await rateRecipe(recipe['_id'], selectedRating);
-                          setState(() {
-                            if (recipe['rating'] == null ||
-                                recipe['rating'] is! List) {
-                              recipe['rating'] = [];
-                            }
-                            recipe['rating'].add(selectedRating);
-                          });
-                          Navigator.pop(context);
-                          Navigator.pop(context, 'refresh');
+                          if (recipe['rating'] == null ||
+                              recipe['rating'] is! List) {
+                            recipe['rating'] = [];
+                          }
+                          recipe['rating'].add(selectedRating);
+                          Navigator.pop(context); // Only one pop
                         }
                       },
                     ),
@@ -595,7 +591,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     final recipeId = meal['recipe']['_id'];
 
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/mealplans/$planId/remove-recipe',
+      'http://192.168.1.4:3000/api/mealplans/$planId/remove-recipe',
     );
 
     final res = await http.put(
@@ -725,7 +721,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                           print('Recipe ID: $recipeId');
 
                           final url = Uri.parse(
-                            'http://192.168.68.60:3000/api/mealplans/${willBeDone ? 'mark-done' : 'mark-undone'}',
+                            'http://192.168.1.4:3000/api/mealplans/${willBeDone ? 'mark-done' : 'mark-undone'}',
                           );
 
                           final response = await http.put(
@@ -752,7 +748,24 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
                             // 👇 Show rating modal only if just marked as done
                             if (willBeDone) {
-                              _showRatingModal(meal['recipe']);
+                              await _showRatingModal(
+                                meal['recipe'],
+                              ); // 🔁 wait for rating to finish
+
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => CaloryScoreScreen(
+                                        userId: widget.userId,
+                                      ),
+                                ),
+                              );
+
+                              if (result == 'refresh') {
+                                setState(() {}); // Trigger UI rebuild
+                                await loadMealsFromBackend(); // Reload the meals and sync calories
+                              }
                             }
                           } else {
                             print('❌ Failed to update done status in backend');

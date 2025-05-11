@@ -16,7 +16,16 @@ const userSchema = new mongoose.Schema({
   recipes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' }],
   savedPlans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MealPlan' }],
   currentGroceryList: [{ type: String }],
-  role: { type: String, enum: ['user', 'admin'], default: 'user' }
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  survey: {
+    diet: { type: String, enum: ['Vegan', 'Keto', 'Low-Carb', 'Paleo', 'Vegetarian', 'None'], default: 'None' },
+    preferredTags: [{ type: String }], // e.g. ['gluten-free', 'spicy']
+    preferredCuisines: [{ type: String }], // e.g. ['Italian', 'Asian']
+    weight: { type: Number }, // in kg
+    height: { type: Number }, // in cm
+    bmiStatus: { type: String, enum: ['underweight', 'normal', 'overweight'], default: 'normal' }
+  }
+  
 });
 
 module.exports = mongoose.model('User', userSchema);
