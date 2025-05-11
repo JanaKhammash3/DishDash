@@ -24,7 +24,7 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
   TextEditingController _targetController = TextEditingController();
   int weeklyTarget = 10000;
 
-  final Color darkBlue = const Color(0xFF1E293B);
+  final Color darkBlue = const Color(0xFF304D30);
   final Color softWhite = const Color(0xFFF9FAFB);
   final Color accentGreen = const Color(0xFF10B981);
   final Color accentRed = const Color(0xFFEF4444);
