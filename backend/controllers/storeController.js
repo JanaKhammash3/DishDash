@@ -32,13 +32,15 @@ exports.comparePrices = async (req, res) => {
 
 exports.addStore = async (req, res) => {
   try {
-    const { name, location, items } = req.body;
+   const { name, location, items, image } = req.body;
 
-    const newStore = await Store.create({
-      name,
-      location,
-      items,
-    });
+const newStore = await Store.create({
+  name,
+  location,
+  items,
+  image, // ✅ include this
+});
+
 
     res.status(201).json(newStore);
   } catch (err) {

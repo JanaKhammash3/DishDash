@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
+import 'package:frontend/screens/store_items_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/screens/userprofile-screen.dart';
+import 'package:lucide_icons/lucide_icons.dart'; // For modern icons (optional)
 
 class CommunityScreen extends StatefulWidget {
   final String userId;
@@ -14,17 +16,12 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
+  String selectedCategory = 'users'; // default
   List<dynamic> posts = [];
   List<String> savedRecipeIds = [];
   String? userId;
-  String _formatTimestamp(String? isoString) {
-    if (isoString == null) return '';
-    final date = DateTime.tryParse(isoString);
-    if (date == null) return '';
-    return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
 
-  final String baseUrl = 'http://192.168.68.60:3000'; // Adjust for your setup
+  final String baseUrl = 'http://192.168.1.4:3000'; // Adjust for your setup
 
   @override
   void initState() {
@@ -32,21 +29,338 @@ class _CommunityScreenState extends State<CommunityScreen> {
     loadUserAndData();
   }
 
+  String _formatTimestamp(String? isoString) {
+    if (isoString == null) return '';
+    final date = DateTime.tryParse(isoString);
+    if (date == null) return '';
+    return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
   ImageProvider _getImageProvider(String? imageString) {
     if (imageString == null || imageString.isEmpty) {
       return const AssetImage('assets/placeholder.png');
     }
-
     if (imageString.startsWith('http')) {
       return NetworkImage(imageString);
     }
-
     try {
       final decoded = base64Decode(imageString.split(',').last);
       return MemoryImage(decoded);
     } catch (_) {
       return const AssetImage('assets/placeholder.png');
     }
+  }
+
+  Future<void> loadUserAndData() async {
+    final prefs = await SharedPreferences.getInstance();
+    userId = prefs.getString('userId');
+    await fetchUserProfile();
+    await fetchPosts();
+  }
+
+  Future<void> fetchUserProfile() async {
+    final res = await http.get(Uri.parse('$baseUrl/api/profile/$userId'));
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      setState(() {
+        savedRecipeIds = List<String>.from(data['recipes'] ?? []);
+      });
+    }
+  }
+
+  Future<void> fetchPosts() async {
+    final res = await http.get(Uri.parse('$baseUrl/api/recipes'));
+
+    if (res.statusCode == 200) {
+      final List data = json.decode(res.body);
+      List filteredPosts;
+
+      if (selectedCategory == 'users') {
+        filteredPosts =
+            data
+                .where(
+                  (r) =>
+                      r['author'] != null &&
+                      r['type'] != 'store' &&
+                      r['type'] != 'challenge',
+                )
+                .toList();
+      } else if (selectedCategory == 'stores') {
+        filteredPosts = data.where((r) => r['type'] == 'store').toList();
+      } else {
+        filteredPosts = data.where((r) => r['type'] == 'challenge').toList();
+      }
+
+      for (final post in filteredPosts) {
+        final commentsRes = await http.get(
+          Uri.parse('$baseUrl/api/comments/${post['_id']}'),
+        );
+        if (commentsRes.statusCode == 200) {
+          final comments = json.decode(commentsRes.body);
+          post['commentCount'] = comments.length;
+        } else {
+          post['commentCount'] = 0;
+        }
+      }
+
+      filteredPosts.sort(
+        (a, b) => (b['likes']?.length ?? 0).compareTo(a['likes']?.length ?? 0),
+      );
+
+      setState(() {
+        posts = filteredPosts;
+      });
+    }
+  }
+
+  Future<void> toggleLike(String recipeId, int index) async {
+    if (userId == null) return;
+
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/recipes/$recipeId/like'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'userId': userId}),
+    );
+
+    if (res.statusCode == 200) {
+      final result = json.decode(res.body);
+      setState(() {
+        posts[index]['likes'] = result['likes'];
+        posts[index]['liked'] = result['liked'];
+      });
+    }
+  }
+
+  Future<void> toggleSave(String recipeId) async {
+    final isSaved = savedRecipeIds.contains(recipeId);
+    final route = isSaved ? '/unsaveRecipe' : '/saveRecipe';
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/users/$userId$route'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'recipeId': recipeId}),
+    );
+
+    if (res.statusCode == 200) {
+      setState(() {
+        isSaved
+            ? savedRecipeIds.remove(recipeId)
+            : savedRecipeIds.add(recipeId);
+      });
+    }
+  }
+
+  Widget _buildCategoryButton(String label, String value, IconData icon) {
+    final isSelected = selectedCategory == value;
+    return ElevatedButton.icon(
+      onPressed: () {
+        if (value == 'stores') {
+          // 👉 Instead of just filtering, open store items screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StoreItemsScreen()),
+          );
+        } else {
+          // regular filter logic for 'users' or 'challenges'
+          if (selectedCategory != value) {
+            setState(() => selectedCategory = value);
+            fetchPosts();
+          }
+        }
+      },
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? green : Colors.grey[300],
+        foregroundColor: isSelected ? Colors.white : Colors.black,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Our Community',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: green,
+        centerTitle: true,
+        foregroundColor: Colors.white,
+      ),
+      body:
+          posts.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildCategoryButton('Users', 'users', Icons.person),
+                        _buildCategoryButton('Stores', 'stores', Icons.store),
+                        _buildCategoryButton(
+                          'Challenges',
+                          'challenges',
+                          Icons.flag,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: posts.length,
+                      itemBuilder: (context, index) {
+                        final post = posts[index];
+                        final recipeId = post['_id'];
+                        final author = post['author'];
+                        final liked =
+                            (post['likes'] as List?)?.contains(userId) ?? false;
+                        final isSaved = savedRecipeIds.contains(recipeId);
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 4,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ListTile(
+                                leading: CircleAvatar(
+                                  backgroundImage: _getImageProvider(
+                                    author?['avatar'],
+                                  ),
+                                ),
+                                title: Text(author?['name'] ?? 'Unknown'),
+                                trailing:
+                                    author?['_id'] != userId
+                                        ? ElevatedButton(
+                                          onPressed: () async {
+                                            await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (_) => UserProfileScreen(
+                                                      userId:
+                                                          author?['_id'] ?? '',
+                                                    ),
+                                              ),
+                                            );
+                                            await fetchPosts();
+                                            await fetchUserProfile();
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: green,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 6,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Profile',
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        )
+                                        : null,
+                              ),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image(
+                                  image: _getImageProvider(post['image']),
+                                  width: double.infinity,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  post['title'] ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 8,
+                                ),
+                                child: Text(post['description'] ?? ''),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 4,
+                                ),
+                                child: Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        liked
+                                            ? Icons.favorite
+                                            : Icons.favorite_border,
+                                        color: liked ? Colors.red : Colors.grey,
+                                      ),
+                                      onPressed:
+                                          () => toggleLike(recipeId, index),
+                                    ),
+                                    Text('${post['likes']?.length ?? 0}'),
+                                    const SizedBox(width: 12),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.comment,
+                                        color: Colors.grey,
+                                      ),
+                                      onPressed:
+                                          () => openCommentModal(recipeId),
+                                    ),
+                                    Text('${post['commentCount'] ?? 0}'),
+                                    const Spacer(),
+                                    IconButton(
+                                      icon: Icon(
+                                        isSaved
+                                            ? Icons.bookmark
+                                            : Icons.bookmark_outline,
+                                        color:
+                                            isSaved
+                                                ? Colors.black
+                                                : Colors.grey,
+                                      ),
+                                      onPressed: () => toggleSave(recipeId),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+    );
   }
 
   void openCommentModal(String recipeId) async {
@@ -216,282 +530,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
         );
       },
-    );
-  }
-
-  Future<void> fetchUserProfile() async {
-    final res = await http.get(Uri.parse('$baseUrl/api/profile/$userId'));
-    if (res.statusCode == 200) {
-      final data = json.decode(res.body);
-      setState(() {
-        savedRecipeIds = List<String>.from(data['recipes'] ?? []);
-      });
-    } else {
-      print('❌ Failed to fetch profile');
-    }
-  }
-
-  Future<void> loadUserAndData() async {
-    final prefs = await SharedPreferences.getInstance();
-    userId = prefs.getString('userId');
-    await fetchUserProfile(); // ✅ load saved recipes
-    await fetchPosts();
-  }
-
-  Future<void> fetchPosts() async {
-    final res = await http.get(Uri.parse('$baseUrl/api/recipes'));
-
-    if (res.statusCode == 200) {
-      final List data = json.decode(res.body);
-      final userPosts = data.where((r) => r['author'] != null).toList();
-
-      // Fetch comment counts for each recipe
-      for (final post in userPosts) {
-        final commentsRes = await http.get(
-          Uri.parse('$baseUrl/api/comments/${post['_id']}'),
-        );
-        if (commentsRes.statusCode == 200) {
-          final comments = json.decode(commentsRes.body);
-          post['commentCount'] = comments.length;
-        } else {
-          post['commentCount'] = 0;
-        }
-      }
-
-      // ✅ Sort by number of likes (descending)
-      userPosts.sort(
-        (a, b) => (b['likes']?.length ?? 0).compareTo(a['likes']?.length ?? 0),
-      );
-
-      setState(() {
-        posts = userPosts;
-      });
-    } else {
-      print('❌ Failed to fetch recipes');
-    }
-  }
-
-  Future<void> toggleLike(String recipeId, int index) async {
-    if (userId == null) {
-      print('❌ No userId found for liking');
-      return;
-    }
-
-    // ✅ FIXED version
-    final res = await http.post(
-      Uri.parse('$baseUrl/api/recipes/$recipeId/like'), // 👈 no double /recipes
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'userId': userId}),
-    );
-
-    if (res.statusCode == 200) {
-      final result = json.decode(res.body);
-      setState(() {
-        posts[index]['likes'] = result['likes'];
-        posts[index]['liked'] = result['liked'];
-      });
-    } else {
-      print('❌ Like failed with status: ${res.statusCode}');
-    }
-  }
-
-  Future<void> toggleSave(String recipeId) async {
-    final isSaved = savedRecipeIds.contains(recipeId);
-    final route = isSaved ? '/unsaveRecipe' : '/saveRecipe';
-    final res = await http.post(
-      Uri.parse('$baseUrl/api/users/$userId$route'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'recipeId': recipeId}),
-    );
-
-    if (res.statusCode == 200) {
-      setState(() {
-        if (isSaved) {
-          savedRecipeIds.remove(recipeId);
-        } else {
-          savedRecipeIds.add(recipeId);
-        }
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isSaved ? 'Removed from saved!' : 'Recipe saved!'),
-        ),
-      );
-    } else {
-      print('❌ Save/Unsave failed');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Our Community',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: green,
-        centerTitle: true,
-        foregroundColor: Colors.white,
-      ),
-      body:
-          posts.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  final post = posts[index];
-                  final recipeId = post['_id'];
-                  final author = post['author'];
-                  final liked =
-                      (post['likes'] as List?)?.contains(userId) ?? false;
-
-                  final isSaved = savedRecipeIds.contains(recipeId);
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: _getImageProvider(
-                              author?['avatar'],
-                            ),
-                          ),
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  author?['name'] ?? 'Unknown',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (author?['_id'] != userId)
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => UserProfileScreen(
-                                              userId: author?['_id'] ?? '',
-                                            ),
-                                      ),
-                                    );
-                                    // Refresh posts after returning
-                                    await fetchPosts();
-                                    await fetchUserProfile();
-                                  },
-
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: green,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 6,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: const Text(
-                                    'Profile',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image(
-                            image: _getImageProvider(post['image']),
-                            width: double.infinity,
-                            height: 200,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 4,
-                          ),
-                          child: Text(
-                            post['title'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 8,
-                          ),
-                          child: Text(post['description'] ?? ''),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 4,
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  liked
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color: liked ? Colors.red : Colors.grey,
-                                ),
-                                onPressed: () => toggleLike(recipeId, index),
-                              ),
-                              Text('${post['likes']?.length ?? 0}'),
-
-                              const SizedBox(width: 12), // spacing
-
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.comment,
-                                  color: Colors.grey,
-                                ),
-                                onPressed: () => openCommentModal(recipeId),
-                              ),
-                              Text(
-                                '${post['commentCount'] ?? 0}',
-                              ), // ✅ Show comment count
-                              const Spacer(),
-                              IconButton(
-                                icon: Icon(
-                                  isSaved
-                                      ? Icons.bookmark
-                                      : Icons.bookmark_outline,
-                                  color: isSaved ? Colors.black : Colors.grey,
-                                ),
-                                onPressed: () => toggleSave(recipeId),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
     );
   }
 }
