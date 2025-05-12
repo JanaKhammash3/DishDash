@@ -4,57 +4,48 @@ import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/userprofile-screen.dart';
 
-class FollowingScreen extends StatefulWidget {
+class FollowersScreen extends StatefulWidget {
   final String userId;
-  const FollowingScreen({super.key, required this.userId});
+  const FollowersScreen({super.key, required this.userId});
 
   @override
-  State<FollowingScreen> createState() => _FollowingScreenState();
+  State<FollowersScreen> createState() => _FollowersScreenState();
 }
 
-class _FollowingScreenState extends State<FollowingScreen> {
-  List<dynamic> followingUsers = [];
+class _FollowersScreenState extends State<FollowersScreen> {
+  List<dynamic> followers = [];
 
   @override
   void initState() {
     super.initState();
-    fetchFollowing();
+    fetchFollowers();
   }
 
-  Future<void> fetchFollowing() async {
-    final response = await http.get(
-      Uri.parse('http://192.168.68.60:3000/api/profile/${widget.userId}'),
+  Future<void> fetchFollowers() async {
+    final url = Uri.parse(
+      'http://192.168.68.60:3000/api/users/followers/${widget.userId}',
     );
+    final res = await http.get(url);
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+    if (res.statusCode == 200) {
       setState(() {
-        followingUsers = data['following'] ?? [];
+        followers = json.decode(res.body);
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to fetch following list')),
+        const SnackBar(content: Text('Failed to fetch followers')),
       );
     }
   }
 
-  ImageProvider _getAvatar(dynamic image) {
-    if (image == null || image is! String || image.isEmpty) {
-      return const AssetImage('assets/placeholder.png');
-    }
-
-    try {
-      if (image.startsWith('http')) {
-        return NetworkImage(image);
-      }
-      if (image.startsWith('data:image')) {
-        return MemoryImage(base64Decode(image.split(',').last));
-      }
-      if (image.startsWith('/9j') || image.length > 100) {
-        return MemoryImage(base64Decode(image));
-      }
-      return NetworkImage('http://192.168.68.60:3000/images/$image');
-    } catch (e) {
+  ImageProvider _getAvatar(String? avatar) {
+    if (avatar != null && avatar.startsWith('http')) {
+      return NetworkImage(avatar);
+    } else if (avatar != null && avatar.startsWith('/9j')) {
+      return MemoryImage(base64Decode(avatar));
+    } else if (avatar != null && avatar.isNotEmpty) {
+      return NetworkImage('http://192.168.68.60:3000/images/$avatar');
+    } else {
       return const AssetImage('assets/placeholder.png');
     }
   }
@@ -63,34 +54,27 @@ class _FollowingScreenState extends State<FollowingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Following'),
+        title: const Text('Followers'),
         backgroundColor: green,
         foregroundColor: Colors.white,
       ),
       body:
-          followingUsers.isEmpty
-              ? const Center(child: Text('You are not following anyone.'))
+          followers.isEmpty
+              ? const Center(child: Text('You have no followers yet.'))
               : ListView.builder(
+                itemCount: followers.length,
                 padding: const EdgeInsets.all(16),
-                itemCount: followingUsers.length,
                 itemBuilder: (_, index) {
-                  final user = followingUsers[index];
-
-                  ImageProvider avatarImage;
-                  try {
-                    avatarImage = _getAvatar(user['avatar']);
-                  } catch (e) {
-                    avatarImage = const AssetImage('assets/placeholder.png');
-                  }
-
+                  final user = followers[index];
                   return Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 3,
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     child: ListTile(
-                      leading: CircleAvatar(backgroundImage: avatarImage),
+                      leading: CircleAvatar(
+                        backgroundImage: _getAvatar(user['avatar']),
+                      ),
                       title: Text(user['name'] ?? 'User'),
                       trailing: ElevatedButton(
                         onPressed: () {

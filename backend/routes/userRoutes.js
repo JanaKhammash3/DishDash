@@ -20,7 +20,8 @@ const {
   updateSurvey,
    getAvailableIngredients,
   updateAvailableIngredients,
-  getProfile
+  getProfile,
+  getFollowers
 } = require('../controllers/userController');
 
 // Auth & profile
@@ -41,15 +42,7 @@ router.get('/:userId/myRecipes', getMyRecipes);
 // Follow system
 router.post('/toggleFollow', toggleFollow);
 router.get('/:id/followers/count', getFollowerCount);
-router.get('/followers/:userId', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const allUsers = await User.find({ following: userId });
-    res.json({ followers: allUsers.length });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/followers/:userId', getFollowers);
 
 // ✅ Grocery list
 router.get('/:userId/grocery-list', getGroceryList);

@@ -562,3 +562,14 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+// GET list of followers
+exports.getFollowers = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const followers = await User.find({ following: userId }).select('name avatar');
+    res.status(200).json(followers);
+  } catch (err) {
+    console.error('Error fetching followers:', err.message);
+    res.status(500).json({ message: 'Failed to fetch followers' });
+  }
+};

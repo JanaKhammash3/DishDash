@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   int visibleRecipeCount = 4;
   String searchQuery = '';
-  bool showSurveyRecommendations = false;
+  bool showSurveyRecommendations = true;
   List<String> selectedIngredients = [];
   double _averageRating(List? ratings) {
     final r = (ratings ?? []).cast<num>();
@@ -428,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   () => setState(() => showSurveyRecommendations = false),
               style: TextButton.styleFrom(
                 backgroundColor:
-                    !showSurveyRecommendations ? maroon : Colors.grey[200],
+                    !showSurveyRecommendations ? green : Colors.grey[200],
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -446,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => setState(() => showSurveyRecommendations = true),
               style: TextButton.styleFrom(
                 backgroundColor:
-                    showSurveyRecommendations ? maroon : Colors.grey[200],
+                    showSurveyRecommendations ? green : Colors.grey[200],
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
