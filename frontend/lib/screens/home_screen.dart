@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'Zucchini', 'image': 'assets/ingredients/zucchini.jpg'},
     {'name': 'Spinach', 'image': 'assets/ingredients/spinach.png'},
     {'name': 'Carrot', 'image': 'assets/ingredients/carrot.png'},
-    {'name': 'Tofu', 'image': 'assets/ingredients/tofu.png'},
+    {'name': 'Tofu', 'image': 'assets/ingredients/tofupng.png'},
   ];
 
   final Map<String, Map<String, bool>> _filters = {
