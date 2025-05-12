@@ -14,6 +14,7 @@ import 'package:image/image.dart' as img;
 import 'package:frontend/screens/saved_recipes_screen.dart' as saved;
 import 'package:frontend/screens/my_recipes_screen.dart';
 import 'package:frontend/screens/calory_score_screen.dart' as saved;
+import 'package:frontend/screens/following_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -353,7 +354,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icons.group,
             'Following',
             'View users and creators you follow',
-            () {},
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FollowingScreen(userId: widget.userId),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 30),
           Center(
