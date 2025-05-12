@@ -118,7 +118,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
                     await saveRecipe(id);
                   }
 
-                  // ❌ Don't call fetchRecommendations() here
+                  fetchRecommendations();
                 },
               };
             }).toList();

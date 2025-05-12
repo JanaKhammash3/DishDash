@@ -19,13 +19,15 @@ const {
   getRecommendations,
   updateSurvey,
    getAvailableIngredients,
-  updateAvailableIngredients
+  updateAvailableIngredients,
+  getProfile,
+  getFollowers
 } = require('../controllers/userController');
 
 // Auth & profile
 router.post('/register', register);
 router.post('/login', login);
-router.get('/profile/:id', getUserProfile);
+router.get('/profile/:id', getProfile);
 router.put('/profile/:id', updateProfile);
 router.patch('/updateAllergies/:id', updateAllergies);
 router.put('/profile/:id/avatar', uploadAvatar);
@@ -40,15 +42,7 @@ router.get('/:userId/myRecipes', getMyRecipes);
 // Follow system
 router.post('/toggleFollow', toggleFollow);
 router.get('/:id/followers/count', getFollowerCount);
-router.get('/followers/:userId', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const allUsers = await User.find({ following: userId });
-    res.json({ followers: allUsers.length });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/followers/:userId', getFollowers);
 
 // ✅ Grocery list
 router.get('/:userId/grocery-list', getGroceryList);
@@ -62,6 +56,8 @@ module.exports = router;
 router.get('/:id/followers/count', getFollowerCount);
 router.get('/:id/recommendations', getRecommendations);
 router.put('/users/:id/survey', updateSurvey);
+
+
 
 
 

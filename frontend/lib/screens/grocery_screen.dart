@@ -470,7 +470,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_sweep, color: maroon),
+            icon: const Icon(Icons.delete_sweep, color: green),
             tooltip: 'Clear All',
             onPressed:
                 groceryItems.isEmpty
@@ -568,7 +568,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
                                   IconButton(
                                     icon: const Icon(
                                       Icons.delete,
-                                      color: maroon,
+                                      color: green,
                                     ),
                                     onPressed:
                                         () => _removeIngredient(item['name']),
