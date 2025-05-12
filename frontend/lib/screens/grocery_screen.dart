@@ -723,18 +723,73 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
                               horizontal: 0,
                               vertical: 4,
                             ),
-                            leading: const Icon(
-                              Icons.store,
-                              color: green,
-                              size: 32,
+                            leading: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child:
+                                  store['image'] != null &&
+                                          store['image'].toString().startsWith(
+                                            'http',
+                                          )
+                                      ? Image.network(
+                                        store['image'],
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (_, __, ___) => Container(
+                                              width: 48,
+                                              height: 48,
+                                              color: Colors.grey[300],
+                                              child: const Icon(
+                                                Icons.store,
+                                                color: green,
+                                              ),
+                                            ),
+                                      )
+                                      : Container(
+                                        width: 48,
+                                        height: 48,
+                                        color: Colors.grey[300],
+                                        child: const Icon(
+                                          Icons.store,
+                                          color: green,
+                                        ),
+                                      ),
                             ),
-                            title: Text(
-                              store['store'],
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
+
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    store['store'],
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                if (index == 0) // Nearest store
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: green.withOpacity(0.1),
+                                      border: Border.all(color: green),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text(
+                                      'Nearest Store',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: green,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                             subtitle: Text(
                               store['distance'] != null
@@ -743,7 +798,7 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
                               style: const TextStyle(color: Colors.grey),
                             ),
                             trailing: Text(
-                              '\$$price',
+                              '\$${(store['price'] ?? 0.0).toStringAsFixed(2)}',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

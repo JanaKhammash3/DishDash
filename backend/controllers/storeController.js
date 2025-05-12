@@ -48,22 +48,27 @@ const newStore = await Store.create({
   }
 };
 
-// Example: controllers/storeController.js
 exports.getStorePrices = async (req, res) => {
   const { item } = req.query;
 
-  if (!item) {
-    return res.status(400).json({ error: 'Item is required' });
-  }
+  if (!item) return res.status(400).json({ error: 'Item is required' });
 
   try {
-    const stores = await Store.find({ "items.name": item }); // or .find() then filter in JS
+    const stores = await Store.find(
+      { "items.name": item },
+      'name location items image'
+    );
+
+    console.log('🔍 Returned stores with images:', stores); // Add this
+
     res.json(stores);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error fetching store prices:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
 
 // POST /api/stores/:storeId/items
 exports.addItemToStore = async (req, res) => {
