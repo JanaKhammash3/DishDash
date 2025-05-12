@@ -360,14 +360,14 @@ exports.getRecommendations = async (req, res) => {
     const user = await User.findById(userId).populate('recipes');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // Determine current meal time
     const hour = new Date().getHours();
     let currentMeal = 'Breakfast';
     if (hour >= 11 && hour < 15) currentMeal = 'Lunch';
     else if (hour >= 15 && hour < 20) currentMeal = 'Dinner';
     else if (hour >= 20 || hour < 6) currentMeal = 'Snack';
 
-    const mealPlans = await MealPlan.find({ userId }).populate('days.meals.recipe');
-
+    // Extract liked tags/ingredients from activity
     const likedTags = {};
     const likedIngredients = {};
     const extractFromRecipe = recipe => {
@@ -380,15 +380,22 @@ exports.getRecommendations = async (req, res) => {
       });
     };
 
+    // From saved recipes
     user.recipes.forEach(extractFromRecipe);
+
+    // From liked recipes
     const likedRecipes = await Recipe.find({ likes: userId });
     likedRecipes.forEach(extractFromRecipe);
+
+    // From meal plans
+    const mealPlans = await MealPlan.find({ userId }).populate('days.meals.recipe');
     mealPlans.forEach(plan =>
       plan.days.forEach(day =>
         day.meals.forEach(meal => extractFromRecipe(meal.recipe))
       )
     );
 
+    // Build search priorities
     const topTags = [...new Set([
       ...Object.keys(likedTags),
       ...(user.preferredTags || []),
@@ -406,6 +413,7 @@ exports.getRecommendations = async (req, res) => {
       ingredients: { $nin: user.allergies || [] }
     };
 
+    // Calorie logic based on BMI
     let calorieCondition = {};
     if (user.height && user.weight) {
       const heightM = user.height / 100;
@@ -414,44 +422,55 @@ exports.getRecommendations = async (req, res) => {
       else if (bmi < 18.5) calorieCondition = { calories: { $gte: 400 } };
     }
 
-    const mealTimeRecipes = await Recipe.find({
+    // 🥗 Meal-time Recommendations (based on current time and diet)
+    const mealTimeBased = await Recipe.find({
       ...baseConditions,
       mealTime: currentMeal,
       ...calorieCondition
-    }).limit(10);
+    })
+    .populate('author') 
+    .limit(10);
 
-    const mealTimeIds = mealTimeRecipes.map(r => r._id);
+    const mealTimeIds = mealTimeBased.map(r => r._id.toString());
 
+    // 🌱 Survey-Based Recommendations
     const orConditions = [];
-
     if (topTags.length) orConditions.push({ tags: { $in: topTags } });
     if (topIngredients.length) orConditions.push({ ingredients: { $in: topIngredients } });
     if (user.diet && user.diet !== 'None') orConditions.push({ diet: user.diet });
-    
-    let personalizedRecipes = [];
-    
+
+    let surveyBased = [];
+
     if (orConditions.length > 0) {
-      personalizedRecipes = await Recipe.find({
+      surveyBased = await Recipe.find({
         ...baseConditions,
         _id: { $nin: [...excludedIds, ...mealTimeIds] },
         $or: orConditions,
         ...calorieCondition
-      }).limit(10);
+      })
+      .populate('author') 
+      .limit(10);
     } else {
-      // fallback if nothing matched: just fetch some random ones
-      personalizedRecipes = await Recipe.find({
+      // fallback if survey data is missing
+      surveyBased = await Recipe.find({
         ...baseConditions,
         _id: { $nin: [...excludedIds, ...mealTimeIds] },
         ...calorieCondition
-      }).limit(10);
+      })
+      .populate('author') 
+      .limit(10);
     }
-    
-    res.json([...mealTimeRecipes, ...personalizedRecipes]);
+
+    res.json({
+      mealTimeBased,
+      surveyBased,
+    });
   } catch (err) {
     console.error('Recommendation error:', err);
     res.status(500).json({ message: 'Recommendation failed' });
   }
 };
+
 
 // ✅ GET /api/users/:userId/available-ingredients
 exports.getAvailableIngredients = async (req, res) => {

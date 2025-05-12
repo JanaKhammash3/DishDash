@@ -13,6 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       initialRoute: '/', // The initial route (home screen)
       routes: {
         '/': (context) => LoginScreen(), // Define the login screen route
