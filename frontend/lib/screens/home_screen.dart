@@ -11,6 +11,7 @@ import 'package:frontend/screens/recipe_screen.dart';
 import 'package:frontend/screens/grocery_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import './category_filters.dart';
+import 'package:frontend/screens/recommendations_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userId;
@@ -21,19 +22,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<dynamic> mealTimeRecommendations = [];
+  List<dynamic> surveyRecommendations = [];
   String selectedCategory = '';
   String? userId;
   String? avatarUrl;
   List<dynamic> randomRecipes = [];
   List<dynamic> popularRecipes = [];
-  List<dynamic> recommendedRecipes = [];
   Set<String> savedRecipeIds = {};
   String? userName;
   final TextEditingController _searchController = TextEditingController();
   int visibleRecipeCount = 4;
   String searchQuery = '';
-
+  bool showSurveyRecommendations = false;
   List<String> selectedIngredients = [];
+  double _averageRating(List? ratings) {
+    final r = (ratings ?? []).cast<num>();
+    return r.isEmpty ? 0.0 : r.reduce((a, b) => a + b) / r.length;
+  }
+
   final List<Map<String, String>> allIngredients = [
     {'name': 'Egg', 'image': 'assets/ingredients/egg.jpg'},
     {'name': 'Chicken', 'image': 'assets/ingredients/chicken.jpg'},
@@ -54,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
     {'name': 'Zucchini', 'image': 'assets/ingredients/zucchini.jpg'},
     {'name': 'Spinach', 'image': 'assets/ingredients/spinach.png'},
     {'name': 'Carrot', 'image': 'assets/ingredients/carrot.png'},
-    {'name': 'Tofu', 'image': 'assets/ingredients/tofu.png'},
+    {'name': 'Tofu', 'image': 'assets/ingredients/tofupng.png'},
   ];
 
   final Map<String, Map<String, bool>> _filters = {
@@ -210,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
     final uri = Uri.http(
-      '192.168.1.4:3000',
+      '192.168.68.60:3000',
       '/api/recipes/filter',
       queryParams,
     );
@@ -240,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.1.4:3000/images/$image'
+                    ? 'http://192.168.68.60:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -274,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.68.60:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -287,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/recipes');
+    final url = Uri.parse('http://192.168.68.60:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -300,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/$userId/saveRecipe',
+      'http://192.168.68.60:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -314,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.68.60:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -327,7 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes({String? category}) async {
-    String baseUrl = 'http://192.168.1.4:3000/api/recipes/filter';
+    String baseUrl = 'http://192.168.68.60:3000/api/recipes/filter';
     Uri url;
 
     if (category != null && category.isNotEmpty) {
@@ -385,7 +392,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.1.4:3000/images/$image'
+                    ? 'http://192.168.68.60:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -403,6 +410,83 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       print('Error fetching recipes: ${response.statusCode}');
     }
+  }
+
+  Widget _buildRecommendationsSection() {
+    final currentList =
+        showSurveyRecommendations
+            ? surveyRecommendations
+            : mealTimeRecommendations;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            TextButton(
+              onPressed:
+                  () => setState(() => showSurveyRecommendations = false),
+              style: TextButton.styleFrom(
+                backgroundColor:
+                    !showSurveyRecommendations ? maroon : Colors.grey[200],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: Text(
+                'Recommendation',
+                style: TextStyle(
+                  color:
+                      !showSurveyRecommendations ? Colors.white : Colors.black,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () => setState(() => showSurveyRecommendations = true),
+              style: TextButton.styleFrom(
+                backgroundColor:
+                    showSurveyRecommendations ? maroon : Colors.grey[200],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              child: Text(
+                'Based on Your Survey',
+                style: TextStyle(
+                  color:
+                      showSurveyRecommendations ? Colors.white : Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: currentList.length,
+            itemBuilder: (context, index) {
+              final recipe = currentList[index];
+
+              final imagePath = recipe['imagePath'] ?? 'assets/placeholder.png';
+
+              return placeCard(
+                recipe['title'],
+                recipe['author']?['name'] ?? 'Unknown',
+                imagePath,
+                rating: _averageRating(recipe['ratings']),
+                authorName: recipe['author']?['name'],
+                authorAvatar: recipe['author']?['avatar'],
+                onSave: recipe['onSave'],
+                isSaved: recipe['isSaved'] ?? false,
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -640,14 +724,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildCategoryList(),
                     const SizedBox(height: 12),
                     const Text(
-                      'Recommendation',
+                      'Recommendations',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
                         fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    _buildRecommendations(),
+                    const SizedBox(height: 8),
+                    RecommendationsWidget(
+                      userId: widget.userId,
+                      onUpdate: ({
+                        required mealTimeBased,
+                        required surveyBased,
+                      }) {
+                        setState(() {
+                          mealTimeRecommendations = mealTimeBased;
+                          surveyRecommendations = surveyBased;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    _buildRecommendationsSection(),
                     const SizedBox(height: 20),
                     const Text(
                       'Popular Recipes',
@@ -948,24 +1045,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecommendations() {
-    return SizedBox(
-      height: 150,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: recommendedRecipes.length,
-        itemBuilder: (context, index) {
-          final recipe = recommendedRecipes[index];
-          return placeCard(
-            recipe['title'],
-            recipe['author'] ?? 'Unknown',
-            recipe['image'] ?? 'assets/placeholder.png',
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildPopularRecipes() {
     final filtered =
         popularRecipes.where((recipe) {
@@ -1000,7 +1079,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final rawPath = recipe['image'] ?? '';
               final imagePath =
                   rawPath.startsWith('/images/')
-                      ? 'http://192.168.1.4:3000$rawPath'
+                      ? 'http://192.168.68.60:3000$rawPath'
                       : rawPath;
 
               final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];

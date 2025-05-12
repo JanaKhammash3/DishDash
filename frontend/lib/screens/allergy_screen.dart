@@ -16,11 +16,38 @@ class AllergyScreen extends StatefulWidget {
 
 class _AllergyScreenState extends State<AllergyScreen> {
   List<TextEditingController> _allergyControllers = [TextEditingController()];
-
+  String? _selectedDiet;
+  List<String> _preferredTags = [];
+  List<String> _preferredCuisines = [];
+  TextEditingController _weightController = TextEditingController();
+  TextEditingController _heightController = TextEditingController();
   void _addAllergyField() {
     setState(() {
       _allergyControllers.add(TextEditingController());
     });
+  }
+
+  Future<void> _saveSurvey() async {
+    final url = Uri.parse(
+      'http://192.168.68.60:3000/api/users/${widget.userId}/survey',
+    );
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        "diet": _selectedDiet ?? "None",
+        "preferredTags": _preferredTags,
+        "preferredCuisines": _preferredCuisines,
+        "weight": int.tryParse(_weightController.text),
+        "height": int.tryParse(_heightController.text),
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to save survey")));
+    }
   }
 
   void _goToHomeScreen() {
@@ -35,28 +62,22 @@ class _AllergyScreenState extends State<AllergyScreen> {
   void _saveAllergies() async {
     List<String> allergies =
         _allergyControllers
-            .map((controller) => controller.text.trim())
-            .where((text) => text.isNotEmpty)
+            .map((c) => c.text.trim())
+            .where((t) => t.isNotEmpty)
             .toList();
 
-    if (allergies.isEmpty) {
-      _goToHomeScreen();
-      return;
-    }
-
-    final response = await http.patch(
+    final allergyRes = await http.patch(
       Uri.parse(
-        'http://192.168.1.4:3000/api/users/updateAllergies/${widget.userId}',
+        'http://192.168.68.60:3000/api/users/updateAllergies/${widget.userId}',
       ),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'allergies': allergies}),
     );
 
-    if (response.statusCode == 200) {
-      // ✅ Save userId to SharedPreferences
+    if (allergyRes.statusCode == 200) {
+      await _saveSurvey(); // 👈 also save survey
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userId', widget.userId);
-
       _goToHomeScreen();
     } else {
       ScaffoldMessenger.of(
@@ -158,7 +179,118 @@ class _AllergyScreenState extends State<AllergyScreen> {
                       ),
                     ),
 
+                    const SizedBox(height: 30),
+                    Text(
+                      "Diet Preference",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    DropdownButton<String>(
+                      value: _selectedDiet,
+                      hint: const Text("Select Diet"),
+                      isExpanded: true,
+                      items:
+                          [
+                                'None',
+                                'Vegan',
+                                'Keto',
+                                'Low-Carb',
+                                'Paleo',
+                                'Vegetarian',
+                              ]
+                              .map(
+                                (diet) => DropdownMenuItem(
+                                  value: diet,
+                                  child: Text(diet),
+                                ),
+                              )
+                              .toList(),
+                      onChanged:
+                          (value) => setState(() => _selectedDiet = value),
+                    ),
+
                     const SizedBox(height: 20),
+                    Text(
+                      "Preferred Tags",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      children:
+                          [
+                            'gluten-free',
+                            'spicy',
+                            'lactose-free',
+                            'high-protein',
+                          ].map((tag) {
+                            final isSelected = _preferredTags.contains(tag);
+                            return ChoiceChip(
+                              label: Text(tag),
+                              selected: isSelected,
+                              onSelected: (_) {
+                                setState(() {
+                                  isSelected
+                                      ? _preferredTags.remove(tag)
+                                      : _preferredTags.add(tag);
+                                });
+                              },
+                            );
+                          }).toList(),
+                    ),
+
+                    const SizedBox(height: 20),
+                    Text(
+                      "Preferred Cuisines",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      children:
+                          [
+                            'Italian',
+                            'Asian',
+                            'Middle Eastern',
+                            'Mexican',
+                            'Indian',
+                          ].map((cuisine) {
+                            final isSelected = _preferredCuisines.contains(
+                              cuisine,
+                            );
+                            return ChoiceChip(
+                              label: Text(cuisine),
+                              selected: isSelected,
+                              onSelected: (_) {
+                                setState(() {
+                                  isSelected
+                                      ? _preferredCuisines.remove(cuisine)
+                                      : _preferredCuisines.add(cuisine);
+                                });
+                              },
+                            );
+                          }).toList(),
+                    ),
+
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _weightController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Weight (kg)',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _heightController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Height (cm)',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
 
                     // Save Button
                     SizedBox(
@@ -172,6 +304,7 @@ class _AllergyScreenState extends State<AllergyScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
+
                         child: const Text(
                           "Save",
                           style: TextStyle(

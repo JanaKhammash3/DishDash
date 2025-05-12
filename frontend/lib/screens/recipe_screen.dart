@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:frontend/colors.dart';
@@ -41,11 +43,19 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isBase64 = widget.imagePath.startsWith(
+      '/9j',
+    ); // Simple JPEG base64 check
     final isNetwork = widget.imagePath.startsWith('http');
-    final imageProvider =
-        isNetwork
-            ? NetworkImage(widget.imagePath)
-            : const AssetImage('assets/placeholder.png') as ImageProvider;
+
+    ImageProvider imageProvider;
+    if (isBase64) {
+      imageProvider = MemoryImage(base64Decode(widget.imagePath));
+    } else if (isNetwork) {
+      imageProvider = NetworkImage(widget.imagePath);
+    } else {
+      imageProvider = const AssetImage('assets/placeholder.png');
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
