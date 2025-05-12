@@ -502,7 +502,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: maroon,
+                color: green,
               ),
             ),
             const SizedBox(height: 16),
@@ -588,7 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: const Text(
                         'Clear all',
                         style: TextStyle(
-                          color: maroon, // ✅ Set the text color
+                          color: green, // ✅ Set the text color
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -651,7 +651,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: maroon,
+                color: green,
               ),
             ),
             const SizedBox(height: 8),
@@ -713,7 +713,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const Spacer(),
                         IconButton(
-                          icon: const Icon(Icons.notifications, color: maroon),
+                          icon: const Icon(Icons.notifications, color: green),
                           onPressed: () {},
                         ),
                       ],
@@ -778,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> {
             .map(
               (entry) => CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
-                activeColor: maroon,
+                activeColor: green,
                 value: entry.value,
                 title: Text(
                   entry.key,
@@ -839,7 +839,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: maroon,
+              color: green,
             ),
           ),
           const SizedBox(height: 16),
@@ -980,7 +980,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: maroon,
+              color: green,
             ),
           ),
           const SizedBox(height: 8),
@@ -1019,7 +1019,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Builder(
           builder:
               (context) => IconButton(
-                icon: const Icon(Icons.filter_list, color: maroon),
+                icon: const Icon(Icons.filter_list, color: green),
                 onPressed: () => Scaffold.of(context).openEndDrawer(),
               ),
         ),
@@ -1122,7 +1122,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       });
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: maroon,
+                      backgroundColor: green,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -1159,7 +1159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: const Text(
                       'Show Less',
-                      style: TextStyle(color: maroon),
+                      style: TextStyle(color: green),
                     ),
                   ),
               ],
@@ -1176,7 +1176,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         height: 60,
         decoration: BoxDecoration(
-          color: maroon,
+          color: green,
           borderRadius: BorderRadius.circular(40),
           boxShadow: [
             BoxShadow(
@@ -1250,7 +1250,7 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(right: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: bgColor ?? maroon,
+        color: bgColor ?? green,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(

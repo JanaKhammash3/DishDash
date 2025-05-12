@@ -10,13 +10,13 @@ class ForgotPasswordScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Top maroon header with curved bottom right
+          // Top green header with curved bottom right
           Container(
             width: double.infinity,
             height: MediaQuery.of(context).size.height * 0.3,
             padding: const EdgeInsets.only(top: 70, left: 24),
             decoration: const BoxDecoration(
-              color: maroon,
+              color: green,
               borderRadius: BorderRadius.only(bottomRight: Radius.circular(60)),
             ),
             alignment: Alignment.topLeft,
@@ -98,7 +98,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                           // Add reset logic
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: maroon,
+                          backgroundColor: green,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),

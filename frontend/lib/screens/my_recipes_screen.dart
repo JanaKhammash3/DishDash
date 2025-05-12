@@ -228,7 +228,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: maroon),
+                  style: ElevatedButton.styleFrom(backgroundColor: green),
                   child: const Text(
                     'Add',
                     style: TextStyle(color: Colors.white),
@@ -284,7 +284,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: maroon,
+        backgroundColor: green,
         title: const Text('My Recipes', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -360,7 +360,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
             child: ElevatedButton.icon(
               onPressed: _openCreateModal,
               style: ElevatedButton.styleFrom(
-                backgroundColor: maroon,
+                backgroundColor: green,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),

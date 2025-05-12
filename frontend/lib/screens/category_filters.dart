@@ -36,8 +36,8 @@ class CategoryFilters extends StatelessWidget {
         itemBuilder: (_, index) {
           final category = categories[index];
           final isSelected = selectedCategory == category['label'];
-          final Color bgColor = isSelected ? Colors.white : maroon;
-          final Color textColor = isSelected ? maroon : Colors.white;
+          final Color bgColor = isSelected ? Colors.white : green;
+          final Color textColor = isSelected ? green : Colors.white;
 
           return GestureDetector(
             onTap: () => onCategorySelected(category['label']! as String),
@@ -48,7 +48,7 @@ class CategoryFilters extends StatelessWidget {
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: maroon),
+                border: Border.all(color: green),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

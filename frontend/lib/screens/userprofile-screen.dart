@@ -271,7 +271,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   const SizedBox(height: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: maroon,
+                      backgroundColor: green,
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () async {
@@ -478,7 +478,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                   ),
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: isMe ? maroon : Colors.grey[300],
+                                    color: isMe ? green : Colors.grey[300],
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   constraints: const BoxConstraints(
@@ -571,7 +571,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           },
 
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: maroon,
+                            backgroundColor: green,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
@@ -594,7 +594,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: maroon,
+        backgroundColor: green,
         foregroundColor: Colors.white,
         title: const Text('User Profile'),
       ),
@@ -636,7 +636,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ElevatedButton(
                           onPressed: toggleFollow,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: maroon,
+                            backgroundColor: green,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
@@ -651,7 +651,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ElevatedButton(
                     onPressed: openChatModal,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: maroon,
+                      backgroundColor: green,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(

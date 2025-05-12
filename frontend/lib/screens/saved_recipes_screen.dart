@@ -73,7 +73,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: maroon,
+                  color: green,
                 ),
               ),
               const SizedBox(height: 12),
@@ -121,7 +121,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                 children: [
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: maroon,
+                      backgroundColor: green,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -151,7 +151,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Close', style: TextStyle(color: maroon)),
+                    child: const Text('Close', style: TextStyle(color: green)),
                   ),
                 ],
               ),
@@ -166,7 +166,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: maroon,
+        backgroundColor: green,
         title: const Text(
           'Saved Recipes',
           style: TextStyle(color: Colors.white),

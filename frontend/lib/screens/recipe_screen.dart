@@ -60,7 +60,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: maroon,
+        backgroundColor: green,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),

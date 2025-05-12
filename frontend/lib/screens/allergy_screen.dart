@@ -89,7 +89,7 @@ class _AllergyScreenState extends State<AllergyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: maroon,
+      backgroundColor: green,
       body: Column(
         children: [
           Container(
@@ -172,10 +172,10 @@ class _AllergyScreenState extends State<AllergyScreen> {
                     // Add another allergy field
                     TextButton.icon(
                       onPressed: _addAllergyField,
-                      icon: Icon(Icons.add, color: maroon),
+                      icon: Icon(Icons.add, color: green),
                       label: Text(
                         "Add another",
-                        style: TextStyle(color: maroon),
+                        style: TextStyle(color: green),
                       ),
                     ),
 
@@ -299,7 +299,7 @@ class _AllergyScreenState extends State<AllergyScreen> {
                       child: ElevatedButton(
                         onPressed: _saveAllergies,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: maroon,
+                          backgroundColor: green,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),

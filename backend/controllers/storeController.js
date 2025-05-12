@@ -62,3 +62,35 @@ exports.getStorePrices = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// POST /api/stores/:storeId/items
+exports.addItemToStore = async (req, res) => {
+  const { storeId } = req.params;
+  const { name, price } = req.body;
+
+  try {
+    const store = await Store.findById(storeId);
+    if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    store.items.push({ name, price });
+    await store.save();
+
+    res.status(200).json({ message: 'Item added', items: store.items });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.getStoreById = async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.storeId);
+    if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    res.status(200).json(store); // ✅ Return full store object
+  } catch (err) {
+    console.error('Get store error:', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
