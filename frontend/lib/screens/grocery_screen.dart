@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert'; // ✅ Add this
 import 'package:frontend/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 
 class GroceryScreen extends StatefulWidget {
   final String userId;
@@ -14,6 +16,7 @@ class GroceryScreen extends StatefulWidget {
 }
 
 class _GroceryScreenState extends State<GroceryScreen> {
+  bool _showSidebar = false;
   final Set<String> availableIngredients = {};
   List<Map<String, dynamic>> groceryItems = [];
 
@@ -211,7 +214,10 @@ class _GroceryScreenState extends State<GroceryScreen> {
       context: context,
       builder:
           (_) => AlertDialog(
-            title: const Text("Add Available Ingredient"),
+            title: const Text(
+              "Add Available Ingredient",
+              style: TextStyle(color: green), // Optional: make title green too
+            ),
             content: TextField(
               controller: _controller,
               autofocus: true,
@@ -220,7 +226,10 @@ class _GroceryScreenState extends State<GroceryScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(color: green), // ✅ green cancel button
+                ),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -232,10 +241,89 @@ class _GroceryScreenState extends State<GroceryScreen> {
                     });
                   }
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: green, // ✅ green background
+                  foregroundColor: Colors.white, // ✅ White text/icon
+                ),
                 child: const Text("Add"),
               ),
             ],
           ),
+    );
+  }
+
+  Widget _buildAvailableSidebar() {
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.35,
+      color: lightGrey,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Available',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: green,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child:
+                availableIngredients.isEmpty
+                    ? const Center(
+                      child: Text(
+                        'No items',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                    : ListView(
+                      children:
+                          availableIngredients.map((ingredient) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Chip(
+                                label: Text(
+                                  ingredient,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: green,
+                                deleteIcon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                ),
+                                onDeleted: () async {
+                                  setState(() {
+                                    availableIngredients.remove(ingredient);
+                                  });
+                                  await _saveAvailableIngredients();
+                                },
+                              ),
+                            );
+                          }).toList(),
+                    ),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: _showAddIngredientDialog,
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text(
+              'Add',
+              style: TextStyle(
+                color: Colors.white,
+              ), // ✅ Set text color to white
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: green,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -245,55 +333,103 @@ class _GroceryScreenState extends State<GroceryScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return Padding(
           padding: MediaQuery.of(
             context,
-          ).viewInsets.add(const EdgeInsets.all(16)),
+          ).viewInsets.add(const EdgeInsets.all(20)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Available Ingredients',
+                'Your Available Ingredients',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: maroon,
+                  color: green,
                 ),
               ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children:
-                    availableIngredients.map((ingredient) {
-                      return Chip(
-                        label: Text(ingredient),
-                        onDeleted: () async {
-                          setState(() {
-                            availableIngredients.remove(ingredient);
-                          });
-                          Navigator.pop(context);
-                          _showAvailableIngredientsPanel();
-                          await _saveAvailableIngredients(); // ✅ Update backend after delete
-                        },
-                      );
-                    }).toList(),
-              ),
-              const SizedBox(height: 20),
-
-              const SizedBox(height: 20),
-              Center(
-                child: FloatingActionButton(
-                  backgroundColor: maroon,
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showAddIngredientDialog();
-                  },
-                  child: const Icon(Icons.add, color: Colors.white),
+              const Divider(thickness: 1.5, height: 20),
+              if (availableIngredients.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text(
+                    'No ingredients marked as available yet.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children:
+                      availableIngredients.map((ingredient) {
+                        return Chip(
+                          label: Text(
+                            ingredient,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                          backgroundColor: green,
+                          deleteIcon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                          ),
+                          onDeleted: () async {
+                            setState(() {
+                              availableIngredients.remove(ingredient);
+                            });
+                            Navigator.pop(context);
+                            _showAvailableIngredientsPanel();
+                            await _saveAvailableIngredients();
+                          },
+                        );
+                      }).toList(),
                 ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: "Add new ingredient",
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      final newIngredient = _controller.text.trim();
+                      Navigator.pop(context);
+                      if (newIngredient.isNotEmpty) {
+                        _addAvailableIngredient(newIngredient);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      shape: const CircleBorder(),
+                      backgroundColor: green,
+                      padding: const EdgeInsets.all(12),
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
             ],
@@ -309,15 +445,30 @@ class _GroceryScreenState extends State<GroceryScreen> {
       backgroundColor: lightGrey,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: maroon),
+          icon: const Icon(Icons.arrow_back, color: green),
           onPressed: () => Navigator.pop(context),
         ),
         backgroundColor: Colors.white,
         title: const Text(
           'Grocery Shop',
-          style: TextStyle(color: maroon, fontWeight: FontWeight.bold),
+          style: TextStyle(color: green, fontWeight: FontWeight.bold),
         ),
         actions: [
+          TextButton.icon(
+            onPressed: () {
+              setState(() => _showSidebar = !_showSidebar);
+            },
+            icon: Icon(
+              _showSidebar ? Icons.chevron_left : Icons.chevron_right,
+              color: green,
+            ),
+            label: Text(
+              _showSidebar
+                  ? 'Hide Available Ingredients'
+                  : 'Show Available Ingredients',
+              style: const TextStyle(color: green, fontWeight: FontWeight.w600),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.delete_sweep, color: maroon),
             tooltip: 'Clear All',
@@ -352,25 +503,11 @@ class _GroceryScreenState extends State<GroceryScreen> {
           ),
         ],
       ),
-      body: Column(
+
+      body: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.check_circle, color: Colors.white),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: maroon,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: _showAvailableIngredientsPanel,
-              label: const Text(
-                'Manage Available Ingredients',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
+          if (_showSidebar) _buildAvailableSidebar(),
+          if (_showSidebar) const VerticalDivider(width: 1, color: Colors.grey),
           Expanded(
             child:
                 groceryItems.isEmpty
@@ -381,6 +518,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
                       ),
                     )
                     : ListView.builder(
+                      padding: const EdgeInsets.all(16),
                       itemCount: groceryItems.length,
                       itemBuilder: (context, index) {
                         final item = groceryItems[index];
@@ -392,23 +530,17 @@ class _GroceryScreenState extends State<GroceryScreen> {
                           opacity: isAvailable ? 0.4 : 1.0,
                           child: Card(
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
+                            margin: const EdgeInsets.symmetric(vertical: 8),
                             elevation: 3,
                             child: ListTile(
                               leading: Icon(
                                 item['icon'],
                                 size: 36,
-                                color: isAvailable ? Colors.grey : maroon,
+                                color: isAvailable ? Colors.grey : green,
                               ),
-                              title: Text(
-                                item['name'],
-                                style: const TextStyle(color: Colors.black),
-                              ),
+                              title: Text(item['name']),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -420,10 +552,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
                                         (_) => toggleAvailability(item['name']),
                                   ),
                                   IconButton(
-                                    icon: const Icon(
-                                      Icons.store,
-                                      color: maroon,
-                                    ),
+                                    icon: const Icon(Icons.store, color: green),
                                     onPressed: () {
                                       Navigator.push(
                                         context,
@@ -481,48 +610,73 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
       'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
     );
 
-    final res = await http.get(url);
+    try {
+      final res = await http.get(url);
 
-    if (res.statusCode == 200) {
-      final List rawStores = jsonDecode(res.body);
-      final filtered =
-          rawStores
-              .where(
-                (s) =>
-                    s['items'] != null &&
-                    s['items'].any(
-                      (i) =>
-                          (i['name']?.toString().toLowerCase() ?? '') ==
-                          widget.itemName.toLowerCase(),
-                    ),
-              )
-              .map<Map<String, dynamic>>((store) {
-                final item = store['items'].firstWhere(
-                  (i) =>
-                      (i['name']?.toString().toLowerCase() ?? '') ==
-                      widget.itemName.toLowerCase(),
-                  orElse: () => null,
-                );
+      if (res.statusCode == 200) {
+        final List rawStores = jsonDecode(res.body);
 
-                return {
-                  'store': store['name']?.toString() ?? 'Unknown Store',
-                  'lat': store['location']?['lat'],
-                  'lng': store['location']?['lng'],
-                  'price':
-                      item != null && item['price'] != null
-                          ? (item['price'] as num).toDouble()
-                          : 0.0,
-                };
-              })
-              .toList();
+        // Get user's current location
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
 
-      setState(() {
-        storePrices = filtered;
-        isLoading = false;
-      });
-    } else {
+        final Distance distance = const Distance();
+
+        final processed =
+            rawStores
+                .where((s) {
+                  return s['items'] != null &&
+                      s['items'].any(
+                        (i) =>
+                            (i['name']?.toString().toLowerCase() ?? '') ==
+                            widget.itemName.toLowerCase(),
+                      );
+                })
+                .map<Map<String, dynamic>>((store) {
+                  final item = store['items'].firstWhere(
+                    (i) =>
+                        (i['name']?.toString().toLowerCase() ?? '') ==
+                        widget.itemName.toLowerCase(),
+                    orElse: () => null,
+                  );
+
+                  final lat = store['location']?['lat'];
+                  final lng = store['location']?['lng'];
+
+                  double dist = 999999; // default large distance
+                  if (lat != null && lng != null) {
+                    dist = distance.as(
+                      LengthUnit.Kilometer,
+                      LatLng(position.latitude, position.longitude),
+                      LatLng(lat, lng),
+                    );
+                  }
+
+                  return {
+                    'store': store['name'],
+                    'lat': lat,
+                    'lng': lng,
+                    'price': (item?['price'] ?? 0.0).toDouble(),
+                    'distance': dist,
+                  };
+                })
+                .toList();
+
+        // Sort by distance ascending
+        processed.sort((a, b) => a['distance'].compareTo(b['distance']));
+
+        setState(() {
+          storePrices = processed;
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+        print('❌ Failed to fetch store prices: ${res.statusCode}');
+      }
+    } catch (e) {
       setState(() => isLoading = false);
-      print('❌ Failed to fetch store prices: ${res.statusCode} - ${res.body}');
+      print('❌ Error fetching prices or location: $e');
     }
   }
 
@@ -532,7 +686,7 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
       appBar: AppBar(
         title: Text('${widget.itemName} Prices'),
         backgroundColor: Colors.white,
-        foregroundColor: maroon,
+        foregroundColor: green,
       ),
       body:
           isLoading
@@ -564,30 +718,40 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.store, color: maroon, size: 32),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  store['store'],
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 0,
+                              vertical: 4,
+                            ),
+                            leading: const Icon(
+                              Icons.store,
+                              color: green,
+                              size: 32,
+                            ),
+                            title: Text(
+                              store['store'],
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
                               ),
-                              Text(
-                                '\$$price',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: maroon,
-                                ),
+                            ),
+                            subtitle: Text(
+                              store['distance'] != null
+                                  ? 'Distance: ${store['distance'].toStringAsFixed(2)} km'
+                                  : 'Distance: N/A',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            trailing: Text(
+                              '\$$price',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: green,
                               ),
-                            ],
+                            ),
                           ),
+
                           const SizedBox(height: 12),
                           if (lat != null && lng != null)
                             InkWell(
@@ -607,12 +771,12 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
                               borderRadius: BorderRadius.circular(8),
                               child: Row(
                                 children: const [
-                                  Icon(Icons.map, color: maroon),
+                                  Icon(Icons.map, color: green),
                                   SizedBox(width: 8),
                                   Text(
                                     'View on Map',
                                     style: TextStyle(
-                                      color: maroon,
+                                      color: green,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),

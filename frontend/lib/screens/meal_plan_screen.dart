@@ -296,7 +296,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                                       40, // match modal width
                                   margin: const EdgeInsets.only(top: 8),
                                   decoration: BoxDecoration(
-                                    color: maroon,
+                                    color: green,
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: const [
                                       BoxShadow(
@@ -336,7 +336,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                             color: Colors.white,
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: maroon,
+                            backgroundColor: green,
                             minimumSize: const Size.fromHeight(48),
                           ),
                           onPressed: () async {
@@ -373,7 +373,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                             ),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: maroon,
+                                backgroundColor: green,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 24,
                                   vertical: 12,
@@ -546,7 +546,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                       onPressed: () => Navigator.pop(context),
                     ),
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: maroon),
+                      style: ElevatedButton.styleFrom(backgroundColor: green),
                       child: const Text(
                         "Rate",
                         style: TextStyle(color: Colors.white),
@@ -622,14 +622,14 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
           "Meal Planner",
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: maroon,
+        backgroundColor: green,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: maroon,
+        backgroundColor: green,
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: _addMeal,
       ),
@@ -775,7 +775,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: maroon),
+                        icon: const Icon(Icons.delete, color: green),
                         onPressed: () => _removeMeal(index),
                       ),
                     ],

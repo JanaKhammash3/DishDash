@@ -135,7 +135,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: maroon,
+        backgroundColor: green,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () async {
@@ -174,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                 },
-                child: Icon(Icons.add, color: maroon, size: 32),
+                child: Icon(Icons.add, color: green, size: 32),
               ),
             ),
           ),
@@ -183,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Add Recipe',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white, // clearly white and visible on maroon
+              color: Colors.white, // clearly white and visible on green
             ),
           ),
         ],
@@ -195,7 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           height: 60,
           decoration: BoxDecoration(
-            color: maroon,
+            color: green,
             borderRadius: BorderRadius.circular(40),
             boxShadow: [
               BoxShadow(
@@ -279,7 +279,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: _pickAndUploadImage,
                         child: CircleAvatar(
                           radius: 14,
-                          backgroundColor: maroon,
+                          backgroundColor: green,
                           child: const Icon(
                             Icons.edit,
                             size: 16,
@@ -359,7 +359,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Center(
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: maroon,
+                backgroundColor: green,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
@@ -417,7 +417,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           horizontal: 16,
           vertical: 12,
         ),
-        leading: Icon(icon, color: maroon, size: 28),
+        leading: Icon(icon, color: green, size: 28),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),

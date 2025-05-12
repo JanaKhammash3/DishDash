@@ -24,7 +24,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pick a Location'),
-        backgroundColor: maroon,
+        backgroundColor: green,
       ),
       body: Stack(
         children: [
@@ -52,7 +52,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     height: 60,
                     child: const Icon(
                       Icons.location_pin,
-                      color: maroon,
+                      color: green,
                       size: 40,
                     ),
                   ),
@@ -67,7 +67,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             child: ElevatedButton(
               onPressed: _confirmLocation,
               style: ElevatedButton.styleFrom(
-                backgroundColor: maroon,
+                backgroundColor: green,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),

@@ -23,7 +23,7 @@ class StoreMapScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(storeName),
         backgroundColor: Colors.white,
-        foregroundColor: maroon,
+        foregroundColor: green,
       ),
       body: FlutterMap(
         mapController: MapController(),
@@ -40,7 +40,7 @@ class StoreMapScreen extends StatelessWidget {
                 height: 40,
                 point: storeLocation,
                 rotate: false,
-                child: const Icon(Icons.store, size: 40, color: maroon),
+                child: const Icon(Icons.store, size: 40, color: green),
               ),
             ],
           ),

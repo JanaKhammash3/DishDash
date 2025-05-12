@@ -5,6 +5,7 @@ const Recipe = require('../models/Recipe');
 const multer = require('multer');
 const path = require('path');
 const MealPlan = require('../models/MealPlan'); 
+const Store = require('../models/Store'); // ✅ Add this
 const mongoose = require('mongoose');
 
 
@@ -16,63 +17,110 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 // Register user
+
 exports.register = async (req, res) => {
-  const { name, email, password, location } = req.body;
+  const { name, email, password, location, role, telephone } = req.body;
 
   try {
-    const exists = await User.findOne({ email });
-    if (exists) return res.status(400).json({ message: 'Email already in use' });
+    if (!role || !['user', 'store'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role specified' });
+    }
+
+    // Check email in correct collection
+    const existing = await (role === 'store'
+      ? Store.findOne({ email })
+      : User.findOne({ email }));
+
+    if (existing) {
+      return res.status(400).json({ message: 'Email already in use' });
+    }
 
     const hashed = await bcrypt.hash(password, 10);
 
-    const newUser = await User.create({
-      name,
-      email,
-      password: hashed,
-      avatar: '',
-      location: location || { latitude: null, longitude: null },
-      allergies: [],
-      calorieScore: 0,
-      following: [],
-      recipes: [],
-      savedPlans: [],
-      currentGroceryList: [],
-      role: 'user'
-    });
+    if (role === 'store') {
+      const newStore = await Store.create({
+        name,
+        email,
+        password: hashed,
+        telephone,
+        location: {
+          lat: location.latitude,
+          lng: location.longitude,
+        },
+        items: [],
+      });
 
-    res.status(201).json({ message: 'User created', userId: newUser._id });
+      return res.status(201).json({ message: 'Store created', userId: newStore._id });
+    } else {
+      const newUser = await User.create({
+        name,
+        email,
+        password: hashed,
+        avatar: '',
+        location: location || { latitude: null, longitude: null },
+        allergies: [],
+        calorieScore: 0,
+        following: [],
+        recipes: [],
+        savedPlans: [],
+        currentGroceryList: [],
+        availableIngredients: [],
+        role: 'user',
+      });
+
+      return res.status(201).json({ message: 'User created', userId: newUser._id });
+    }
   } catch (err) {
+    console.error('❌ Registration error:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+
 
 // Login user
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    // Step 1: Try to find user by email in Users collection
+    let account = await User.findOne({ email });
+    let type = 'user';
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    // Step 2: If not found, try Stores collection
+    if (!account) {
+      account = await Store.findOne({ email });
+      type = 'store';
+    }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    // Step 3: If not found at all
+    if (!account) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Step 4: Compare password
+    const isMatch = await bcrypt.compare(password, account.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Step 5: Issue token and return account type
+    const token = jwt.sign({ id: account._id }, process.env.JWT_SECRET, {
+      expiresIn: '1d',
+    });
 
     res.status(200).json({
       message: 'Login successful',
       token,
+      type, // 👈 'user' or 'store'
       user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-        location: user.location,
-        allergies: user.allergies,
-        calorieScore: user.calorieScore
-      }
+        _id: account._id,
+        name: account.name,
+        email: account.email,
+      },
     });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };

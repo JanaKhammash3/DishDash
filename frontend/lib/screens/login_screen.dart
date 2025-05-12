@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/store_dashboard_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../colors.dart';
@@ -39,16 +40,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
-        final userId = data['user']['_id']; // ✅ Extract from response
-        await prefs.setString('userId', userId); // ✅ Save
+        final userId = data['user']['_id'];
+        final type = data['type']; // 'user' or 'store'
+        await prefs.setString('userId', userId);
+        await prefs.setString('userType', type);
 
-        // ignore: use_build_context_synchronously
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => HomeScreen(userId: userId),
-          ), // no need to pass userId
-        );
+        if (type == 'user') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => HomeScreen(userId: userId)),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StoreDashboardScreen(storeId: userId),
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'] ?? 'Login failed')),
@@ -64,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: maroon,
+      backgroundColor: green,
       body: Column(
         children: [
           // Logo/Header Section
@@ -149,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: ElevatedButton(
                           onPressed: loginUser,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: maroon,
+                            backgroundColor: green,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -177,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Text(
                         'Forgot Password?',
                         style: TextStyle(
-                          color: maroon,
+                          color: green,
                           decoration: TextDecoration.underline,
                         ),
                       ),
@@ -195,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                           child: Text(
                             'Register',
-                            style: TextStyle(color: maroon),
+                            style: TextStyle(color: green),
                           ),
                         ),
                       ],

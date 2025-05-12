@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/store_dashboard_screen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../colors.dart';
@@ -17,6 +18,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController telephoneController = TextEditingController();
+
+  String selectedRole = 'user'; // default value
 
   double? latitude;
   double? longitude;
@@ -25,6 +29,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final name = nameController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text;
+    final telephone = telephoneController.text.trim();
 
     if (name.isEmpty ||
         email.isEmpty ||
@@ -49,19 +54,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'email': email,
           'password': password,
           'location': {'latitude': latitude, 'longitude': longitude},
+          'role': selectedRole, // 👈 include role
+          if (selectedRole == 'store')
+            'telephone': telephone, // 👈 only include if store
         }),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
-        final userId = data['userId']; // ✅ from your controller
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AllergyScreen(userId: userId), // ✅ pass userId
-          ),
-        );
+        final userId = data['userId'];
+
+        if (selectedRole == 'user') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => AllergyScreen(userId: userId)),
+          );
+        } else {
+          // navigate to a different screen if store, or just show success
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Store registered successfully')),
+          );
+
+          // Optional: clear fields
+          setState(() {
+            nameController.clear();
+            emailController.clear();
+            passwordController.clear();
+            telephoneController.clear();
+            latitude = null;
+            longitude = null;
+            selectedRole = 'user'; // reset to default
+          });
+
+          // Or redirect as needed
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data['message'] ?? 'Registration failed')),
@@ -95,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: maroon,
+      backgroundColor: green,
       body: Column(
         children: [
           Container(
@@ -143,7 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             'Log in here.',
                             style: TextStyle(
                               fontSize: 14,
-                              color: maroon,
+                              color: green,
                               decoration: TextDecoration.underline,
                             ),
                           ),
@@ -175,6 +202,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: _buildInputDecoration('******'),
                     ),
                     const SizedBox(height: 20),
+                    if (selectedRole == 'store') ...[
+                      _buildLabel('TELEPHONE'),
+                      TextField(
+                        controller: telephoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: _buildInputDecoration('+970 598 123 456'),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                     _buildLabel('LOCATION'),
                     ElevatedButton.icon(
@@ -190,13 +226,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: maroon,
+                        backgroundColor: green,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
+
+                    _buildLabel('REGISTER AS'),
+                    DropdownButtonFormField<String>(
+                      value: selectedRole,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'user',
+                          child: Text('Regular User'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'store',
+                          child: Text('Store Owner'),
+                        ),
+                      ],
+
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            selectedRole = value;
+                          });
+                        }
+                      },
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: lightGrey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
                     const SizedBox(height: 32),
 
@@ -206,7 +274,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: ElevatedButton(
                         onPressed: registerUser,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: maroon,
+                          backgroundColor: green,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),

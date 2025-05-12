@@ -170,7 +170,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 const SizedBox(height: 8),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: maroon, // Maroon
+                    backgroundColor: green, // green
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -330,7 +330,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
           'Our Community',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: maroon,
+        backgroundColor: green,
         centerTitle: true,
         foregroundColor: Colors.white,
       ),
@@ -396,7 +396,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                   },
 
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: maroon,
+                                    backgroundColor: green,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 14,
