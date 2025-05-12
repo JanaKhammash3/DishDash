@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
   recipes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' }],
   savedPlans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MealPlan' }],
   currentGroceryList: [{ type: String }],
+  availableIngredients: [{ type: String }],
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   survey: {
     diet: { type: String, enum: ['Vegan', 'Keto', 'Low-Carb', 'Paleo', 'Vegetarian', 'None'], default: 'None' },

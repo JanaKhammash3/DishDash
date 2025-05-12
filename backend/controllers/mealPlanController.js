@@ -1,5 +1,6 @@
 const MealPlan = require('../models/MealPlan');
 const Recipe = require('../models/Recipe');
+const User = require('../models/User'); 
 
 exports.createMealPlan = async (req, res) => {
   try {
@@ -48,16 +49,17 @@ exports.markMealAsUndone = async (req, res) => {
   }
 };
 
-
 exports.addRecipeToPlan = async (req, res) => {
   const { planId } = req.params;
-  const { date, recipeId } = req.body;
+  const { date, recipeId, userId } = req.body; // Make sure frontend sends userId
 
   try {
     const plan = await MealPlan.findById(planId);
     const recipe = await Recipe.findById(recipeId);
-    if (!plan || !recipe) {
-      return res.status(404).json({ message: 'Plan or Recipe not found' });
+    const user = await User.findById(userId); // ✅ Get user for availability check
+
+    if (!plan || !recipe || !user) {
+      return res.status(404).json({ message: 'Plan, Recipe or User not found' });
     }
 
     const day = plan.days.find(d => d.date === date);
@@ -75,10 +77,16 @@ exports.addRecipeToPlan = async (req, res) => {
       plan.days.push({ date, meals: [{ recipe: recipeId, done: false }] });
     }
 
-    // ✅ Add ingredients to groceryList
-    const ingredientsToAdd = recipe.ingredients || [];
+    // ✅ Filter out available ingredients
+    const availableSet = new Set((user.availableIngredients || []).map(i => i.toLowerCase()));
+    const newIngredients = (recipe.ingredients || []).filter(
+      ing => !availableSet.has(ing.toLowerCase())
+    );
+
     if (!Array.isArray(plan.groceryList)) plan.groceryList = [];
-    ingredientsToAdd.forEach(ing => {
+
+    // ✅ Only add missing ones
+    newIngredients.forEach(ing => {
       if (!plan.groceryList.includes(ing)) {
         plan.groceryList.push(ing);
       }
@@ -87,9 +95,11 @@ exports.addRecipeToPlan = async (req, res) => {
     await plan.save();
     res.status(200).json(plan);
   } catch (err) {
+    console.error('❌ Error adding recipe to plan:', err.message);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 
 exports.getWeeklyCalories = async (req, res) => {

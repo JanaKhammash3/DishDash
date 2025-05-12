@@ -17,7 +17,9 @@ const {
   getGroceryList,
   saveGroceryList,
   getRecommendations,
-  updateSurvey
+  updateSurvey,
+   getAvailableIngredients,
+  updateAvailableIngredients
 } = require('../controllers/userController');
 
 // Auth & profile
@@ -51,6 +53,10 @@ router.get('/followers/:userId', async (req, res) => {
 // ✅ Grocery list
 router.get('/:userId/grocery-list', getGroceryList);
 router.post('/:userId/grocery-list', saveGroceryList);
+// ✅ Available Ingredients Routes
+router.get('/:userId/available-ingredients', getAvailableIngredients);
+router.put('/:userId/available-ingredients', updateAvailableIngredients);
+
 
 module.exports = router;
 router.get('/:id/followers/count', getFollowerCount);

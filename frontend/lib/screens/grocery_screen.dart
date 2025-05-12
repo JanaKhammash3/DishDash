@@ -21,6 +21,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
   void initState() {
     super.initState();
     _loadIngredients();
+    _loadAvailableIngredients();
   }
 
   Future<void> _loadIngredients() async {
@@ -54,6 +55,19 @@ class _GroceryScreenState extends State<GroceryScreen> {
     }
   }
 
+  Future<void> _loadAvailableIngredients() async {
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+    );
+    final res = await http.get(url);
+    if (res.statusCode == 200) {
+      final List<String> fetched = List<String>.from(jsonDecode(res.body));
+      setState(() {
+        availableIngredients.addAll(fetched);
+      });
+    }
+  }
+
   Future<void> _saveIngredients() async {
     final url = Uri.parse(
       'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
@@ -69,6 +83,34 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
     if (response.statusCode != 200) {
       print('❌ Failed to save grocery list to backend');
+    }
+  }
+
+  Future<void> _saveAvailableIngredients() async {
+    final ingredientsList = availableIngredients.toList();
+    print('📤 Attempting to save available ingredients: $ingredientsList');
+
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+    );
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'ingredients': ingredientsList}),
+      );
+
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('✅ Available ingredients saved to backend');
+      } else {
+        print('❌ Failed to save available ingredients to backend');
+      }
+    } catch (e) {
+      print('❌ Exception while saving available ingredients: $e');
     }
   }
 
@@ -129,7 +171,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     }
   }
 
-  void toggleAvailability(String itemName) {
+  void toggleAvailability(String itemName) async {
     setState(() {
       if (availableIngredients.contains(itemName)) {
         availableIngredients.remove(itemName);
@@ -137,29 +179,29 @@ class _GroceryScreenState extends State<GroceryScreen> {
         availableIngredients.add(itemName);
       }
     });
+    await _saveAvailableIngredients(); // ✅
   }
 
-  void _addAvailableIngredient(String name) {
+  void _addAvailableIngredient(String name) async {
     final normalized = name.toLowerCase();
+
+    // Always add to availableIngredients set
+    setState(() {
+      availableIngredients.add(name);
+    });
+
+    // If it's not in groceryItems, do NOT block anything — just don't display it in the list
     final alreadyInList = groceryItems.any(
       (item) => item['name'].toString().toLowerCase() == normalized,
     );
 
     if (!alreadyInList) {
-      setState(() {
-        groceryItems.add({
-          'name': name,
-          'price': _getPrice(normalized),
-          'icon': _getIcon(normalized),
-        });
-        availableIngredients.add(name);
-      });
-      _saveIngredients(); // Update backend
-    } else {
-      setState(() {
-        availableIngredients.add(name);
-      });
+      print(
+        '🔔 "$name" is not in groceryItems – skipping UI addition but still saving as available.',
+      );
     }
+
+    await _saveAvailableIngredients(); // Always save regardless of display
   }
 
   void _showAddIngredientDialog() {
@@ -229,12 +271,13 @@ class _GroceryScreenState extends State<GroceryScreen> {
                     availableIngredients.map((ingredient) {
                       return Chip(
                         label: Text(ingredient),
-                        onDeleted: () {
+                        onDeleted: () async {
                           setState(() {
                             availableIngredients.remove(ingredient);
                           });
                           Navigator.pop(context);
-                          _showAvailableIngredientsPanel(); // reopen updated
+                          _showAvailableIngredientsPanel();
+                          await _saveAvailableIngredients(); // ✅ Update backend after delete
                         },
                       );
                     }).toList(),

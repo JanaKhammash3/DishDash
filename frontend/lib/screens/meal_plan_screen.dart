@@ -455,6 +455,8 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                                         body: jsonEncode({
                                           'recipeId': selectedRecipe!['_id'],
                                           'date': formattedDate,
+                                          'userId':
+                                              widget.userId, // 👈 Add this line
                                         }),
                                       );
 

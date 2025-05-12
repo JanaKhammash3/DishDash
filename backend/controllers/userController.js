@@ -453,3 +453,33 @@ exports.getRecommendations = async (req, res) => {
   }
 };
 
+// ✅ GET /api/users/:userId/available-ingredients
+exports.getAvailableIngredients = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json(user.availableIngredients || []);
+  } catch (err) {
+    console.error('Error fetching available ingredients:', err.message);
+    res.status(500).json({ message: 'Failed to get available ingredients' });
+  }
+};
+
+// ✅ PUT /api/users/:userId/available-ingredients
+exports.updateAvailableIngredients = async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      { availableIngredients: ingredients },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json(user.availableIngredients);
+  } catch (err) {
+    console.error('Error updating available ingredients:', err.message);
+    res.status(500).json({ message: 'Failed to update available ingredients' });
+  }
+};
+
+
