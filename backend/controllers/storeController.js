@@ -32,13 +32,15 @@ exports.comparePrices = async (req, res) => {
 
 exports.addStore = async (req, res) => {
   try {
-    const { name, location, items } = req.body;
+   const { name, location, items, image } = req.body;
 
-    const newStore = await Store.create({
-      name,
-      location,
-      items,
-    });
+const newStore = await Store.create({
+  name,
+  location,
+  items,
+  image, // ✅ include this
+});
+
 
     res.status(201).json(newStore);
   } catch (err) {
@@ -46,22 +48,27 @@ exports.addStore = async (req, res) => {
   }
 };
 
-// Example: controllers/storeController.js
 exports.getStorePrices = async (req, res) => {
   const { item } = req.query;
 
-  if (!item) {
-    return res.status(400).json({ error: 'Item is required' });
-  }
+  if (!item) return res.status(400).json({ error: 'Item is required' });
 
   try {
-    const stores = await Store.find({ "items.name": item }); // or .find() then filter in JS
+    const stores = await Store.find(
+      { "items.name": item },
+      'name location items image'
+    );
+
+    console.log('🔍 Returned stores with images:', stores); // Add this
+
     res.json(stores);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error fetching store prices:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
 
 // POST /api/stores/:storeId/items
 exports.addItemToStore = async (req, res) => {

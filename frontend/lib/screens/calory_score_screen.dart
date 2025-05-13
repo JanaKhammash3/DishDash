@@ -57,7 +57,7 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
   Future<Map<String, dynamic>> fetchCalorieData() async {
     final response = await http.get(
       Uri.parse(
-        'http://192.168.68.60:3000/api/mealplans/weekly-calories/${widget.userId}',
+        'http://192.168.1.4:3000/api/mealplans/weekly-calories/${widget.userId}',
       ),
     );
 
