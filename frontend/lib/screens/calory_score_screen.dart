@@ -80,6 +80,19 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
         dailyCalories = data['dailyCalories'];
         isLoading = false;
       });
+      if (data['totalCalories'] >= weeklyTarget) {
+        Future.delayed(Duration.zero, () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.redAccent,
+              content: Text(
+                '⚠️ You’ve exceeded your weekly calorie goal!',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          );
+        });
+      }
     } catch (_) {
       setState(() => isLoading = false);
     }
@@ -240,11 +253,16 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
                                         ),
                                       ),
                                       progressColor:
-                                          value >= 1.0 ? accentGreen : darkBlue,
+                                          value > 1.0
+                                              ? accentRed
+                                              : value == 1.0
+                                              ? accentGreen
+                                              : darkBlue, // ✅ Color logic based on value
                                       backgroundColor: Colors.grey.shade300,
                                       circularStrokeCap:
                                           CircularStrokeCap.round,
                                     ),
+
                                     const SizedBox(height: 12),
                                     Text(
                                       '$totalCaloriesThisWeek / $weeklyTarget kcal',
@@ -262,6 +280,37 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
                                         color: Colors.grey,
                                       ),
                                     ),
+                                    if (value >=
+                                        1.0) // ✅ Add this block right below
+                                      AnimatedScale(
+                                        scale: 1.1,
+                                        duration: const Duration(
+                                          milliseconds: 500,
+                                        ),
+                                        child: Container(
+                                          margin: const EdgeInsets.only(
+                                            top: 10,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: accentRed.withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            '⚠️ You’ve exceeded your goal!',
+                                            style: TextStyle(
+                                              color: Color(0xFFEF4444),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
                                     if (value >= 1.0)
                                       AnimatedScale(
                                         scale: 1.1,

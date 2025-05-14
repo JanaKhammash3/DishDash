@@ -31,7 +31,7 @@ router.put('/mark-undone', markMealAsUndone); // ✅ Add this line
 router.get('/user/:userId', getMealPlanByUser);
 
 // 🛒 Get grocery list by plan ID
-router.get('/:planId/grocery-list', getGroceryList);
+router.get('/user/:userId/grocery-list', getGroceryList);
 
 // 🔥 Weekly calorie summary
 router.get('/weekly-calories/:userId', getWeeklyCalories);

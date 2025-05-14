@@ -29,29 +29,74 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadIngredients() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/grocery-list',
+      'http://192.168.1.4:3000/api/mealplans/user/${widget.userId}/grocery-list',
     );
+
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
-      final List<String> ingredients = List<String>.from(
-        jsonDecode(response.body),
-      );
-      if (ingredients.isEmpty) {
+      final List<dynamic> rawItems = jsonDecode(response.body);
+      if (rawItems.isEmpty) {
         print('🟡 Grocery list is empty');
       }
+
+      final Map<String, Map<String, dynamic>> ingredientMap = {};
+
+      for (var item in rawItems) {
+        final name = item is String ? item : item['ingredient'];
+        final recipe = item is Map<String, dynamic> ? item['recipe'] : null;
+
+        DateTime? scheduledTime;
+        if (recipe != null && recipe['scheduledTime'] != null) {
+          scheduledTime = DateTime.tryParse(recipe['scheduledTime']);
+        }
+
+        final timeLeft =
+            scheduledTime != null
+                ? scheduledTime.difference(DateTime.now())
+                : null;
+
+        if (ingredientMap.containsKey(name)) {
+          final existing = ingredientMap[name];
+          final existingTime = existing?['scheduledTime'] as DateTime?;
+
+          if (scheduledTime != null &&
+              (existingTime == null || scheduledTime.isBefore(existingTime))) {
+            ingredientMap[name] = {
+              'name': name,
+              'price': _getPrice(name.toLowerCase()),
+              'icon': _getIcon(name.toLowerCase()),
+              'source': recipe?['title'],
+              'scheduledTime': scheduledTime,
+              'timeLeft': timeLeft,
+            };
+          }
+        } else {
+          ingredientMap[name] = {
+            'name': name,
+            'price': _getPrice(name.toLowerCase()),
+            'icon': _getIcon(name.toLowerCase()),
+            'source': recipe?['title'],
+            'scheduledTime': scheduledTime,
+            'timeLeft': timeLeft,
+          };
+        }
+      }
+
+      // 🔽 Convert to list and sort by soonest scheduled time
+      List<Map<String, dynamic>> sortedItems = ingredientMap.values.toList();
+      sortedItems.sort((a, b) {
+        final aTime = a['timeLeft'] as Duration?;
+        final bTime = b['timeLeft'] as Duration?;
+
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        return aTime.compareTo(bTime);
+      });
+
       setState(() {
-        groceryItems =
-            ingredients
-                .toSet()
-                .map(
-                  (name) => {
-                    'name': name,
-                    'price': _getPrice(name.toLowerCase()),
-                    'icon': _getIcon(name.toLowerCase()),
-                  },
-                )
-                .toList();
+        groceryItems = sortedItems;
       });
     } else {
       print('❌ Failed to load grocery list from backend');
@@ -91,6 +136,12 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _saveAvailableIngredients() async {
     final ingredientsList = availableIngredients.toList();
+
+    if (ingredientsList.isEmpty) {
+      print('ℹ️ Skipping save: no available ingredients');
+      return;
+    }
+
     print('📤 Attempting to save available ingredients: $ingredientsList');
 
     final url = Uri.parse(
@@ -114,6 +165,24 @@ class _GroceryScreenState extends State<GroceryScreen> {
       }
     } catch (e) {
       print('❌ Exception while saving available ingredients: $e');
+    }
+  }
+
+  Future<void> recordPurchase(String storeId, String ingredient) async {
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/stores/$storeId/purchase',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'userId': widget.userId, 'ingredient': ingredient}),
+    );
+
+    if (response.statusCode == 200) {
+      print('✅ Purchase recorded');
+    } else {
+      print('❌ Failed to record purchase: ${response.body}');
     }
   }
 
@@ -175,14 +244,106 @@ class _GroceryScreenState extends State<GroceryScreen> {
   }
 
   void toggleAvailability(String itemName) async {
-    setState(() {
-      if (availableIngredients.contains(itemName)) {
+    final wasAvailable = availableIngredients.contains(itemName);
+
+    if (!wasAvailable) {
+      _showStoreSelection(itemName); // will handle adding and saving
+    } else {
+      setState(() {
         availableIngredients.remove(itemName);
-      } else {
-        availableIngredients.add(itemName);
-      }
+        _sortGroceryItems(); // 👈 resort after change
+      });
+      await _saveAvailableIngredients();
+    }
+  }
+
+  void _sortGroceryItems() {
+    setState(() {
+      groceryItems.sort((a, b) {
+        final aAvailable = availableIngredients.contains(a['name']);
+        final bAvailable = availableIngredients.contains(b['name']);
+        if (aAvailable && !bAvailable) return 1;
+        if (!aAvailable && bAvailable) return -1;
+        return 0;
+      });
     });
-    await _saveAvailableIngredients(); // ✅
+  }
+
+  void _showStoreSelection(String itemName) async {
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
+    );
+    final response = await http.get(url);
+
+    if (response.statusCode != 200) {
+      print('❌ Failed to fetch stores');
+      return;
+    }
+
+    final List stores = jsonDecode(response.body);
+    final List<Map<String, dynamic>> matchedStores =
+        stores
+            .where(
+              (s) => s['items']?.any(
+                (i) =>
+                    (i['name']?.toString().toLowerCase() ?? '') ==
+                    itemName.toLowerCase(),
+              ),
+            )
+            .map<Map<String, dynamic>>(
+              (s) => {
+                '_id': s['_id'],
+                'name': s['name'],
+                'image': s['image'],
+                'location': s['location'],
+              },
+            )
+            .toList();
+
+    if (matchedStores.isEmpty) {
+      print('⚠️ No matching stores found');
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children:
+              matchedStores.map((store) {
+                return ListTile(
+                  leading:
+                      store['image'] != null &&
+                              store['image'].toString().startsWith('http')
+                          ? Image.network(
+                            store['image'],
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                          )
+                          : const Icon(Icons.store, color: green),
+                  title: Text(store['name']),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    setState(() {
+                      availableIngredients.add(itemName);
+                      _sortGroceryItems();
+                    });
+                    await _saveAvailableIngredients();
+
+                    // ✅ Add this line
+                    await recordPurchase(store['_id'], itemName);
+
+                    print(
+                      '🛒 $itemName marked as available from ${store['name']}',
+                    );
+                  },
+                );
+              }).toList(),
+        );
+      },
+    );
   }
 
   void _addAvailableIngredient(String name) async {
@@ -439,6 +600,18 @@ class _GroceryScreenState extends State<GroceryScreen> {
     );
   }
 
+  String _formatTimeLeft(Duration duration) {
+    if (duration.isNegative) return 'Already passed';
+
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+    final minutes = duration.inMinutes % 60;
+
+    if (days > 0) return '$days day(s) left';
+    if (hours > 0) return '$hours hour(s) left';
+    return '$minutes minute(s) left';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -541,6 +714,27 @@ class _GroceryScreenState extends State<GroceryScreen> {
                                 color: isAvailable ? Colors.grey : green,
                               ),
                               title: Text(item['name']),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (item['source'] != null)
+                                    Text(
+                                      'From: ${item['source']}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  if (item['timeLeft'] != null)
+                                    Text(
+                                      _formatTimeLeft(item['timeLeft']),
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                ],
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

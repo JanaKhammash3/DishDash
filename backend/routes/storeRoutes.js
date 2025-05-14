@@ -12,6 +12,7 @@ const {
   getStorePrices,
   addItemToStore,
   getStoreById,
+  recordPurchase
 } = require('../controllers/storeController');
 
 // ➕ Add a new store
@@ -113,6 +114,9 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch stores', error: err.message });
   }
 });
+
+router.post('/:storeId/purchase', recordPurchase);
+
 
 
 module.exports = router;

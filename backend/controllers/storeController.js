@@ -100,4 +100,36 @@ exports.getStoreById = async (req, res) => {
   }
 };
 
+exports.recordPurchase = async (req, res) => {
+  const { storeId } = req.params;
+  const { userId, ingredient } = req.body;
+
+  if (!userId || !ingredient) {
+    return res.status(400).json({ message: 'userId and ingredient are required' });
+  }
+
+  try {
+    const store = await Store.findById(storeId);
+    if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    // ✅ Prevent duplicate purchase entries
+    const alreadyPurchased = store.purchases.some(p =>
+      p.userId.toString() === userId && p.ingredient.toLowerCase() === ingredient.toLowerCase()
+    );
+
+    if (alreadyPurchased) {
+      return res.status(200).json({ message: 'Purchase already recorded' });
+    }
+
+    store.purchases.push({ userId, ingredient });
+    await store.save();
+
+    res.status(200).json({ message: 'Purchase recorded successfully' });
+  } catch (err) {
+    console.error('❌ Error recording purchase:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
 
