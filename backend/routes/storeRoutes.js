@@ -11,8 +11,10 @@ const {
   addStore,
   getStorePrices,
   addItemToStore,
+  getStoresWithItems,
   getStoreById,
-  recordPurchase
+  recordPurchase,
+  rateStore 
 } = require('../controllers/storeController');
 
 // ➕ Add a new store
@@ -48,17 +50,8 @@ router.get('/store-items', async (req, res) => {
   }
 });
 
-// ✅ NEW: Return grouped store data for Flutter UI
-router.get('/api/stores-with-items', async (req, res) => {
-  try {
-    const stores = await Store.find({}, 'name items image telephone'); // ✅ Add 'telephone'
-    res.json(stores);
-  } catch (err) {
-    console.error('❌ Error fetching stores with items:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
+// ✅ New controller-based version
+router.get('/api/stores-with-items', getStoresWithItems);
 
 
 // ✅ NEW: Search stores by item name
@@ -109,6 +102,7 @@ router.put('/stores/:storeId/image', upload.single('image'), async (req, res) =>
 
 router.post('/:storeId/purchase', recordPurchase);
 
+router.post('/stores/:storeId/rate', rateStore);
 
 
 module.exports = router;

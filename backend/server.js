@@ -38,9 +38,7 @@ app.use('/images', express.static(path.join(__dirname, './public/images')));
 app.use('/api/chats', chatRoutes);
 app.use(storeRoutes);
 app.use('/api', require('./routes/storeRoutes'));
-
-
-
+app.use('/api/stores', require('./routes/storeRoutes'));
 
 // ✅ Create HTTP server and attach Socket.IO
 const server = http.createServer(app);
