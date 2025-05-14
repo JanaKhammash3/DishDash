@@ -1,4 +1,5 @@
 // HOME SCREEN (Updated with Dynamic Popular & Random Recipes)
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -22,6 +23,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late PageController _pageController;
+  int _currentPage = 0;
+
   List<dynamic> mealTimeRecommendations = [];
   List<dynamic> surveyRecommendations = [];
   String selectedCategory = '';
@@ -77,6 +81,27 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    _pageController = PageController();
+    Timer.periodic(const Duration(seconds: 8), (timer) {
+      if (_pageController.hasClients && mounted) {
+        final listLength =
+            showSurveyRecommendations
+                ? surveyRecommendations.length
+                : mealTimeRecommendations.length;
+
+        if (listLength > 0) {
+          final nextPage = (_currentPage + 1) % listLength;
+          _pageController.animateToPage(
+            nextPage,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          );
+          setState(() {
+            _currentPage = nextPage;
+          });
+        }
+      }
+    });
   }
 
   void _showRecipeModal(
@@ -464,12 +489,11 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 8),
         SizedBox(
           height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
+          child: PageView.builder(
+            controller: _pageController,
             itemCount: currentList.length,
             itemBuilder: (context, index) {
               final recipe = currentList[index];
-
               final imagePath = recipe['imagePath'] ?? 'assets/placeholder.png';
 
               return placeCard(
@@ -721,6 +745,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 16),
                     _buildSearchBar(),
                     const SizedBox(height: 20),
+                    const Text(
+                      'Browse by Category',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     _buildCategoryList(),
                     const SizedBox(height: 12),
                     const Text(
