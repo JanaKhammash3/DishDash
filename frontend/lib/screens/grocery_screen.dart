@@ -247,21 +247,26 @@ class _GroceryScreenState extends State<GroceryScreen> {
     final wasAvailable = availableIngredients.contains(itemName);
 
     if (!wasAvailable) {
-      _showStoreSelection(itemName); // Ask which store they bought from
+      _showStoreSelection(itemName); // will handle adding and saving
     } else {
-      // 🛑 Fix: Safely remove only if it exists
-      if (availableIngredients.contains(itemName)) {
-        setState(() {
-          availableIngredients.remove(itemName);
-        });
-
-        try {
-          await _saveAvailableIngredients();
-        } catch (e) {
-          print('❌ Error saving available ingredients: $e');
-        }
-      }
+      setState(() {
+        availableIngredients.remove(itemName);
+        _sortGroceryItems(); // 👈 resort after change
+      });
+      await _saveAvailableIngredients();
     }
+  }
+
+  void _sortGroceryItems() {
+    setState(() {
+      groceryItems.sort((a, b) {
+        final aAvailable = availableIngredients.contains(a['name']);
+        final bAvailable = availableIngredients.contains(b['name']);
+        if (aAvailable && !bAvailable) return 1;
+        if (!aAvailable && bAvailable) return -1;
+        return 0;
+      });
+    });
   }
 
   void _showStoreSelection(String itemName) async {
@@ -323,6 +328,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
                     Navigator.pop(context);
                     setState(() {
                       availableIngredients.add(itemName);
+                      _sortGroceryItems();
                     });
                     await _saveAvailableIngredients();
 
