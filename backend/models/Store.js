@@ -3,9 +3,15 @@ const mongoose = require('mongoose');
 const storeItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   price: { type: Number, required: true },
-  image: { type: String }, // Optional: useful if items might have pictures
-  category: { type: String }, // Optional: support filtering later
-}, { _id: false }); // prevent duplicate _id fields in embedded items
+  image: { type: String },
+  category: { type: String },
+}, { _id: false });
+
+const purchaseSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  ingredient: { type: String, required: true },
+  date: { type: Date, default: Date.now },
+}, { _id: false });
 
 const storeSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -16,8 +22,9 @@ const storeSchema = new mongoose.Schema({
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
   },
-  image: { type: String }, // store photo (URL or Base64)
-  items: [storeItemSchema], // Embedded item list
+  image: { type: String },
+  items: [storeItemSchema],
+  purchases: [purchaseSchema], // ✅ Track which user bought what
 }, { timestamps: true });
 
 module.exports = mongoose.models.Store || mongoose.model('Store', storeSchema);

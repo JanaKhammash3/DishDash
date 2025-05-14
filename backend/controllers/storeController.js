@@ -100,4 +100,25 @@ exports.getStoreById = async (req, res) => {
   }
 };
 
+exports.recordPurchase = async (req, res) => {
+  const { storeId } = req.params;
+  const { userId, ingredient } = req.body;
+
+  try {
+    const store = await Store.findById(storeId);
+    if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    store.purchases.push({ userId, ingredient });
+    store.markModified('purchases'); // ✅ Required for arrays of subdocs
+    await store.save();
+
+    console.log(`🛒 Purchase recorded for ${ingredient} at store ${store.name}`);
+    res.status(200).json({ message: 'Purchase recorded' });
+  } catch (err) {
+    console.error('❌ Error recording purchase:', err.message);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
 

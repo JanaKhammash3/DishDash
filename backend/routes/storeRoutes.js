@@ -12,6 +12,7 @@ const {
   getStorePrices,
   addItemToStore,
   getStoreById,
+  recordPurchase
 } = require('../controllers/storeController');
 
 // ➕ Add a new store
@@ -105,6 +106,9 @@ router.put('/stores/:storeId/image', upload.single('image'), async (req, res) =>
     res.status(500).json({ error: 'Image upload failed' });
   }
 });
+
+router.post('/:storeId/purchase', recordPurchase);
+
 
 
 module.exports = router;

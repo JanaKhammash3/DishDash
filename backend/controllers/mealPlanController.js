@@ -180,14 +180,60 @@ exports.getWeeklyCalories = async (req, res) => {
 };
 
 
+// Use this version in mealPlanController.js
 exports.getGroceryList = async (req, res) => {
   try {
-    const plan = await MealPlan.findById(req.params.planId);
-    res.status(200).json(plan.groceryList || []);
+    const userPlans = await MealPlan.find({ userId: req.params.userId }).lean();
+    if (!userPlans || userPlans.length === 0) return res.status(200).json([]);
+
+    const recipeIds = userPlans.flatMap(plan =>
+      plan.days.flatMap(day => day.meals.map(meal => meal.recipe.toString()))
+    );
+
+    const recipes = await Recipe.find({ _id: { $in: recipeIds } }).lean();
+    const recipeMap = {};
+    recipes.forEach(r => {
+      recipeMap[r._id.toString()] = {
+        title: r.title,
+        ingredients: r.ingredients,
+      };
+    });
+
+    const ingredientMap = {};
+
+    userPlans.forEach(plan => {
+      plan.days.forEach(day => {
+        const scheduledTime = new Date(`${day.date}T08:00:00Z`);
+        day.meals.forEach(meal => {
+          const recipe = recipeMap[meal.recipe.toString()];
+          if (!recipe) return;
+
+          recipe.ingredients.forEach(ing => {
+            const lower = ing.toLowerCase();
+            if (
+              !ingredientMap[lower] ||
+              scheduledTime < ingredientMap[lower].recipe.scheduledTime
+            ) {
+              ingredientMap[lower] = {
+                ingredient: ing,
+                recipe: {
+                  title: recipe.title,
+                  scheduledTime,
+                },
+              };
+            }
+          });
+        });
+      });
+    });
+
+    res.status(200).json(Object.values(ingredientMap));
   } catch (err) {
+    console.error('❌ getGroceryList error:', err.message);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 exports.getMealPlanByUser = async (req, res) => {
   try {
