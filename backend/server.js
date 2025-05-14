@@ -38,6 +38,7 @@ app.use('/images', express.static(path.join(__dirname, './public/images')));
 app.use('/api/chats', chatRoutes);
 app.use(storeRoutes);
 app.use('/api', require('./routes/storeRoutes'));
+app.use('/api/stores', require('./routes/storeRoutes'));
 
 app.post('/translate', async (req, res) => {
   const { text, target } = req.body;
