@@ -15,7 +15,7 @@ class StoreItemsScreen extends StatefulWidget {
 
 class _StoreItemsScreenState extends State<StoreItemsScreen> {
   List<dynamic> stores = [];
-  final String baseUrl = 'http://192.168.1.4:3000';
+  final String baseUrl = 'http://192.168.68.60:3000';
 
   @override
   void initState() {

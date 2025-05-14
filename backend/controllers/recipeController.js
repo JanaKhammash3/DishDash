@@ -74,6 +74,7 @@ exports.getAllRecipes = async (req, res) => {
   }
 
   try {
+    filter.isPublic=true;
     const recipes = await Recipe.find(filter).populate('author', 'name avatar');
     res.json(recipes);
   } catch (err) {
@@ -126,7 +127,7 @@ exports.filterRecipes = async (req, res) => {
       }));
     }
     
-
+    filter.isPublic=true;
     const recipes = await Recipe.find(filter).populate('author', 'name avatar');
     res.status(200).json(recipes);
   } catch (err) {
@@ -201,7 +202,7 @@ exports.rateRecipe = async (req, res) => {
 
 exports.getPopularRecipes = async (req, res) => {
   try {
-    const recipes = await Recipe.find().sort({ averageRating: -1 }).limit(4);
+    const recipes = await Recipe.find({ isPublic: true }).sort({ averageRating: -1 }).limit(4);
     res.status(200).json(recipes);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

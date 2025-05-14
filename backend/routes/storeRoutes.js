@@ -99,6 +99,14 @@ router.put('/stores/:storeId/image', upload.single('image'), async (req, res) =>
     res.status(500).json({ error: 'Image upload failed' });
   }
 });
+router.get('/', async (req, res) => {
+  try {
+    const stores = await Store.find();
+    res.status(200).json(stores);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch stores', error: err.message });
+  }
+});
 
 router.post('/:storeId/purchase', recordPurchase);
 

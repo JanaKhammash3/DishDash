@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
 
-class RecipeDetailedScreen extends StatelessWidget {
+class RecipeDetailedScreen extends StatefulWidget {
   final String title;
   final String imagePath;
   final String description;
@@ -24,12 +26,70 @@ class RecipeDetailedScreen extends StatelessWidget {
   });
 
   @override
+  State<RecipeDetailedScreen> createState() => _RecipeDetailedScreenState();
+}
+
+class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
+  bool translating = false;
+  bool showArabic = false;
+
+  String? descriptionAr;
+  String? instructionsAr;
+  String? ingredientsAr;
+
+  Future<String> translateToArabic(String text) async {
+    if (text.trim().isEmpty) return '';
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://192.168.68.60:3000/translate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': text, 'target': 'ar'}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['translated'] ?? '';
+      } else {
+        print('❌ Status ${response.statusCode}: ${response.body}');
+        return '[Translation failed]';
+      }
+    } catch (e) {
+      print('❌ Translation error: $e');
+      return '[Translation error]';
+    }
+  }
+
+  Future<void> _toggleTranslation() async {
+    if (!showArabic && descriptionAr == null) {
+      setState(() => translating = true);
+
+      descriptionAr = await translateToArabic(widget.description);
+      instructionsAr = await translateToArabic(widget.instructions);
+      ingredientsAr = await translateToArabic(widget.ingredients.join(', '));
+
+      setState(() {
+        translating = false;
+        showArabic = true;
+      });
+    } else {
+      setState(() => showArabic = !showArabic);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isNetwork = imagePath.startsWith('http');
-    final imageProvider =
-        isNetwork
-            ? NetworkImage(imagePath)
-            : const AssetImage('assets/placeholder.png') as ImageProvider;
+    final isBase64 = widget.imagePath.startsWith('/9j');
+    final isNetwork = widget.imagePath.startsWith('http');
+
+    ImageProvider imageProvider;
+    if (isBase64) {
+      imageProvider = MemoryImage(base64Decode(widget.imagePath));
+    } else if (isNetwork) {
+      imageProvider = NetworkImage(widget.imagePath);
+    } else {
+      imageProvider = const AssetImage('assets/placeholder.png');
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -55,7 +115,7 @@ class RecipeDetailedScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            title,
+            widget.title,
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -66,8 +126,14 @@ class RecipeDetailedScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            description.isNotEmpty ? description : 'No description provided.',
+            widget.description.isNotEmpty
+                ? widget.description
+                : 'No description provided.',
           ),
+          if (showArabic && descriptionAr != null) ...[
+            const SizedBox(height: 6),
+            Text(descriptionAr!, textDirection: TextDirection.rtl),
+          ],
 
           const SizedBox(height: 20),
           Row(
@@ -77,21 +143,21 @@ class RecipeDetailedScreen extends StatelessWidget {
                 children: [
                   const Icon(Icons.schedule),
                   SizedBox(width: 5),
-                  Text(prepTime),
+                  Text(widget.prepTime),
                 ],
               ),
               Row(
                 children: [
                   const Icon(Icons.local_fire_department),
                   SizedBox(width: 5),
-                  Text(difficulty),
+                  Text(widget.difficulty),
                 ],
               ),
               Row(
                 children: [
                   const Icon(Icons.star, color: Colors.amber),
                   SizedBox(width: 5),
-                  Text(rating.toStringAsFixed(1)),
+                  Text(widget.rating.toStringAsFixed(1)),
                 ],
               ),
             ],
@@ -104,8 +170,8 @@ class RecipeDetailedScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            ingredients.isNotEmpty
-                ? ingredients.map((e) => "• $e").join("\n")
+            widget.ingredients.isNotEmpty
+                ? widget.ingredients.map((e) => "• $e").join("\n")
                 : "N/A",
             style: const TextStyle(
               fontSize: 14,
@@ -113,6 +179,10 @@ class RecipeDetailedScreen extends StatelessWidget {
               height: 1.5,
             ),
           ),
+          if (showArabic && ingredientsAr != null) ...[
+            const SizedBox(height: 6),
+            Text(ingredientsAr!, textDirection: TextDirection.rtl),
+          ],
 
           const SizedBox(height: 30),
           const Text(
@@ -121,13 +191,38 @@ class RecipeDetailedScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            instructions.isNotEmpty
-                ? instructions
+            widget.instructions.isNotEmpty
+                ? widget.instructions
                 : "No instructions provided.",
             style: const TextStyle(
               fontSize: 14,
               color: Colors.black87,
               height: 1.5,
+            ),
+          ),
+          if (showArabic && instructionsAr != null) ...[
+            const SizedBox(height: 6),
+            Text(instructionsAr!, textDirection: TextDirection.rtl),
+          ],
+
+          const SizedBox(height: 40),
+          ElevatedButton.icon(
+            onPressed: translating ? null : _toggleTranslation,
+            icon: const Icon(Icons.translate),
+            label: Text(
+              translating
+                  ? "Translating..."
+                  : showArabic
+                  ? "Show Original"
+                  : "Translate to Arabic",
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
