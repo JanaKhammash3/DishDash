@@ -24,7 +24,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     } else if (image != null && image.startsWith('/9j')) {
       return MemoryImage(base64Decode(image));
     } else if (image != null && image.isNotEmpty) {
-      return NetworkImage('http://192.168.1.4:3000/images/$image');
+      return NetworkImage('http://192.168.68.60:3000/images/$image');
     } else {
       return const AssetImage('assets/placeholder.png');
     }
@@ -38,7 +38,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
   Future<void> fetchUserRecipes() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/myRecipes',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/myRecipes',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -46,7 +46,37 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     }
   }
 
+  Future<String> translateToArabic(String text) async {
+    if (text.trim().isEmpty) return '';
+
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'http://192.168.68.60:3000/translate',
+        ), // ✅ Your backend endpoint
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'text': text,
+          'target': 'ar', // Optional, defaults to 'ar' in your backend
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['translated'] ?? '';
+      } else {
+        print('❌ Status ${response.statusCode}: ${response.body}');
+        return '[Translation failed]';
+      }
+    } catch (e) {
+      print('❌ Translation error: $e');
+      return '[Translation error]';
+    }
+  }
+
   void _openCreateModal() {
+    bool showArabicFields = false;
+
     String title = '',
         ingredients = '',
         calories = '',
@@ -57,6 +87,11 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
         prepTime = '',
         instructions = '',
         difficulty = 'Easy';
+    String titleAr = '';
+    String descriptionAr = '';
+    String instructionsAr = '';
+    String ingredientsAr = '';
+
     List<String> tags = [];
 
     showDialog(
@@ -110,9 +145,19 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
+
                     TextField(
-                      decoration: const InputDecoration(labelText: 'Title'),
+                      decoration: const InputDecoration(
+                        labelText: 'Title (English)',
+                      ),
                       onChanged: (val) => title = val,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Title (Arabic)',
+                      ),
+                      textDirection: TextDirection.rtl,
+                      onChanged: (val) => titleAr = val,
                     ),
                     TextField(
                       decoration: const InputDecoration(
@@ -223,6 +268,64 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                 ),
               ),
               actions: [
+                TextButton.icon(
+                  onPressed: () async {
+                    setModalState(() {
+                      descriptionAr = 'Translating...';
+                      instructionsAr = 'Translating...';
+                      ingredientsAr = 'Translating...';
+                      showArabicFields = true;
+                    });
+
+                    final translatedDescription = await translateToArabic(
+                      description,
+                    );
+                    final translatedInstructions = await translateToArabic(
+                      instructions,
+                    );
+                    final translatedIngredients = await translateToArabic(
+                      ingredients,
+                    );
+
+                    setModalState(() {
+                      descriptionAr = translatedDescription;
+                      instructionsAr = translatedInstructions;
+                      ingredientsAr = translatedIngredients;
+                    });
+                  },
+                  icon: const Icon(Icons.translate, color: Colors.green),
+                  label: const Text('Translate to Arabic'),
+                ),
+                if (showArabicFields) ...[
+                  const SizedBox(height: 10),
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Arabic)',
+                    ),
+                    controller: TextEditingController(text: descriptionAr),
+                    textDirection: TextDirection.rtl,
+                    maxLines: 3,
+                    onChanged: (val) => descriptionAr = val,
+                  ),
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Instructions (Arabic)',
+                    ),
+                    controller: TextEditingController(text: instructionsAr),
+                    textDirection: TextDirection.rtl,
+                    maxLines: 3,
+                    onChanged: (val) => instructionsAr = val,
+                  ),
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Ingredients (Arabic)',
+                    ),
+                    controller: TextEditingController(text: ingredientsAr),
+                    textDirection: TextDirection.rtl,
+                    onChanged: (val) => ingredientsAr = val,
+                  ),
+                ],
+
                 TextButton(
                   child: const Text('Cancel'),
                   onPressed: () => Navigator.pop(context),
@@ -237,11 +340,21 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                     if (title.isEmpty || calories.isEmpty) return;
                     final body = {
                       'title': title,
+                      'titleAr': titleAr,
+                      'description': description,
+                      'descriptionAr': descriptionAr,
+                      'instructions': instructions,
+                      'instructionsAr': instructionsAr,
                       'ingredients':
                           ingredients.split(',').map((e) => e.trim()).toList(),
+                      'ingredientsAr':
+                          ingredientsAr
+                              .split(',')
+                              .map((e) => e.trim())
+                              .toList(),
+
                       'calories': int.tryParse(calories) ?? 0,
-                      'description': description,
-                      'instructions': instructions,
+
                       'image':
                           imageBytes != null ? base64Encode(imageBytes!) : '',
                       'diet': diet,
@@ -249,14 +362,41 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       'tags': tags,
                       'prepTime': int.tryParse(prepTime) ?? 0,
                       'difficulty': difficulty,
+                      'isPublic': true,
                     };
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder:
+                          (_) => AlertDialog(
+                            title: const Text('Make this recipe public?'),
+                            content: const Text(
+                              'Do you want your recipe to be visible to others?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Private'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Public'),
+                              ),
+                            ],
+                          ),
+                    );
+
+                    if (result == null) return;
+
+                    body['isPublic'] = result;
+
                     final res = await http.post(
                       Uri.parse(
-                        'http://192.168.1.4:3000/api/users/${widget.userId}/customRecipe',
+                        'http://192.168.68.60:3000/api/users/${widget.userId}/customRecipe',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
                     );
+
                     if (res.statusCode == 201) {
                       Navigator.pop(context);
                       setState(() => fetchUserRecipes());

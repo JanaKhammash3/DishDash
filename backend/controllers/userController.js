@@ -65,7 +65,7 @@ exports.register = async (req, res) => {
         savedPlans: [],
         currentGroceryList: [],
         availableIngredients: [],
-        role: 'user',
+        role: role || 'user',
       });
 
       return res.status(201).json({ message: 'User created', userId: newUser._id });
@@ -112,7 +112,7 @@ exports.login = async (req, res) => {
     res.status(200).json({
       message: 'Login successful',
       token,
-      type, // 👈 'user' or 'store'
+      type: account.role, // 👈 'user' or 'store'
       user: {
         _id: account._id,
         name: account.name,
@@ -234,15 +234,21 @@ exports.createCustomRecipe = async (req, res) => {
 
     const {
       title,
+      titleAr,
       description,
+      descriptionAr,
       ingredients,
+      ingredientsAr,
       instructions,
+      instructionsAr,
       image,
       calories,
       diet,
       mealTime,
       prepTime,
-      tags
+      difficulty,
+      tags,
+      isPublic = true,
     } = req.body;
 
     const safeIngredients = Array.isArray(ingredients)
@@ -268,7 +274,13 @@ exports.createCustomRecipe = async (req, res) => {
       mealTime,
       prepTime,
       tags: safeTags,
-      author: userId  // ✅ this is now guaranteed
+      author: userId, // ✅ this is now guaranteed
+      titleAr,
+      descriptionAr,
+      instructionsAr,
+      difficulty,
+      ingredientsAr,
+      isPublic,
     });
 
     await User.findByIdAndUpdate(userId, {

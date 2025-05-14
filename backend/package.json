@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/translate": "^9.1.0",
     "backend": "file:",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",

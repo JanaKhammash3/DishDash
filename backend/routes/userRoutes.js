@@ -56,7 +56,16 @@ module.exports = router;
 router.get('/:id/followers/count', getFollowerCount);
 router.get('/:id/recommendations', getRecommendations);
 router.put('/users/:id/survey', updateSurvey);
+const User = require('../models/User'); // ✅ Required for GET /
 
+router.get('/', async (req, res) => {
+  try {
+    const users = await User.find();
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch users', error: err.message });
+  }
+});
 
 
 

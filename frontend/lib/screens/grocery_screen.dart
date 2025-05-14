@@ -29,7 +29,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/grocery-list',
     );
     final response = await http.get(url);
 
@@ -60,7 +60,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadAvailableIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/available-ingredients',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -73,7 +73,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _saveIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/grocery-list',
     );
     final ingredients =
         groceryItems.map((item) => item['name'] as String).toList();
@@ -94,7 +94,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     print('📤 Attempting to save available ingredients: $ingredientsList');
 
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/available-ingredients',
     );
 
     try {
@@ -607,7 +607,7 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
 
   Future<void> fetchStorePrices() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
+      'http://192.168.68.60:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
     );
 
     try {

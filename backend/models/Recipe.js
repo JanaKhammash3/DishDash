@@ -1,10 +1,17 @@
 const mongoose = require('mongoose');
 
 const recipeSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: String,
-  ingredients: [String],
-  instructions: String,
+  title: { type: String, required: true },               // ✅ Keep English as-is
+  titleAr: { type: String },                             // ➕ Arabic title
+
+  description: String,                                   // ✅ Existing English
+  descriptionAr: String,                                 // ➕ Arabic description
+
+  ingredients: [String],                                 // ✅ English ingredients
+  ingredientsAr: [String],                               // ➕ Arabic ingredients
+
+  instructions: String,                                  // ✅ English
+  instructionsAr: String,  
   image: String,
   calories: Number,
 
@@ -32,6 +39,10 @@ const recipeSchema = new mongoose.Schema({
   },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isPublic: {
+    type: Boolean,
+    default: true,
+  }
 }, { timestamps: true });
 
 recipeSchema.virtual('averageRating').get(function () {

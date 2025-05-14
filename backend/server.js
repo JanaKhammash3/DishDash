@@ -9,7 +9,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const Chat = require('./models/chat');
 const User = require('./models/User');
 const storeRoutes = require('./routes/storeRoutes');
-
+const { translateText }= require( './translate.js');
 
 const app = express();
 app.use(cors());
@@ -39,6 +39,21 @@ app.use('/api/chats', chatRoutes);
 app.use(storeRoutes);
 app.use('/api', require('./routes/storeRoutes'));
 
+app.post('/translate', async (req, res) => {
+  const { text, target } = req.body;
+
+  if (!text) {
+    return res.status(400).json({ error: 'Missing "text" in request body' });
+  }
+
+  try {
+    const translated = await translateText(text, target || 'ar');
+    res.json({ translated });
+  } catch (error) {
+    console.error('Translation Error:', error.message);
+    res.status(500).json({ error: 'Translation failed' });
+  }
+});
 
 
 
@@ -103,6 +118,13 @@ io.on('connection', (socket) => {
     }
     console.log('🔴 Socket disconnected:', socket.id);
   });
+});
+const frontendPath = path.join(__dirname, '../frontend_web/build');
+app.use(express.static(frontendPath));
+
+// ✅ Only match non-API routes
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 // ✅ Start server
