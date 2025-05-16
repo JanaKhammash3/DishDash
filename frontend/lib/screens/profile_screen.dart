@@ -162,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Transform.translate(
-            offset: const Offset(0, 20), // fine-tuned to sink it halfway
+            offset: const Offset(0, 20),
             child: SizedBox(
               width: 64,
               height: 64,
@@ -178,17 +178,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                 },
-                child: Icon(Icons.add, color: green, size: 32),
+                child: Image.asset(
+                  'assets/Pinterest.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 23),
           const Text(
-            'Add Recipe',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white, // clearly white and visible on green
-            ),
+            'Import Recipe',
+            style: TextStyle(fontSize: 12, color: Colors.white),
           ),
         ],
       ),

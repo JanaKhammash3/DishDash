@@ -1,378 +1,579 @@
-import 'package:flutter/material.dart';
-import 'package:frontend/screens/login_screen.dart';
-import 'package:http/http.dart' as http;
+// Full StoreDashboardScreen with Ratings (User Avatars + Names) & Exportable Items + Profile Image Upload + Loading
+
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-
-import '../colors.dart';
+import 'package:frontend/screens/login_screen.dart';
+import 'package:frontend/colors.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class StoreDashboardScreen extends StatefulWidget {
   final String storeId;
-
   const StoreDashboardScreen({super.key, required this.storeId});
-
   @override
   State<StoreDashboardScreen> createState() => _StoreDashboardScreenState();
 }
 
-class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
+class _StoreDashboardScreenState extends State<StoreDashboardScreen>
+    with SingleTickerProviderStateMixin {
+  Map<String, dynamic> userMap = {};
   List<Map<String, dynamic>> items = [];
+  Map<String, dynamic> storeData = {};
+  final ImagePicker picker = ImagePicker();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
-  File? _pickedImage;
-  String? storeImageUrl;
-  final ImagePicker picker = ImagePicker();
+  bool isUploading = false;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    fetchStoreItems();
+    _tabController = TabController(length: 2, vsync: this);
+    fetchStoreInfo();
+    fetchUsers(); // ✅ Add this
+  }
+
+  Future<void> fetchUsers() async {
+    final url = Uri.parse('http://192.168.1.4:3000/api/users');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as List<dynamic>;
+        setState(() {
+          userMap = {for (var user in data) user['_id']: user};
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching users: $e');
+    }
+  }
+
+  Future<void> fetchStoreInfo() async {
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          storeData = data;
+          items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching store info: $e');
+    }
   }
 
   Future<void> pickAndUploadImage() async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile == null) {
-      print('📷 No image selected');
-      return;
-    }
+    if (pickedFile == null) return;
 
-    final bytes = await pickedFile.readAsBytes(); // ✅ Works on web
+    setState(() => isUploading = true);
+
+    final bytes = await pickedFile.readAsBytes();
     final fileName = pickedFile.name;
-
     final uri = Uri.parse(
       'http://192.168.1.4:3000/api/stores/${widget.storeId}/image',
     );
     final request = http.MultipartRequest('PUT', uri);
-
     request.files.add(
       http.MultipartFile.fromBytes('image', bytes, filename: fileName),
     );
 
     try {
       final response = await request.send();
-      print('📶 Upload status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final respStr = await response.stream.bytesToString();
         final data = json.decode(respStr);
-        final uploadedUrl = data['image'];
-
-        print('✅ Uploaded image URL: $uploadedUrl');
-
-        setState(() {
-          storeImageUrl = uploadedUrl;
-        });
-
-        await fetchStoreItems();
-
+        setState(() => storeData['image'] = data['image']);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('✅ Image uploaded')));
       } else {
-        print('❌ Upload failed: ${response.statusCode}');
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('❌ Upload failed')));
       }
     } catch (e) {
-      print('❌ Exception during upload: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('❌ Upload error')));
+    } finally {
+      setState(() => isUploading = false);
     }
   }
 
-  Future<void> fetchStoreItems() async {
-    final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores/${widget.storeId}',
-    );
+  void showRatingsModal() {
+    final ratings = storeData['ratings'] as List<dynamic>? ?? [];
 
-    print('🌐 Fetching store: $url');
-
-    try {
-      final response = await http.get(url);
-      print('📥 Fetch status: ${response.statusCode}');
-      print('📦 Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final rawItems = data['items'] ?? [];
-
-        setState(() {
-          items = List<Map<String, dynamic>>.from(rawItems);
-          storeImageUrl = data['image'];
-        });
-
-        print('✅ Image from DB: $storeImageUrl');
-      } else {
-        print('❌ Failed to fetch items. Status: ${response.statusCode}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to fetch items (${response.statusCode})'),
-          ),
-        );
-      }
-    } catch (e) {
-      print('❌ Fetch exception: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('❌ Failed to load store')));
-    }
-  }
-
-  Future<void> addItem() async {
-    final name = nameController.text.trim();
-    final price = double.tryParse(priceController.text.trim());
-
-    if (name.isEmpty || price == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter valid name and price')),
-      );
-      return;
-    }
-
-    final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores/${widget.storeId}/items',
-    );
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'price': price}),
-    );
-
-    if (response.statusCode == 200) {
-      nameController.clear();
-      priceController.clear();
-      Navigator.pop(context); // Close modal
-      fetchStoreItems();
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to add item')));
-    }
-  }
-
-  void handleMenuSelection(String value) {
-    if (value == 'logout') {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    } else if (value == 'info') {
-      showDialog(
-        context: context,
-        builder:
-            (_) => AlertDialog(
-              title: const Text('Store Info'),
-              content: Text(
-                'Store ID: ${widget.storeId}\nContact: (e.g. from DB)',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-      );
-    }
-  }
-
-  Future<void> deleteItem(String itemName) async {
-    final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores/${widget.storeId}/items/$itemName',
-    );
-    final response = await http.delete(url);
-
-    if (response.statusCode == 200) {
-      fetchStoreItems();
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to delete item')));
-    }
-  }
-
-  void showAddItemModal() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      isScrollControlled: true,
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            top: 24,
-            left: 24,
-            right: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      builder:
+          (_) => Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                ratings.isEmpty
+                    ? const Text('No ratings yet.')
+                    : ListView.builder(
+                      itemCount: ratings.length,
+                      itemBuilder: (_, index) {
+                        final r = ratings[index];
+                        final userId = r['userId']?.toString();
+                        final user = userMap[userId] ?? {};
+
+                        final avatarBase64 = user['avatar']?.toString();
+                        ImageProvider imageProvider;
+
+                        if (avatarBase64 != null && avatarBase64.isNotEmpty) {
+                          try {
+                            imageProvider = MemoryImage(
+                              base64Decode(avatarBase64.split(',').last),
+                            );
+                          } catch (_) {
+                            imageProvider = const AssetImage(
+                              'assets/profile.jpg',
+                            );
+                          }
+                        } else {
+                          imageProvider = const AssetImage(
+                            'assets/profile.jpg',
+                          );
+                        }
+
+                        return ListTile(
+                          leading: CircleAvatar(backgroundImage: imageProvider),
+                          title: Text(user['name']?.toString() ?? 'User'),
+                          trailing: Text('⭐ ${r['value']?.toString() ?? '-'}'),
+                        );
+                      },
+                    ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Add New Item',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Item Name'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Price'),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: addItem,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: green,
-                  minimumSize: const Size.fromHeight(45),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+    );
+  }
+
+  void showItemsModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (_) => Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                items.isEmpty
+                    ? const Text('No items added.')
+                    : ListView.builder(
+                      itemCount: items.length,
+                      itemBuilder: (_, index) {
+                        final item = items[index];
+                        return Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.fastfood, color: green),
+                            title: Text(item['name']?.toString() ?? 'Unnamed'),
+                            subtitle: Text(
+                              'Price: \$${item['price']?.toString() ?? '0.00'}',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+          ),
+    );
+  }
+
+  void showPurchasesModal() {
+    final purchases = storeData['purchases'] as List<dynamic>? ?? [];
+
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (final p in purchases) {
+      final userId = p['userId']?.toString() ?? 'unknown';
+      grouped.putIfAbsent(userId, () => []).add(p as Map<String, dynamic>);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (_) => Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                grouped.isEmpty
+                    ? const Text('No purchases yet.')
+                    : ListView(
+                      children:
+                          grouped.entries.map((entry) {
+                            final userPurchases = entry.value;
+                            final userId = entry.key;
+                            final user = userMap[userId] ?? {};
+                            final avatarBase64 = user['avatar']?.toString();
+
+                            ImageProvider imageProvider;
+                            if (avatarBase64 != null &&
+                                avatarBase64.isNotEmpty) {
+                              try {
+                                imageProvider = MemoryImage(
+                                  base64Decode(avatarBase64.split(',').last),
+                                );
+                              } catch (_) {
+                                imageProvider = const AssetImage(
+                                  'assets/profile.jpg',
+                                );
+                              }
+                            } else {
+                              imageProvider = const AssetImage(
+                                'assets/profile.jpg',
+                              );
+                            }
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          backgroundImage: imageProvider,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          user['userName']?.toString() ??
+                                              'User',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ...userPurchases.map((p) {
+                                      final itemId = p['item']?.toString();
+                                      final quantity =
+                                          p['quantity']?.toString() ?? '1';
+                                      final date =
+                                          p['date']?.toString() ??
+                                          'Date unknown';
+
+                                      final item = items.firstWhere(
+                                        (i) => i['id']?.toString() == itemId,
+                                        orElse: () => {},
+                                      );
+
+                                      final itemName =
+                                          item['name']?.toString() ?? 'Unnamed';
+                                      final price =
+                                          item['price']?.toString() ?? '0.00';
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 6,
+                                          left: 8,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Item: $itemName'),
+                                            Text('Price: \$$price'),
+                                            Text('Quantity: $quantity'),
+                                            Text('Date: $date'),
+                                            const Divider(height: 20),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+          ),
+    );
+  }
+
+  Widget _infoButton({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPerformanceTab() {
+    final purchases = storeData['purchases'] as List<dynamic>? ?? [];
+    final Map<String, int> daySales = {};
+    for (final p in purchases) {
+      final date = DateTime.tryParse(p['date'] ?? '') ?? DateTime.now();
+      final day = '${date.year}-${date.month}-${date.day}';
+      daySales[day] = (daySales[day] ?? 0) + 1;
+    }
+    final sortedDays = daySales.keys.toList()..sort();
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Weekly Sales Overview',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 200,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                barGroups: List.generate(sortedDays.length, (index) {
+                  final count = daySales[sortedDays[index]] ?? 0;
+                  return BarChartGroupData(
+                    x: index,
+                    barRods: [
+                      BarChartRodData(
+                        toY: count.toDouble(),
+                        width: 16,
+                        color: green,
+                      ),
+                    ],
+                  );
+                }),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: true),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < sortedDays.length) {
+                          return Text(sortedDays[index].split('-').last);
+                        }
+                        return const Text('');
+                      },
+                    ),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
                   ),
                 ),
-                child: const Text(
-                  'Add Item',
-                  style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoTab() {
+    final ratings = storeData['ratings'] as List<dynamic>? ?? [];
+    final purchases = storeData['purchases'] as List<dynamic>? ?? [];
+    final ratingAverage =
+        ratings.isNotEmpty
+            ? ratings.map((r) => (r['value'] as num)).reduce((a, b) => a + b) /
+                ratings.length
+            : 0.0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.grey[300],
+                backgroundImage:
+                    storeData['image'] != null
+                        ? NetworkImage(storeData['image'])
+                        : null,
+                child:
+                    storeData['image'] == null
+                        ? const Icon(Icons.storefront, size: 50)
+                        : null,
+              ),
+              if (isUploading)
+                const Positioned.fill(
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                ),
+              Positioned(
+                bottom: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: pickAndUploadImage,
+                  child: const CircleAvatar(
+                    radius: 18,
+                    backgroundColor: green,
+                    child: Icon(Icons.edit, size: 18, color: Colors.white),
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 14),
+          Text(
+            storeData['name']?.toString() ?? 'Store Name',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            storeData['telephone']?.toString() ?? 'Phone: N/A',
+            style: const TextStyle(color: Colors.grey, fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _infoButton(
+                icon: Icons.star,
+                color: Colors.amber,
+                label: '${ratingAverage.toStringAsFixed(1)} / 5.0',
+                onTap: showRatingsModal,
+              ),
+              _infoButton(
+                icon: Icons.shopping_cart,
+                color: green,
+                label: '${purchases.length} Purchases',
+                onTap: showPurchasesModal,
+              ),
+              _infoButton(
+                icon: Icons.fastfood,
+                color: Colors.deepOrange,
+                label: 'Items',
+                onTap: showItemsModal,
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            color: Colors.white,
+            elevation: 1,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Store Summary',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Items:'),
+                      Text('${items.length}'),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Purchases:'),
+                      Text('${purchases.length}'),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Avg. Rating:'),
+                      Text('${ratingAverage.toStringAsFixed(1)} / 5.0'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF9F6FD),
       appBar: AppBar(
         backgroundColor: green,
         title: const Text(
           'Store Dashboard',
           style: TextStyle(color: Colors.white),
         ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(icon: Icon(Icons.info), text: 'Overview'),
+            Tab(icon: Icon(Icons.bar_chart), text: 'Performance'),
+          ],
+        ),
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onSelected: handleMenuSelection,
+          PopupMenuButton(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             itemBuilder:
-                (context) => [
-                  const PopupMenuItem(value: 'info', child: Text('Info')),
-                  const PopupMenuItem(value: 'logout', child: Text('Logout')),
+                (_) => [
+                  PopupMenuItem(
+                    child: const Text('Logout'),
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    },
+                  ),
                 ],
           ),
         ],
       ),
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: green,
-        onPressed: showAddItemModal,
-        child: const Icon(Icons.add, color: Colors.white), // ✅ white +
-      ),
-
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              if (storeImageUrl != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: NetworkImage(storeImageUrl!),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.storefront,
-                    size: 60,
-                    color: Colors.grey,
-                  ),
-                ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: pickAndUploadImage,
-                icon: const Icon(Icons.image),
-                label: const Text('Upload/Change Store Photo'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              items.isEmpty
-                  ? const Text('No items added yet.')
-                  : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: items.length,
-                    itemBuilder: (_, index) {
-                      final item = items[index];
-                      final name = item['name'] ?? 'Unnamed';
-                      final price = item['price']?.toStringAsFixed(2) ?? '0.00';
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: green.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.fastfood,
-                              color: green,
-                              size: 24,
-                            ),
-                          ),
-                          title: Text(
-                            name,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Text('Price: \$${price}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => deleteItem(name),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-            ],
-          ),
-        ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [_buildInfoTab(), _buildPerformanceTab()],
       ),
     );
   }

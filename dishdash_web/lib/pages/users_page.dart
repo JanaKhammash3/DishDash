@@ -14,7 +14,7 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  final String baseUrl = 'http://192.168.68.60:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   List<Map<String, dynamic>> users = [];
   Map<String, dynamic>? selectedUser;
   List<Map<String, dynamic>> userRecipes = [];
