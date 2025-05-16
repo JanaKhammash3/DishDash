@@ -11,7 +11,8 @@ const {
   searchRecipes,
   filterRecipes,
   deleteRecipe,
-  toggleLike
+  toggleLike,
+  getAllRecipesAdmin
 } = require('../controllers/recipeController');
 
 // ✅ Specific routes first
@@ -27,5 +28,6 @@ router.patch('/rate/:id', rateRecipe);
 router.delete('/:id', deleteRecipe);
 router.post('/:id/like', toggleLike);
 router.get('/:id', getRecipeById);
+router.get('/admin/all', getAllRecipesAdmin);
 
 module.exports = router;

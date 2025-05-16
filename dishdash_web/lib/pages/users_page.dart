@@ -1,9 +1,7 @@
-import 'dart:convert';
+// ADD this import at the top
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 
 const Color maroon = Color(0xFF8B0000);
 const Color darkGreen = Color(0xFF304D30);
@@ -16,10 +14,12 @@ class UsersPage extends StatefulWidget {
 class _UsersPageState extends State<UsersPage> {
   final String baseUrl = 'http://192.168.68.60:3000';
   List<Map<String, dynamic>> users = [];
+  List<Map<String, dynamic>> filteredUsers = [];
   Map<String, dynamic>? selectedUser;
   List<Map<String, dynamic>> userRecipes = [];
   int followerCount = 0;
-
+  String searchQuery = '';
+  int privateRecipeCount = 0;
   @override
   void initState() {
     super.initState();
@@ -30,10 +30,26 @@ class _UsersPageState extends State<UsersPage> {
     final res = await http.get(Uri.parse('$baseUrl/api/users'));
     if (res.statusCode == 200) {
       final all = List<Map<String, dynamic>>.from(jsonDecode(res.body));
+      final userList = all.where((u) => u['role'] != 'admin').toList();
       setState(() {
-        users = all.where((u) => u['role'] != 'admin').toList();
+        users = userList;
+        filteredUsers = userList;
       });
     }
+  }
+
+  void filterUsers(String query) {
+    final lowerQuery = query.toLowerCase();
+    final filtered =
+        users.where((u) {
+          final name = u['name']?.toString().toLowerCase() ?? '';
+          final email = u['email']?.toString().toLowerCase() ?? '';
+          return name.contains(lowerQuery) || email.contains(lowerQuery);
+        }).toList();
+    setState(() {
+      searchQuery = query;
+      filteredUsers = filtered;
+    });
   }
 
   Future<void> fetchUserDetails(String userId) async {
@@ -43,7 +59,18 @@ class _UsersPageState extends State<UsersPage> {
     final countRes = await http.get(
       Uri.parse('$baseUrl/api/users/$userId/followers/count'),
     );
-    final recipeRes = await http.get(Uri.parse('$baseUrl/api/recipes'));
+    final recipeRes = await http.get(
+      Uri.parse('$baseUrl/api/recipes/admin/all'),
+    );
+    final allRecipes = List<Map<String, dynamic>>.from(
+      json.decode(recipeRes.body),
+    );
+    final userCreatedRecipes =
+        allRecipes.where((r) => r['author']?['_id'] == userId).toList();
+    final publicRecipes =
+        userCreatedRecipes.where((r) => r['isPublic'] == true).toList();
+    final privateCount =
+        userCreatedRecipes.where((r) => r['isPublic'] == false).length;
 
     if (profileRes.statusCode == 200 && recipeRes.statusCode == 200) {
       final profileData = json.decode(profileRes.body);
@@ -58,13 +85,13 @@ class _UsersPageState extends State<UsersPage> {
       setState(() {
         selectedUser = profileData;
         followerCount = countData['count'] ?? 0;
-        userRecipes =
-            recipes.where((r) => r['author']?['_id'] == userId).toList();
+        userRecipes = publicRecipes;
+        privateRecipeCount = privateCount;
       });
     }
   }
 
-  Future<void> deleteUser(String userId) async {
+  void _confirmDeleteUser(String userId) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder:
@@ -93,7 +120,8 @@ class _UsersPageState extends State<UsersPage> {
       if (res.statusCode == 200) {
         setState(() {
           users.removeWhere((u) => u['_id'] == userId);
-          if (selectedUser?['_id'] == userId) selectedUser = null;
+          filteredUsers.removeWhere((u) => u['_id'] == userId);
+          selectedUser = null;
           userRecipes.clear();
         });
         ScaffoldMessenger.of(
@@ -101,6 +129,48 @@ class _UsersPageState extends State<UsersPage> {
         ).showSnackBar(const SnackBar(content: Text("User deleted")));
       }
     }
+  }
+
+  void _showNotificationModal(BuildContext context) {
+    final TextEditingController _messageController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Send Notification"),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            content: TextField(
+              controller: _messageController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: "Enter your message here...",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel", style: TextStyle(color: maroon)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final message = _messageController.text.trim();
+                  // ⚠️ Placeholder for notification logic
+                  print('Notification to ${selectedUser?['name']}: $message');
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: darkGreen),
+                child: const Text(
+                  "Notify",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+    );
   }
 
   ImageProvider _getImage(String? data) {
@@ -114,137 +184,83 @@ class _UsersPageState extends State<UsersPage> {
     }
   }
 
-  void _showMapModal(BuildContext context, double lat, double lng) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            contentPadding: EdgeInsets.zero,
-            content: SizedBox(
-              width: 500,
-              height: 300,
-              child: FlutterMap(
-                options: MapOptions(
-                  initialCenter: LatLng(lat, lng),
-                  initialZoom: 13,
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.dishdash.admin',
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(lat, lng),
-                        width: 40,
-                        height: 40,
-                        child: const Icon(
-                          Icons.location_on,
-                          color: Colors.red,
-                          size: 32,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-    );
-  }
+  void _showUserInfoModal(BuildContext context, int privateCount) {
+    final user = selectedUser!;
+    final survey = user['survey'] ?? {};
 
-  void _showProfileModal(BuildContext context) {
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text(selectedUser?['name'] ?? 'Profile Info'),
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundImage: _getImage(user['avatar']),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  user['name'] ?? '',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
             content: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Email: ${selectedUser?['email'] ?? ''}'),
-                  Text('Followers: $followerCount'),
-                  const SizedBox(height: 10),
-                  Text('Allergies:'),
-                  Wrap(
-                    spacing: 6,
-                    children:
-                        List<String>.from(
-                          selectedUser?['allergies'] ?? [],
-                        ).map((i) => Chip(label: Text(i))).toList(),
-                  ),
-                  const SizedBox(height: 10),
-                  Text('Grocery List:'),
-                  Wrap(
-                    spacing: 6,
-                    children:
-                        List<String>.from(
-                          selectedUser?['groceryList'] ?? [],
-                        ).map((i) => Chip(label: Text(i))).toList(),
-                  ),
-                  const SizedBox(height: 10),
-                  if (selectedUser?['survey'] != null) ...[
-                    Text('Diet: ${selectedUser!['survey']['diet'] ?? 'N/A'}'),
-                    Text(
-                      'Weight: ${selectedUser!['survey']['weight'] ?? 'N/A'}',
-                    ),
-                    Text(
-                      'Height: ${selectedUser!['survey']['height'] ?? 'N/A'}',
-                    ),
+                  Text('📧 ${user['email'] ?? ''}'),
+                  const SizedBox(height: 8),
+                  Text('👥 $followerCount followers'),
+                  const Divider(height: 20),
+
+                  if ((survey['preferredTags'] ?? []).isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Text('🧠 Preferred Tags:'),
                     Wrap(
                       spacing: 6,
                       children:
                           List<String>.from(
-                            selectedUser!['survey']['tags'] ?? [],
-                          ).map((tag) => Chip(label: Text(tag))).toList(),
+                            survey['preferredTags'],
+                          ).map((e) => Chip(label: Text(e))).toList(),
                     ),
                   ],
+                  if ((survey['preferredCuisines'] ?? []).isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Text('🍽️ Cuisines:'),
+                    Wrap(
+                      spacing: 6,
+                      children:
+                          List<String>.from(
+                            survey['preferredCuisines'],
+                          ).map((e) => Chip(label: Text(e))).toList(),
+                    ),
+                  ],
+                  if (survey['diet'] != null) ...[
+                    const SizedBox(height: 12),
+                    Text('🥗 Diet: ${survey['diet']}'),
+                  ],
+                  if (survey['bmiStatus'] != null) ...[
+                    Text('📊 BMI: ${survey['bmiStatus']}'),
+                  ],
+                  if (survey['weight'] != null && survey['height'] != null) ...[
+                    Text('⚖️ Weight: ${survey['weight']} kg'),
+                    Text('📏 Height: ${survey['height']} cm'),
+                  ],
+                  Text('🔒 Private Recipes: $privateCount'),
                 ],
               ),
             ),
-          ),
-    );
-  }
-
-  void _showRecipeDetailsModal(
-    BuildContext context,
-    Map<String, dynamic> recipe,
-  ) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(recipe['title'] ?? 'Recipe'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Image(
-                    image: _getImage(recipe['image']),
-                    height: 150,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Description: ${recipe['description'] ?? 'N/A'}'),
-                  Text('Calories: ${recipe['calories'] ?? 'N/A'}'),
-                  Text('Meal Time: ${recipe['mealTime'] ?? 'N/A'}'),
-                  Text('Difficulty: ${recipe['difficulty'] ?? 'N/A'}'),
-                  const SizedBox(height: 10),
-                  const Text('Ingredients:'),
-                  Wrap(
-                    spacing: 6,
-                    children:
-                        List<String>.from(
-                          recipe['ingredients'] ?? [],
-                        ).map((i) => Chip(label: Text(i))).toList(),
-                  ),
-                ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Close", style: TextStyle(color: maroon)),
               ),
-            ),
+            ],
           ),
     );
   }
@@ -255,63 +271,80 @@ class _UsersPageState extends State<UsersPage> {
       backgroundColor: darkGreen,
       body: Row(
         children: [
-          // Left: User List
+          // 🔍 User List + Search
           Expanded(
             flex: 2,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(24),
-              itemCount: users.length,
-              itemBuilder: (_, index) {
-                final user = users[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    onChanged: filterUsers,
+                    decoration: InputDecoration(
+                      hintText: 'Search users...',
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(Icons.search),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundImage: _getImage(user['avatar']),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          user['name'] ?? 'User',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filteredUsers.length,
+                    itemBuilder: (_, index) {
+                      final user = filteredUsers[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: darkGreen,
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundImage: _getImage(user['avatar']),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                user['name'] ?? 'User',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: darkGreen,
+                              ),
+                              onPressed: () => fetchUserDetails(user['_id']),
+                              child: const Text(
+                                "Profile",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
                         ),
-                        onPressed: () => fetchUserDetails(user['_id']),
-                        child: const Text(
-                          "Profile",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: maroon,
-                        ),
-                        onPressed: () => deleteUser(user['_id']),
-                        child: const Text(
-                          "Delete",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
 
-          // Right: Profile View
+          // 📄 Right Side: Selected User Recipes
           Expanded(
             flex: 3,
             child:
@@ -352,7 +385,7 @@ class _UsersPageState extends State<UsersPage> {
                                     ),
                                   ),
                                   Text(
-                                    '${selectedUser?['email'] ?? ''}',
+                                    selectedUser?['email'] ?? '',
                                     style: const TextStyle(color: Colors.grey),
                                   ),
                                   Text(
@@ -361,35 +394,57 @@ class _UsersPageState extends State<UsersPage> {
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.teal,
+                              const Spacer(),
+                              IconButton(
+                                tooltip: 'User Info',
+                                icon: const Icon(Icons.info_outline),
+                                color: Colors.white,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: darkGreen,
+                                  shape: const CircleBorder(),
                                 ),
                                 onPressed: () {
-                                  final loc = selectedUser!['location'];
-                                  _showMapModal(
+                                  final privateCount =
+                                      userRecipes
+                                          .where((r) => r['isPublic'] == false)
+                                          .length;
+                                  _showUserInfoModal(
                                     context,
-                                    (loc['lat'] as num).toDouble(),
-                                    (loc['lng'] as num).toDouble(),
+                                    privateRecipeCount,
                                   );
                                 },
-                                child: const Text("View Location on Map"),
                               ),
                               const SizedBox(width: 8),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blueGrey,
+                              IconButton(
+                                tooltip: 'Delete User',
+                                icon: const Icon(Icons.delete_outline),
+                                color: Colors.white,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: maroon,
+                                  shape: const CircleBorder(),
                                 ),
-                                onPressed: () => _showProfileModal(context),
-                                child: const Text("Profile Info"),
+                                onPressed:
+                                    () => _confirmDeleteUser(
+                                      selectedUser!['_id'],
+                                    ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                tooltip: 'Send Notification',
+                                icon: const Icon(
+                                  Icons.notifications_active_outlined,
+                                ),
+                                color: Colors.white,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.orange[700],
+                                  shape: const CircleBorder(),
+                                ),
+                                onPressed:
+                                    () => _showNotificationModal(context),
                               ),
                             ],
                           ),
+
                           const SizedBox(height: 20),
                           const Text(
                             'User Recipes',
@@ -437,20 +492,8 @@ class _UsersPageState extends State<UsersPage> {
                                               const SizedBox(height: 4),
                                               Text(
                                                 recipe['description'] ?? '',
-                                                maxLines: 2,
+                                                maxLines: 3,
                                                 overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              ElevatedButton(
-                                                onPressed:
-                                                    () =>
-                                                        _showRecipeDetailsModal(
-                                                          context,
-                                                          recipe,
-                                                        ),
-                                                child: const Text(
-                                                  'View Details',
-                                                ),
                                               ),
                                             ],
                                           ),
