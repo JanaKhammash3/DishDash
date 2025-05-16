@@ -587,3 +587,13 @@ exports.getFollowers = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch followers' });
   }
 };
+exports.deleteUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).send({ message: "User not found" });
+    res.status(200).send({ message: "User deleted" });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+};
+

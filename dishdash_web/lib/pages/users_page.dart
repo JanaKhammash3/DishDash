@@ -173,14 +173,14 @@ class _UsersPageState extends State<UsersPage> {
     );
   }
 
-  ImageProvider _getImage(String? data) {
-    if (data == null || data.isEmpty)
-      return const AssetImage('assets/profile.jpg');
+  ImageProvider<Object>? _getImage(String? data) {
+    if (data == null || data.isEmpty) return null;
+
     if (data.startsWith('http')) return NetworkImage(data);
     try {
       return MemoryImage(base64Decode(data.split(',').last));
     } catch (_) {
-      return const AssetImage('assets/profile.jpg');
+      return null;
     }
   }
 
@@ -468,13 +468,30 @@ class _UsersPageState extends State<UsersPage> {
                                           topLeft: Radius.circular(12),
                                           bottomLeft: Radius.circular(12),
                                         ),
-                                        child: Image(
-                                          image: _getImage(recipe['image']),
-                                          width: 120,
-                                          height: 120,
-                                          fit: BoxFit.cover,
-                                        ),
+                                        child:
+                                            (() {
+                                              final image = _getImage(
+                                                recipe['image'],
+                                              );
+                                              return image == null
+                                                  ? Container(
+                                                    width: 120,
+                                                    height: 120,
+                                                    color: Colors.grey[300],
+                                                    child: const Icon(
+                                                      Icons.image_not_supported,
+                                                      size: 40,
+                                                    ),
+                                                  )
+                                                  : Image(
+                                                    image: image,
+                                                    width: 120,
+                                                    height: 120,
+                                                    fit: BoxFit.cover,
+                                                  );
+                                            })(),
                                       ),
+
                                       Expanded(
                                         child: Padding(
                                           padding: const EdgeInsets.all(12),
