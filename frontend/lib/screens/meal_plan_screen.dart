@@ -33,7 +33,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     String date,
     String recipeId,
   ) async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/mealplans/mark-done');
+    final url = Uri.parse('http://192.168.1.4:3000/api/mealplans/mark-done');
     await http.put(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -43,7 +43,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
   Future<void> fetchSavedRecipes() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/savedRecipes',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/savedRecipes',
     );
 
     final response = await http.get(url);
@@ -55,7 +55,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
   Future<void> rateRecipe(String recipeId, int rating) async {
     await http.patch(
-      Uri.parse('http://192.168.68.60:3000/api/recipes/rate/$recipeId'),
+      Uri.parse('http://192.168.1.4:3000/api/recipes/rate/$recipeId'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'rating': rating}),
     );
@@ -79,7 +79,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
     // 🔥 Save to backend
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/grocery-list',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
     );
     final response = await http.post(
       url,
@@ -96,9 +96,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
   Future<void> loadMealsFromBackend() async {
     final res = await http.get(
-      Uri.parse(
-        'http://192.168.68.60:3000/api/mealplans/user/${widget.userId}',
-      ),
+      Uri.parse('http://192.168.1.4:3000/api/mealplans/user/${widget.userId}'),
     );
 
     if (res.statusCode == 200) {
@@ -120,7 +118,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
             // Fetch full recipe details
             final recipeRes = await http.get(
-              Uri.parse('http://192.168.68.60:3000/api/recipes/$recipeId'),
+              Uri.parse('http://192.168.1.4:3000/api/recipes/$recipeId'),
             );
 
             if (recipeRes.statusCode == 200) {
@@ -200,7 +198,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
       return NetworkImage(image);
     }
     // Fallback to server path
-    return NetworkImage('http://192.168.68.60:3000/images/$image');
+    return NetworkImage('http://192.168.1.4:3000/images/$image');
   }
 
   void addMealToPlan() {
@@ -397,7 +395,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
                                   final planResponse = await http.get(
                                     Uri.parse(
-                                      'http://192.168.68.60:3000/api/mealplans/user/${widget.userId}',
+                                      'http://192.168.1.4:3000/api/mealplans/user/${widget.userId}',
                                     ),
                                   );
 
@@ -413,7 +411,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                                       // 👇 Create a new meal plan if none exists
                                       final createResponse = await http.post(
                                         Uri.parse(
-                                          'http://192.168.68.60:3000/api/mealplans',
+                                          'http://192.168.1.4:3000/api/mealplans',
                                         ),
                                         headers: {
                                           'Content-Type': 'application/json',
@@ -449,7 +447,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
                                       final addResponse = await http.put(
                                         Uri.parse(
-                                          'http://192.168.68.60:3000/api/mealplans/$planId/add-recipe',
+                                          'http://192.168.1.4:3000/api/mealplans/$planId/add-recipe',
                                         ),
                                         headers: {
                                           'Content-Type': 'application/json',
@@ -595,7 +593,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     final recipeId = meal['recipe']['_id'];
 
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/mealplans/$planId/remove-recipe',
+      'http://192.168.1.4:3000/api/mealplans/$planId/remove-recipe',
     );
 
     final res = await http.put(
@@ -725,7 +723,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                           print('Recipe ID: $recipeId');
 
                           final url = Uri.parse(
-                            'http://192.168.68.60:3000/api/mealplans/${willBeDone ? 'mark-done' : 'mark-undone'}',
+                            'http://192.168.1.4:3000/api/mealplans/${willBeDone ? 'mark-done' : 'mark-undone'}',
                           );
 
                           final response = await http.put(
