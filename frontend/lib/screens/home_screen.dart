@@ -497,15 +497,41 @@ class _HomeScreenState extends State<HomeScreen> {
               final recipe = currentList[index];
               final imagePath = recipe['imagePath'] ?? 'assets/placeholder.png';
 
-              return placeCard(
-                recipe['title'],
-                recipe['author']?['name'] ?? 'Unknown',
-                imagePath,
-                rating: _averageRating(recipe['ratings']),
-                authorName: recipe['author']?['name'],
-                authorAvatar: recipe['author']?['avatar'],
-                onSave: recipe['onSave'],
-                isSaved: recipe['isSaved'] ?? false,
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => RecipeScreen(
+                            title: recipe['title'] ?? '',
+                            imagePath: imagePath,
+                            rating: recipe['avgRating'] ?? 0.0,
+                            ingredients: List<String>.from(
+                              recipe['ingredients'] ?? [],
+                            ),
+                            description: recipe['description'] ?? '',
+                            prepTime:
+                                int.tryParse(
+                                  recipe['prepTime']?.toString() ?? '0',
+                                ) ??
+                                0,
+                            difficulty: recipe['difficulty'] ?? 'Easy',
+                            instructions: recipe['instructions'] ?? '',
+                          ),
+                    ),
+                  );
+                },
+                child: placeCard(
+                  recipe['title'],
+                  recipe['author']?['name'] ?? 'Unknown',
+                  imagePath,
+                  rating: _averageRating(recipe['ratings']),
+                  authorName: recipe['author']?['name'],
+                  authorAvatar: recipe['author']?['avatar'],
+                  onSave: recipe['onSave'],
+                  isSaved: recipe['isSaved'] ?? false,
+                ),
               );
             },
           ),
