@@ -272,5 +272,43 @@ exports.removeRecipeFromPlan = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+// PUT /api/mealplans/:planId/update-date
+// PUT /api/mealplans/:planId/update-date
+exports.updateMealDate = async (req, res) => {
+  const { planId } = req.params;
+  const { oldDate, newDate, recipeId } = req.body;
+
+  try {
+    const plan = await MealPlan.findById(planId);
+    if (!plan) return res.status(404).json({ message: "Meal plan not found" });
+
+    const day = plan.days.find(d => d.date === oldDate);
+    if (!day) return res.status(404).json({ message: "Old date not found" });
+
+    const mealIndex = day.meals.findIndex(m => m.recipe.toString() === recipeId);
+    if (mealIndex === -1) return res.status(404).json({ message: "Meal not found in old date" });
+
+    const meal = day.meals.splice(mealIndex, 1)[0]; // remove from old day
+
+    // Remove day if it has no meals left
+    if (day.meals.length === 0) {
+      plan.days = plan.days.filter(d => d.date !== oldDate);
+    }
+
+    // Find or create new date entry
+    let newDay = plan.days.find(d => d.date === newDate);
+    if (!newDay) {
+      newDay = { date: newDate, meals: [] };
+      plan.days.push(newDay);
+    }
+
+    newDay.meals.push(meal); // add meal to new date
+    await plan.save();
+
+    res.status(200).json({ message: "Meal date updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Error updating meal date", error: err.message });
+  }
+};
 
 

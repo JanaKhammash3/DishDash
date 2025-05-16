@@ -23,7 +23,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
 
   Future<void> unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/unsaveRecipe',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/unsaveRecipe',
     );
     await http.post(
       url,
@@ -33,13 +33,13 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   }
 
   Future<void> deleteRecipe(String recipeId) async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/recipes/$recipeId');
+    final url = Uri.parse('http://192.168.68.60:3000/api/recipes/$recipeId');
     await http.delete(url);
   }
 
   Future<void> fetchSavedRecipes() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/savedRecipes',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/savedRecipes',
     );
 
     final response = await http.get(url);
@@ -192,7 +192,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
     } else if (image != null && image.startsWith('/9j')) {
       imageProvider = MemoryImage(base64Decode(image));
     } else if (image != null && image.isNotEmpty) {
-      imageProvider = NetworkImage('http://192.168.1.4:3000/images/$image');
+      imageProvider = NetworkImage('http://192.168.68.60:3000/images/$image');
     } else {
       imageProvider = const AssetImage('assets/placeholder.png');
     }
