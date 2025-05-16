@@ -10,6 +10,7 @@ const {
   markMealAsDone,
   markMealAsUndone, 
   removeRecipeFromPlan, 
+  updateMealDate,
 } = require('../controllers/mealPlanController');
 
 // 🗓️ Meal Plan creation
@@ -35,5 +36,8 @@ router.get('/user/:userId/grocery-list', getGroceryList);
 
 // 🔥 Weekly calorie summary
 router.get('/weekly-calories/:userId', getWeeklyCalories);
+
+router.put('/:planId/update-date', updateMealDate);
+
 
 module.exports = router;

@@ -21,7 +21,8 @@ const {
    getAvailableIngredients,
   updateAvailableIngredients,
   getProfile,
-  getFollowers
+  getFollowers,
+  deleteUser
 } = require('../controllers/userController');
 
 // Auth & profile
@@ -66,6 +67,8 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch users', error: err.message });
   }
 });
+router.delete('/:id', deleteUser);
+
 
 
 

@@ -28,7 +28,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
 
   Future<void> loadSavedRecipes() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/profile/${widget.userId}',
+      'http://192.168.68.60:3000/api/profile/${widget.userId}',
     );
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -42,7 +42,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
 
   Future<void> saveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/saveRecipe',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/saveRecipe',
     );
     await http.post(
       url,
@@ -54,7 +54,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
 
   Future<void> unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/unsaveRecipe',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/unsaveRecipe',
     );
     await http.post(
       url,
@@ -67,7 +67,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
   Future<void> fetchRecommendations() async {
     try {
       final url = Uri.parse(
-        'http://192.168.1.4:3000/api/users/${widget.userId}/recommendations',
+        'http://192.168.68.60:3000/api/users/${widget.userId}/recommendations',
       );
       final res = await http.get(url);
 
@@ -91,7 +91,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
                   isBase64 || isNetwork
                       ? rawImage
                       : rawImage.isNotEmpty
-                      ? 'http://192.168.1.4:3000/images/$rawImage'
+                      ? 'http://192.168.68.60:3000/images/$rawImage'
                       : 'assets/placeholder.png';
               return {
                 ...recipe,
@@ -137,7 +137,7 @@ class _RecommendationsWidgetState extends State<RecommendationsWidget> {
                   isBase64 || isNetwork
                       ? rawImage
                       : rawImage.isNotEmpty
-                      ? 'http://192.168.1.4:3000/images/$rawImage'
+                      ? 'http://192.168.68.60:3000/images/$rawImage'
                       : 'assets/placeholder.png';
 
               return {

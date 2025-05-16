@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
+import 'package:frontend/screens/recipe_screen.dart';
 
 class SavedRecipesScreen extends StatefulWidget {
   final String userId;
@@ -23,7 +24,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
 
   Future<void> unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/unsaveRecipe',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/unsaveRecipe',
     );
     await http.post(
       url,
@@ -33,13 +34,13 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   }
 
   Future<void> deleteRecipe(String recipeId) async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/recipes/$recipeId');
+    final url = Uri.parse('http://192.168.68.60:3000/api/recipes/$recipeId');
     await http.delete(url);
   }
 
   Future<void> fetchSavedRecipes() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/savedRecipes',
+      'http://192.168.68.60:3000/api/users/${widget.userId}/savedRecipes',
     );
 
     final response = await http.get(url);
@@ -47,6 +48,12 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
       final List<dynamic> data = jsonDecode(response.body);
       setState(() => savedRecipes = data);
     }
+  }
+
+  double _averageRating(dynamic ratings) {
+    if (ratings == null || !(ratings is List) || ratings.isEmpty) return 0.0;
+    final List<int> list = List<int>.from(ratings);
+    return list.reduce((a, b) => a + b) / list.length;
   }
 
   void _showRecipeModal(BuildContext context, Map recipe) {
@@ -66,94 +73,83 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                recipe['title'] ?? 'Recipe',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: green,
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context); // Close modal
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => RecipeScreen(
+                            title: recipe['title'] ?? 'Untitled',
+                            imagePath: recipe['image'] ?? '',
+                            rating: _averageRating(recipe['rating']),
+                            ingredients: List<String>.from(
+                              (recipe['ingredients'] as List).map(
+                                (e) => e.toString(),
+                              ),
+                            ),
+                            description: recipe['description'] ?? '',
+                            prepTime:
+                                int.tryParse(
+                                  recipe['prepTime']?.toString() ?? '0',
+                                ) ??
+                                0,
+                            difficulty: recipe['difficulty'] ?? 'Easy',
+                            instructions: recipe['instructions'] ?? '',
+                          ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.info_outline, color: Colors.white),
+                label: const Text(
+                  "Show Recipe Info",
+                  style: TextStyle(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: green,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  const Text("📝 ", style: TextStyle(fontSize: 18)),
-                  Expanded(
-                    child: Text(
-                      recipe['instructions'] ?? 'No instructions provided.',
-                      style: const TextStyle(fontSize: 14),
-                    ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  if (isUserRecipe) {
+                    await deleteRecipe(recipe['_id']);
+                  } else {
+                    await unsaveRecipe(recipe['_id']);
+                  }
+                  fetchSavedRecipes();
+                },
+                child: Text(
+                  isUserRecipe ? 'Delete Recipe' : 'Unsave Recipe',
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Text("🥦 ", style: TextStyle(fontSize: 18)),
-                  Expanded(
-                    child: Text(
-                      (recipe['ingredients'] as List<dynamic>?)?.join(', ') ??
-                          'No ingredients.',
-                      style: const TextStyle(fontSize: 14),
-                    ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Text("🔥 ", style: TextStyle(fontSize: 18)),
-                  Text(
-                    '${recipe['calories'] ?? 'N/A'} kcal',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: () async {
-                      Navigator.pop(context); // close modal
-                      if (isUserRecipe) {
-                        await deleteRecipe(recipe['_id']);
-                      } else {
-                        await unsaveRecipe(recipe['_id']);
-                      }
-                      fetchSavedRecipes(); // refresh list
-                    },
-                    child: Text(
-                      isUserRecipe ? 'Delete Recipe' : 'Unsave Recipe',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[300],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close', style: TextStyle(color: green)),
-                  ),
-                ],
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close', style: TextStyle(color: green)),
               ),
             ],
           ),
@@ -192,7 +188,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
     } else if (image != null && image.startsWith('/9j')) {
       imageProvider = MemoryImage(base64Decode(image));
     } else if (image != null && image.isNotEmpty) {
-      imageProvider = NetworkImage('http://192.168.1.4:3000/images/$image');
+      imageProvider = NetworkImage('http://192.168.68.60:3000/images/$image');
     } else {
       imageProvider = const AssetImage('assets/placeholder.png');
     }

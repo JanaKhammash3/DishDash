@@ -262,3 +262,12 @@ exports.toggleLike = async (req, res) => {
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
+exports.getAllRecipesAdmin = async (req, res) => {
+  try {
+    const recipes = await Recipe.find().populate('author', 'name avatar');
+    res.json(recipes);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
