@@ -88,7 +88,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
   }
 
   void _startClosingCountdown() {
-    final openHours = widget.store['openHours'];
+    final openHours = _getParsedOpenHours();
     if (openHours == null || openHours['to'] == null) return;
 
     final now = DateTime.now();
@@ -130,9 +130,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     super.dispose();
   }
 
-  bool _isStoreOpen() {
-    dynamic rawOpenHours = widget.store['openHours'];
-
+  bool _isStoreOpen(dynamic rawOpenHours) {
     // 🔒 Handle null: use default hours
     if (rawOpenHours == null) {
       debugPrint("⚠️ openHours is missing, using default");
@@ -195,12 +193,26 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     }
   }
 
+  dynamic _getParsedOpenHours() {
+    dynamic raw = widget.store['openHours'];
+    if (raw is String) {
+      try {
+        return jsonDecode(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = widget.store['items'] as List<dynamic>? ?? [];
     final rating = widget.store['avgRating']?.toString() ?? 'N/A';
-    final openHours = widget.store['openHours'];
-    final isOpen = _isStoreOpen();
+    print('🕒 raw openHours from widget: ${widget.store['openHours']}');
+    final openHours = _getParsedOpenHours();
+
+    final isOpen = _isStoreOpen(openHours);
 
     return Scaffold(
       appBar: AppBar(
@@ -256,10 +268,11 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
             if (openHours != null) ...[
               const SizedBox(height: 6),
               Text(
-                'Hours: ${openHours['from']} - ${openHours['to']}',
+                'Hours: ${openHours['from']} - ${openHours['to']}', // ✅ now safe
                 style: const TextStyle(fontSize: 13, color: Colors.black54),
               ),
             ],
+
             if (isOpen && _timeToClose != null) ...[
               const SizedBox(height: 6),
               Text(

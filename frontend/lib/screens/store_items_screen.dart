@@ -37,7 +37,8 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
 
   bool _isStoreOpen(dynamic openHours) {
     if (openHours == null) {
-      openHours = {"from": "08:00", "to": "22:00"};
+      debugPrint("❌ openHours is null, skipping store open logic.");
+      return false;
     }
 
     if (openHours is String) {
@@ -184,7 +185,15 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
                             .map((i) => i['name'])
                             .join(', ');
                         final distance = store['distance'] ?? 2.5;
-                        final isOpen = _isStoreOpen(store['openHours']);
+                        dynamic openHours = store['openHours'];
+                        if (openHours is String) {
+                          try {
+                            openHours = jsonDecode(openHours);
+                          } catch (e) {
+                            openHours = null;
+                          }
+                        }
+                        final isOpen = _isStoreOpen(openHours);
 
                         return GestureDetector(
                           onTap: () {
@@ -263,9 +272,9 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
                                                         : Colors.red,
                                               ),
                                             ),
-                                            if (store['openHours'] != null)
+                                            if (openHours != null)
                                               Text(
-                                                'Hours: ${store['openHours']['from']} - ${store['openHours']['to']}',
+                                                'Hours: ${openHours['from']} - ${openHours['to']}',
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.black54,

@@ -173,15 +173,16 @@ exports.getStoresWithItems = async (req, res) => {
         : null;
 
       return {
-        _id: store._id,
-        name: store.name,
-        image: store.image,
-        telephone: store.telephone,
-        location: store.location, // ✅ Add this line
-        items: store.items,
-        distance: distance ? Number(distance.toFixed(2)) : null,
-        avgRating: avgRating ? Number(avgRating.toFixed(1)) : null,
-      };
+            _id: store._id,
+            name: store.name,
+            image: store.image,
+            telephone: store.telephone,
+            location: store.location,
+            items: store.items,
+            distance: distance ? Number(distance.toFixed(2)) : null,
+            avgRating: avgRating ? Number(avgRating.toFixed(1)) : null,
+            openHours: store.openHours, // ✅ Add this line
+          };
     });
 
     res.json(enriched);

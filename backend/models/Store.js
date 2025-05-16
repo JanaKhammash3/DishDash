@@ -31,7 +31,7 @@ const storeSchema = new mongoose.Schema({
 }],
 openHours: {
   from: { type: String, required: true, default: '08:00' },
-  to: { type: String, required: true, default: '24:00' }
+  to: { type: String, required: true, default: '23:59' }
 },
 
 }, { timestamps: true });
