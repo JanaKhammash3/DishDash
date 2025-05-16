@@ -131,25 +131,52 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
   }
 
   bool _isStoreOpen() {
-    final openHours = widget.store['openHours'];
-    if (openHours == null ||
-        openHours['from'] == null ||
-        openHours['to'] == null) {
+    dynamic rawOpenHours = widget.store['openHours'];
+
+    // 🔒 Handle null: use default hours
+    if (rawOpenHours == null) {
+      debugPrint("⚠️ openHours is missing, using default");
+      rawOpenHours = {"from": "08:00", "to": "22:00"};
+    }
+
+    // 📦 If it's a string, try decoding
+    if (rawOpenHours is String) {
+      try {
+        rawOpenHours = jsonDecode(rawOpenHours);
+      } catch (e) {
+        debugPrint("❌ Failed to parse openHours string: $e");
+        return false;
+      }
+    }
+
+    final from = rawOpenHours['from'];
+    var to = rawOpenHours['to'];
+
+    if (from == null || to == null) {
+      debugPrint("❌ 'from' or 'to' missing");
       return false;
     }
+
+    if (to == "24:00") to = "23:59"; // ✅ Fix Dart's invalid 24:00
 
     try {
       final now = DateTime.now();
       final format = DateFormat('HH:mm');
-      final fromTime = format.parse(openHours['from']);
-      final toTime = format.parse(openHours['to']);
+      final fromTime = format.parse(from);
+      final toTime = format.parse(to);
 
-      final currentMinutes = now.hour * 60 + now.minute;
       final fromMinutes = fromTime.hour * 60 + fromTime.minute;
       final toMinutes = toTime.hour * 60 + toTime.minute;
+      final nowMinutes = now.hour * 60 + now.minute;
 
-      return currentMinutes >= fromMinutes && currentMinutes <= toMinutes;
-    } catch (_) {
+      // 🌙 Handle overnight hours (e.g., 22:00 to 06:00)
+      if (fromMinutes > toMinutes) {
+        return nowMinutes >= fromMinutes || nowMinutes <= toMinutes;
+      }
+
+      return nowMinutes >= fromMinutes && nowMinutes <= toMinutes;
+    } catch (e) {
+      debugPrint("❌ Time parse error: $e");
       return false;
     }
   }
