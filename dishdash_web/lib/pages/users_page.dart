@@ -1,6 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+
+const Color maroon = Color(0xFF8B0000);
+const Color darkGreen = Color(0xFF304D30);
 
 class UsersPage extends StatefulWidget {
   @override
@@ -25,8 +31,7 @@ class _UsersPageState extends State<UsersPage> {
     if (res.statusCode == 200) {
       final all = List<Map<String, dynamic>>.from(jsonDecode(res.body));
       setState(() {
-        users =
-            all.where((u) => u['role'] != 'admin').toList(); // exclude admin
+        users = all.where((u) => u['role'] != 'admin').toList();
       });
     }
   }
@@ -73,9 +78,7 @@ class _UsersPageState extends State<UsersPage> {
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 153, 28, 19),
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: maroon),
                 child: const Text(
                   "Delete",
                   style: TextStyle(color: Colors.white),
@@ -111,10 +114,145 @@ class _UsersPageState extends State<UsersPage> {
     }
   }
 
+  void _showMapModal(BuildContext context, double lat, double lng) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            contentPadding: EdgeInsets.zero,
+            content: SizedBox(
+              width: 500,
+              height: 300,
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: LatLng(lat, lng),
+                  initialZoom: 13,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.dishdash.admin',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(lat, lng),
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Icons.location_on,
+                          color: Colors.red,
+                          size: 32,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  void _showProfileModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(selectedUser?['name'] ?? 'Profile Info'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Email: ${selectedUser?['email'] ?? ''}'),
+                  Text('Followers: $followerCount'),
+                  const SizedBox(height: 10),
+                  Text('Allergies:'),
+                  Wrap(
+                    spacing: 6,
+                    children:
+                        List<String>.from(
+                          selectedUser?['allergies'] ?? [],
+                        ).map((i) => Chip(label: Text(i))).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Grocery List:'),
+                  Wrap(
+                    spacing: 6,
+                    children:
+                        List<String>.from(
+                          selectedUser?['groceryList'] ?? [],
+                        ).map((i) => Chip(label: Text(i))).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  if (selectedUser?['survey'] != null) ...[
+                    Text('Diet: ${selectedUser!['survey']['diet'] ?? 'N/A'}'),
+                    Text(
+                      'Weight: ${selectedUser!['survey']['weight'] ?? 'N/A'}',
+                    ),
+                    Text(
+                      'Height: ${selectedUser!['survey']['height'] ?? 'N/A'}',
+                    ),
+                    Wrap(
+                      spacing: 6,
+                      children:
+                          List<String>.from(
+                            selectedUser!['survey']['tags'] ?? [],
+                          ).map((tag) => Chip(label: Text(tag))).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  void _showRecipeDetailsModal(
+    BuildContext context,
+    Map<String, dynamic> recipe,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(recipe['title'] ?? 'Recipe'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image(
+                    image: _getImage(recipe['image']),
+                    height: 150,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Description: ${recipe['description'] ?? 'N/A'}'),
+                  Text('Calories: ${recipe['calories'] ?? 'N/A'}'),
+                  Text('Meal Time: ${recipe['mealTime'] ?? 'N/A'}'),
+                  Text('Difficulty: ${recipe['difficulty'] ?? 'N/A'}'),
+                  const SizedBox(height: 10),
+                  const Text('Ingredients:'),
+                  Wrap(
+                    spacing: 6,
+                    children:
+                        List<String>.from(
+                          recipe['ingredients'] ?? [],
+                        ).map((i) => Chip(label: Text(i))).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF304D30),
+      backgroundColor: darkGreen,
       body: Row(
         children: [
           // Left: User List
@@ -147,7 +285,7 @@ class _UsersPageState extends State<UsersPage> {
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF304D30),
+                          backgroundColor: darkGreen,
                         ),
                         onPressed: () => fetchUserDetails(user['_id']),
                         child: const Text(
@@ -158,7 +296,7 @@ class _UsersPageState extends State<UsersPage> {
                       const SizedBox(width: 8),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: maroon,
                         ),
                         onPressed: () => deleteUser(user['_id']),
                         child: const Text(
@@ -173,7 +311,7 @@ class _UsersPageState extends State<UsersPage> {
             ),
           ),
 
-          // Right: Profile Viewer
+          // Right: Profile View
           Expanded(
             flex: 3,
             child:
@@ -214,6 +352,10 @@ class _UsersPageState extends State<UsersPage> {
                                     ),
                                   ),
                                   Text(
+                                    '${selectedUser?['email'] ?? ''}',
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  Text(
                                     '$followerCount followers',
                                     style: const TextStyle(color: Colors.grey),
                                   ),
@@ -221,7 +363,34 @@ class _UsersPageState extends State<UsersPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                ),
+                                onPressed: () {
+                                  final loc = selectedUser!['location'];
+                                  _showMapModal(
+                                    context,
+                                    (loc['lat'] as num).toDouble(),
+                                    (loc['lng'] as num).toDouble(),
+                                  );
+                                },
+                                child: const Text("View Location on Map"),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueGrey,
+                                ),
+                                onPressed: () => _showProfileModal(context),
+                                child: const Text("Profile Info"),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
                           const Text(
                             'User Recipes',
                             style: TextStyle(
@@ -247,7 +416,7 @@ class _UsersPageState extends State<UsersPage> {
                                         child: Image(
                                           image: _getImage(recipe['image']),
                                           width: 120,
-                                          height: 100,
+                                          height: 120,
                                           fit: BoxFit.cover,
                                         ),
                                       ),
@@ -268,11 +437,20 @@ class _UsersPageState extends State<UsersPage> {
                                               const SizedBox(height: 4),
                                               Text(
                                                 recipe['description'] ?? '',
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                ),
-                                                maxLines: 3,
+                                                maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              ElevatedButton(
+                                                onPressed:
+                                                    () =>
+                                                        _showRecipeDetailsModal(
+                                                          context,
+                                                          recipe,
+                                                        ),
+                                                child: const Text(
+                                                  'View Details',
+                                                ),
                                               ),
                                             ],
                                           ),
