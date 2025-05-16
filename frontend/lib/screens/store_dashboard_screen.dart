@@ -41,7 +41,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     final fileName = pickedFile.name;
 
     final uri = Uri.parse(
-      'http://192.168.68.60:3000/api/stores/${widget.storeId}/image',
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}/image',
     );
     final request = http.MultipartRequest('PUT', uri);
 
@@ -85,7 +85,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
   Future<void> fetchStoreItems() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/stores/${widget.storeId}',
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}',
     );
 
     print('🌐 Fetching store: $url');
@@ -133,7 +133,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
 
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/stores/${widget.storeId}/items',
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}/items',
     );
     final response = await http.post(
       url,
@@ -181,7 +181,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
   Future<void> deleteItem(String itemName) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/stores/${widget.storeId}/items/$itemName',
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}/items/$itemName',
     );
     final response = await http.delete(url);
 

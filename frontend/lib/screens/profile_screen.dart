@@ -1,5 +1,6 @@
 // PROFILE SCREEN
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -44,7 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/profile/${widget.userId}',
+      'http://192.168.1.4:3000/api/profile/${widget.userId}',
     );
 
     try {
@@ -94,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final base64String = base64Encode(compressedBytes);
 
       final url = Uri.parse(
-        'http://192.168.68.60:3000/api/profile/${widget.userId}/avatar',
+        'http://192.168.1.4:3000/api/profile/${widget.userId}/avatar',
       );
 
       final response = await http.put(
@@ -282,7 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: _pickAndUploadImage,
                         child: CircleAvatar(
                           radius: 14,
-                          backgroundColor: green,
+                          backgroundColor: CupertinoColors.activeOrange,
                           child: const Icon(
                             Icons.edit,
                             size: 16,
@@ -398,7 +399,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Center(
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: green,
+                backgroundColor: CupertinoColors.activeOrange,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
