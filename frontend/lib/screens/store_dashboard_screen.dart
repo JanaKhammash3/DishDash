@@ -78,7 +78,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
     final bytes = await pickedFile.readAsBytes();
     final fileName = pickedFile.name;
     final uri = Uri.parse(
-      'http://192.168.68.60:3000/api/stores/${widget.storeId}/image',
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}/image',
     );
     final request = http.MultipartRequest('PUT', uri);
     request.files.add(

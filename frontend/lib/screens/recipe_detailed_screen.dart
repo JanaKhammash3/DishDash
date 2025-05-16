@@ -42,7 +42,7 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.68.60:3000/translate'),
+        Uri.parse('http://192.168.1.4:3000/translate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'text': text, 'target': 'ar'}),
       );

@@ -29,7 +29,7 @@ class _AllergyScreenState extends State<AllergyScreen> {
 
   Future<void> _saveSurvey() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/survey',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/survey',
     );
     final response = await http.put(
       url,
@@ -68,7 +68,7 @@ class _AllergyScreenState extends State<AllergyScreen> {
 
     final allergyRes = await http.patch(
       Uri.parse(
-        'http://192.168.68.60:3000/api/users/updateAllergies/${widget.userId}',
+        'http://192.168.1.4:3000/api/users/updateAllergies/${widget.userId}',
       ),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'allergies': allergies}),

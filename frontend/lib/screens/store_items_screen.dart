@@ -4,6 +4,7 @@ import 'package:frontend/screens/StoreMapScreen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'store_profile_screen.dart';
 
@@ -18,7 +19,7 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
     with SingleTickerProviderStateMixin {
   List<dynamic> stores = [];
   List<dynamic> filteredStores = [];
-  final String baseUrl = 'http://192.168.68.60:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   String searchQuery = '';
   Position? userPosition;
   late TabController _tabController;
@@ -32,6 +33,45 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
       if (_tabController.indexIsChanging) return;
       _applyTabFilter();
     });
+  }
+
+  bool _isStoreOpen(dynamic openHours) {
+    if (openHours == null) {
+      openHours = {"from": "08:00", "to": "22:00"};
+    }
+
+    if (openHours is String) {
+      try {
+        openHours = jsonDecode(openHours);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    final from = openHours['from'];
+    var to = openHours['to'];
+
+    if (from == null || to == null) return false;
+    if (to == "24:00") to = "23:59";
+
+    try {
+      final now = DateTime.now();
+      final format = DateFormat('HH:mm');
+      final fromTime = format.parse(from);
+      final toTime = format.parse(to);
+
+      final fromMinutes = fromTime.hour * 60 + fromTime.minute;
+      final toMinutes = toTime.hour * 60 + toTime.minute;
+      final nowMinutes = now.hour * 60 + now.minute;
+
+      if (fromMinutes > toMinutes) {
+        return nowMinutes >= fromMinutes || nowMinutes <= toMinutes;
+      }
+
+      return nowMinutes >= fromMinutes && nowMinutes <= toMinutes;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _getUserLocationAndFetchStores() async {
@@ -144,7 +184,7 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
                             .map((i) => i['name'])
                             .join(', ');
                         final distance = store['distance'] ?? 2.5;
-                        final isOpen = store['isOpen'] ?? true;
+                        final isOpen = _isStoreOpen(store['openHours']);
 
                         return GestureDetector(
                           onTap: () {
@@ -223,6 +263,14 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
                                                         : Colors.red,
                                               ),
                                             ),
+                                            if (store['openHours'] != null)
+                                              Text(
+                                                'Hours: ${store['openHours']['from']} - ${store['openHours']['to']}',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.black54,
+                                                ),
+                                              ),
                                           ],
                                         ),
                                       ),
