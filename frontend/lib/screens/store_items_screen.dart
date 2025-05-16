@@ -238,7 +238,11 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
                                               const SizedBox(width: 4),
                                               Text(
                                                 store['avgRating'] != null
-                                                    ? store['avgRating']
+                                                    ? (double.tryParse(
+                                                              store['avgRating']
+                                                                  .toString(),
+                                                            ) ??
+                                                            0.0)
                                                         .toStringAsFixed(1)
                                                     : 'N/A',
                                                 style: const TextStyle(

@@ -233,10 +233,7 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
                       child: Column(
                         children: [
                           TweenAnimationBuilder<double>(
-                            tween: Tween(
-                              begin: 0,
-                              end: percent.clamp(0.0, 1.0),
-                            ),
+                            tween: Tween(begin: 0, end: percent),
                             duration: const Duration(milliseconds: 800),
                             builder:
                                 (context, value, _) => Column(
@@ -244,7 +241,7 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
                                     CircularPercentIndicator(
                                       radius: 80,
                                       lineWidth: 12,
-                                      percent: value,
+                                      percent: value.clamp(0.0, 1.0),
                                       center: Text(
                                         '${(value * 100).toStringAsFixed(1)}%',
                                         style: const TextStyle(
@@ -280,8 +277,7 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
                                         color: Colors.grey,
                                       ),
                                     ),
-                                    if (value >=
-                                        1.0) // ✅ Add this block right below
+                                    if (value > 1.0)
                                       AnimatedScale(
                                         scale: 1.1,
                                         duration: const Duration(
@@ -296,22 +292,34 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
                                             vertical: 6,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: accentRed.withOpacity(0.15),
+                                            color: Color(
+                                              0xFFEF4444,
+                                            ).withOpacity(0.15),
                                             borderRadius: BorderRadius.circular(
                                               30,
                                             ),
                                           ),
-                                          child: const Text(
-                                            '⚠️ You’ve exceeded your goal!',
-                                            style: TextStyle(
-                                              color: Color(0xFFEF4444),
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: const [
+                                              Icon(
+                                                Icons.warning_amber_rounded,
+                                                color: Color(0xFFEF4444),
+                                                size: 20,
+                                              ),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                'You’ve exceeded your goal!',
+                                                style: TextStyle(
+                                                  color: Color(0xFFEF4444),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ),
-
-                                    if (value >= 1.0)
+                                      )
+                                    else if (value == 1.0)
                                       AnimatedScale(
                                         scale: 1.1,
                                         duration: const Duration(
@@ -326,9 +334,11 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
                                             vertical: 6,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: accentGreen.withOpacity(
+                                            color: Color(
+                                              0xFF10B981,
+                                            ).withOpacity(
                                               0.15,
-                                            ),
+                                            ), // green background
                                             borderRadius: BorderRadius.circular(
                                               30,
                                             ),
@@ -336,7 +346,9 @@ class _CaloryScoreScreenState extends State<CaloryScoreScreen> {
                                           child: const Text(
                                             '🎉 Goal Achieved!',
                                             style: TextStyle(
-                                              color: Color(0xFF10B981),
+                                              color: Color(
+                                                0xFF10B981,
+                                              ), // green text
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
