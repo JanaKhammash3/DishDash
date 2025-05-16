@@ -273,20 +273,81 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
                                   ),
                                   const SizedBox(height: 12),
                                   if (sampleItems.isNotEmpty)
-                                    Row(
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(
-                                          Icons.shopping_bag,
-                                          size: 16,
-                                          color: Colors.grey,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Text(
-                                            'Bestsellers: $sampleItems',
-                                            style: const TextStyle(
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.shopping_bag,
+                                              size: 16,
                                               color: Colors.grey,
-                                              fontSize: 13,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                'Bestsellers: $sampleItems',
+                                                style: const TextStyle(
+                                                  color: Colors.grey,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: .9,
+                                          ), // slightly up
+                                          child: Align(
+                                            alignment: Alignment.centerRight,
+                                            child: OutlinedButton.icon(
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: green,
+                                                side: BorderSide(
+                                                  color: green,
+                                                  width: 1.2,
+                                                ),
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 6,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                              ),
+                                              icon: const Icon(
+                                                Icons.person_outline,
+                                                size: 14,
+                                              ),
+                                              label: const Text(
+                                                'Profile',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (_) =>
+                                                            StoreProfileScreen(
+                                                              store: store,
+                                                            ),
+                                                  ),
+                                                );
+                                              },
                                             ),
                                           ),
                                         ),
