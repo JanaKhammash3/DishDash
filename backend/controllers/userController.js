@@ -7,6 +7,7 @@ const path = require('path');
 const MealPlan = require('../models/MealPlan'); 
 const Store = require('../models/Store'); // ✅ Add this
 const mongoose = require('mongoose');
+const  {scrapeSinglePin } = require('../utils/scraper');
 
 
 // Setup storage for Multer
@@ -596,4 +597,66 @@ exports.deleteUser = async (req, res) => {
     res.status(500).send({ message: err.message });
   }
 };
+exports.scrapeAndSaveRecipe = async (req, res) => {
+  const { url } = req.body;
+  const { userId } = req.params;
 
+  if (!url || !userId) {
+    return res.status(400).json({ message: 'Missing pin URL or user ID' });
+  }
+
+  try {
+    // 🔍 Scrape Pinterest pin
+    const data = await scrapeSinglePin(url);
+
+    // 🧪 Extract ingredients and prepTime from full body text
+    const ingredients = extractIngredients(data.bodyText);
+    const prepTime = extractPrepTime(data.bodyText);
+
+    // 🧾 Create recipe
+    const newRecipe = await Recipe.create({
+      title: data.title,
+      description: data.description,
+      image: data.image, // ✅ Already stripped base64
+      ingredients,
+      instructions: '',
+      calories: 0,
+      diet: 'None',
+      mealTime: 'Dinner',
+      prepTime,
+      difficulty: 'Easy',
+      tags: ['scraped'],
+      author: userId,
+      isPublic: true,
+    });
+
+    // 🧠 Attach to user
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        recipes: newRecipe._id,
+        savedRecipes: newRecipe._id,
+      },
+    });
+
+    const populated = await Recipe.findById(newRecipe._id).populate('author', 'name avatar');
+    res.status(201).json(populated);
+  } catch (err) {
+    console.error('❌ Scrape & save error:', err);
+    res.status(500).json({ message: 'Error scraping or saving recipe', error: err.message });
+  }
+};
+
+// ✅ Extract ingredient lines from text content
+function extractIngredients(text) {
+  const lines = text.split(/\n|•|–|-/).map(l => l.trim());
+  return lines.filter(l =>
+    /\b(cup|tsp|tbsp|g|ml|oz|kg|sliced|chopped|grated)\b/i.test(l) &&
+    l.length < 100
+  ).slice(0, 15);
+}
+
+// ✅ Parse prep time (e.g., "Prep time: 10 minutes")
+function extractPrepTime(text) {
+  const match = text.match(/prep(aration)? time[:\s]*([0-9]+)\s*(minutes|min)/i);
+  return match ? parseInt(match[2]) : 0;
+}
