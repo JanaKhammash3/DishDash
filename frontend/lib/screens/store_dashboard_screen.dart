@@ -80,7 +80,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
     final uri = Uri.parse(
       'http://192.168.1.4:3000/api/stores/${widget.storeId}/image',
     );
-    final request = http.MultipartRequest('PUT', uri);
+    final request = http.MultipartRequest('PATCH', uri);
+
     request.files.add(
       http.MultipartFile.fromBytes('image', bytes, filename: fileName),
     );

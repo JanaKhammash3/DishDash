@@ -74,7 +74,7 @@ router.get('/api/stores/search', async (req, res) => {
 router.get('/api/stores', getStorePrices);
 
 
-router.put('/stores/:storeId/image', upload.single('image'), async (req, res) => {
+router.patch('/stores/:storeId/image', upload.single('image'), async (req, res) => {
   try {
     const storeId = req.params.storeId;
 
@@ -84,13 +84,15 @@ router.put('/stores/:storeId/image', upload.single('image'), async (req, res) =>
 
     const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
 
-    const store = await Store.findById(storeId);
+    const store = await Store.findByIdAndUpdate(
+      storeId,
+      { image: imageUrl },
+      { new: true, runValidators: false }
+    );
+
     if (!store) {
       return res.status(404).json({ error: 'Store not found' });
     }
-
-    store.image = imageUrl;
-    await store.save(); // ✅ Save the image URL manually
 
     console.log('✅ Image saved to store:', store.image);
     res.status(200).json(store);
@@ -99,14 +101,7 @@ router.put('/stores/:storeId/image', upload.single('image'), async (req, res) =>
     res.status(500).json({ error: 'Image upload failed' });
   }
 });
-router.get('/', async (req, res) => {
-  try {
-    const stores = await Store.find();
-    res.status(200).json(stores);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch stores', error: err.message });
-  }
-});
+
 
 router.post('/:storeId/purchase', recordPurchase);
 
