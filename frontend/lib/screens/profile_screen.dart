@@ -67,6 +67,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showScrapeRecipeModal() {
+    final TextEditingController urlController = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              title: const Text("Import Pinterest Recipe"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: urlController,
+                    decoration: const InputDecoration(
+                      hintText: "Enter Pinterest recipe link",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  isLoading
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: green, // your app's green
+                          foregroundColor: Colors.white, // icon + label color
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () async {
+                          final url = urlController.text.trim();
+                          if (url.isEmpty) return;
+
+                          setModalState(() => isLoading = true);
+
+                          final response = await http.post(
+                            Uri.parse(
+                              'http://192.168.68.60:3000/api/users/${widget.userId}/scrape-pin',
+                            ),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({'url': url}),
+                          );
+
+                          setModalState(() => isLoading = false);
+
+                          if (response.statusCode == 201) {
+                            Navigator.pop(context); // close modal
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) =>
+                                        MyRecipesScreen(userId: widget.userId),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Failed to scrape recipe. Try again.",
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.cloud_download),
+                        label: const Text("Scrape Recipe"),
+                      ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _pickAndUploadImage() async {
     final picked = await _picker.pickImage(source: ImageSource.gallery);
 
@@ -171,13 +255,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 shape: const CircleBorder(),
                 elevation: 6,
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MyRecipesScreen(userId: widget.userId),
-                    ),
-                  );
+                  _showScrapeRecipeModal();
                 },
+
                 child: Image.asset(
                   'assets/Pinterest.png',
                   width: 32,

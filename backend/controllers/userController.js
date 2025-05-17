@@ -660,3 +660,21 @@ function extractPrepTime(text) {
   const match = text.match(/prep(aration)? time[:\s]*([0-9]+)\s*(minutes|min)/i);
   return match ? parseInt(match[2]) : 0;
 }
+exports.updateCustomRecipe = async (req, res) => {
+  try {
+    const recipeId = req.params.recipeId;
+    const update = req.body;
+
+    const updated = await Recipe.findByIdAndUpdate(recipeId, update, { new: true });
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Recipe not found' });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    console.error('❌ Update error:', err);
+    res.status(500).json({ message: 'Failed to update recipe', error: err.message });
+  }
+};
+

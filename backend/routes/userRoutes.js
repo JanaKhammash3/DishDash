@@ -23,7 +23,8 @@ const {
   getProfile,
   getFollowers,
   deleteUser,
-  scrapeAndSaveRecipe
+  scrapeAndSaveRecipe,
+  updateCustomRecipe
 } = require('../controllers/userController');
 
 // Auth & profile
@@ -70,6 +71,8 @@ router.get('/', async (req, res) => {
 });
 router.delete('/:id', deleteUser);
 router.post('/users/:userId/scrape-pin', scrapeAndSaveRecipe);
+router.put('/recipes/:recipeId', updateCustomRecipe);
+
 
 
 

@@ -74,6 +74,254 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     }
   }
 
+  void _openEditModal(Map recipe) {
+    bool showArabicFields = true;
+    Uint8List? localImage = imageBytes;
+
+    // Prefill
+    String title = recipe['title'] ?? '';
+    String titleAr = recipe['titleAr'] ?? '';
+    String description = recipe['description'] ?? '';
+    String descriptionAr = recipe['descriptionAr'] ?? '';
+    String instructions = recipe['instructions'] ?? '';
+    String instructionsAr = recipe['instructionsAr'] ?? '';
+    String ingredients =
+        (recipe['ingredients'] as List<dynamic>?)?.join(', ') ?? '';
+    String ingredientsAr =
+        (recipe['ingredientsAr'] as List<dynamic>?)?.join(', ') ?? '';
+    String calories = (recipe['calories'] ?? '').toString();
+    String prepTime = (recipe['prepTime'] ?? '').toString();
+    String diet = recipe['diet'] ?? 'None';
+    String mealTime = recipe['mealTime'] ?? 'Breakfast';
+    String difficulty = recipe['difficulty'] ?? 'Easy';
+    List<String> tags = List<String>.from(recipe['tags'] ?? []);
+    String tagInput = '';
+    bool isPublic = recipe['isPublic'] ?? true;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[100],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Edit Recipe',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await ImagePicker().pickImage(
+                          source: ImageSource.gallery,
+                        );
+                        if (picked != null) {
+                          final bytes = await picked.readAsBytes();
+                          setModalState(() => localImage = bytes);
+                        }
+                      },
+                      child: Container(
+                        height: 150,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child:
+                            localImage != null
+                                ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.memory(
+                                    localImage!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                                : const Center(
+                                  child: Text('Tap to change image'),
+                                ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Title'),
+                      controller: TextEditingController(text: title),
+                      onChanged: (v) => title = v,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Title (Arabic)',
+                      ),
+                      controller: TextEditingController(text: titleAr),
+                      textDirection: TextDirection.rtl,
+                      onChanged: (v) => titleAr = v,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Ingredients',
+                      ),
+                      controller: TextEditingController(text: ingredients),
+                      onChanged: (v) => ingredients = v,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(labelText: 'Calories'),
+                      keyboardType: TextInputType.number,
+                      controller: TextEditingController(text: calories),
+                      onChanged: (v) => calories = v,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                      ),
+                      maxLines: 3,
+                      controller: TextEditingController(text: description),
+                      onChanged: (v) => description = v,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Instructions',
+                      ),
+                      maxLines: 3,
+                      controller: TextEditingController(text: instructions),
+                      onChanged: (v) => instructions = v,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Preparation Time',
+                      ),
+                      keyboardType: TextInputType.number,
+                      controller: TextEditingController(text: prepTime),
+                      onChanged: (v) => prepTime = v,
+                    ),
+                    DropdownButtonFormField(
+                      value: diet,
+                      items:
+                          [
+                                'None',
+                                'Vegan',
+                                'Keto',
+                                'Low-Carb',
+                                'Paleo',
+                                'Vegetarian',
+                              ]
+                              .map(
+                                (d) =>
+                                    DropdownMenuItem(value: d, child: Text(d)),
+                              )
+                              .toList(),
+                      onChanged: (v) => setModalState(() => diet = v!),
+                      decoration: const InputDecoration(labelText: 'Diet'),
+                    ),
+                    DropdownButtonFormField(
+                      value: mealTime,
+                      items:
+                          ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert']
+                              .map(
+                                (d) =>
+                                    DropdownMenuItem(value: d, child: Text(d)),
+                              )
+                              .toList(),
+                      onChanged: (v) => setModalState(() => mealTime = v!),
+                      decoration: const InputDecoration(labelText: 'Meal Time'),
+                    ),
+                    DropdownButtonFormField(
+                      value: difficulty,
+                      items:
+                          ['Easy', 'Medium', 'Hard']
+                              .map(
+                                (d) =>
+                                    DropdownMenuItem(value: d, child: Text(d)),
+                              )
+                              .toList(),
+                      onChanged: (v) => setModalState(() => difficulty = v!),
+                      decoration: const InputDecoration(
+                        labelText: 'Difficulty',
+                      ),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Public'),
+                      value: isPublic,
+                      onChanged: (v) => setModalState(() => isPublic = v),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: green),
+                  onPressed: () async {
+                    final body = {
+                      'title': title,
+                      'titleAr': titleAr,
+                      'description': description,
+                      'descriptionAr': descriptionAr,
+                      'instructions': instructions,
+                      'instructionsAr': instructionsAr,
+                      'ingredients':
+                          ingredients.split(',').map((e) => e.trim()).toList(),
+                      'ingredientsAr':
+                          ingredientsAr
+                              .split(',')
+                              .map((e) => e.trim())
+                              .toList(),
+                      'calories': int.tryParse(calories) ?? 0,
+                      'prepTime': int.tryParse(prepTime) ?? 0,
+                      'diet': diet,
+                      'mealTime': mealTime,
+                      'difficulty': difficulty,
+                      'tags': tags,
+                      'isPublic': isPublic,
+                      'image':
+                          localImage != null
+                              ? base64Encode(localImage!)
+                              : recipe['image'],
+                    };
+
+                    final res = await http.put(
+                      Uri.parse(
+                        'http://192.168.68.60:3000/api/recipes/${recipe['_id']}',
+                      ),
+                      headers: {'Content-Type': 'application/json'},
+                      body: jsonEncode(body),
+                    );
+
+                    if (res.statusCode == 200) {
+                      Navigator.pop(context);
+                      fetchUserRecipes();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Recipe updated successfully!'),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to update recipe.'),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'Update',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _openCreateModal() {
     bool showArabicFields = false;
 
@@ -464,32 +712,49 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                             subtitle: Text(
                               '${r['calories']} cal • ${r['difficulty'] ?? 'N/A'}',
                             ),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => RecipeScreen(
-                                        title: r['title'] ?? 'Untitled',
-                                        imagePath: r['image'] ?? '',
-                                        rating: 0.0,
-                                        ingredients: List<String>.from(
-                                          (r['ingredients'] ?? []).map(
-                                            (e) => e.toString(),
-                                          ),
-                                        ),
-                                        description: r['description'] ?? '',
-                                        prepTime: r['prepTime'] ?? 0,
-                                        difficulty: r['difficulty'] ?? 'Easy',
-                                        instructions: r['instructions'] ?? '',
-                                      ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.green,
+                                  ),
+                                  onPressed: () => _openEditModal(r),
                                 ),
-                              );
-                            },
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 16,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => RecipeScreen(
+                                              title: r['title'] ?? 'Untitled',
+                                              imagePath: r['image'] ?? '',
+                                              rating: 0.0,
+                                              ingredients: List<String>.from(
+                                                (r['ingredients'] ?? []).map(
+                                                  (e) => e.toString(),
+                                                ),
+                                              ),
+                                              description:
+                                                  r['description'] ?? '',
+                                              prepTime: r['prepTime'] ?? 0,
+                                              difficulty:
+                                                  r['difficulty'] ?? 'Easy',
+                                              instructions:
+                                                  r['instructions'] ?? '',
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
