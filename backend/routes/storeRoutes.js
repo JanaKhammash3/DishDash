@@ -106,6 +106,14 @@ router.patch('/stores/:storeId/image', upload.single('image'), async (req, res) 
 router.post('/:storeId/purchase', recordPurchase);
 
 router.post('/stores/:storeId/rate', rateStore);
+router.get('/', async (req, res) => {
+  try {
+    const stores = await Store.find();
+    res.status(200).json(stores);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch stores', error: err.message });
+  }
+});
 
 
 module.exports = router;

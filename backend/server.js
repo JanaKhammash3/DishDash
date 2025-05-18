@@ -38,7 +38,6 @@ app.use('/images', express.static(path.join(__dirname, './public/images')));
 app.use('/api/chats', chatRoutes);
 app.use(storeRoutes);
 app.use('/api', require('./routes/storeRoutes'));
-app.use('/api/stores', require('./routes/storeRoutes'));
 const nutritionRoutes = require('./routes/nutritionRoutes');
 app.use('/api', nutritionRoutes);
 
