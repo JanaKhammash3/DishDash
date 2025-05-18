@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 const Color maroon = Color(0xFF8B0000);
 const Color darkGreen = Color(0xFF304D30);
@@ -20,10 +21,43 @@ class _UsersPageState extends State<UsersPage> {
   int followerCount = 0;
   String searchQuery = '';
   int privateRecipeCount = 0;
+  late IO.Socket socket;
+  Set<String> onlineUsers = {};
+
   @override
   void initState() {
     super.initState();
     fetchUsers();
+    initSocket(); // 👈 CALL IT HERE
+  }
+
+  void initSocket() {
+    socket = IO.io(baseUrl, <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+      'query': {'userId': 'admin'}, // optional, since you're using join
+    });
+
+    socket.on('connect', (_) {
+      print('✅ Connected to socket');
+
+      // 🔥 Emit JOIN after socket connects
+      socket.emit(
+        'join',
+        'admin',
+      ); // Replace 'admin' with actual userId if dynamic
+    });
+
+    socket.on('userOnlineStatus', (data) {
+      print('📡 Status Update: $data');
+      setState(() {
+        if (data['online']) {
+          onlineUsers.add(data['userId']);
+        } else {
+          onlineUsers.remove(data['userId']);
+        }
+      });
+    });
   }
 
   Future<void> fetchUsers() async {
@@ -311,10 +345,34 @@ class _UsersPageState extends State<UsersPage> {
                         ),
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              radius: 30,
-                              backgroundImage: _getImage(user['avatar']),
+                            Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 30,
+                                  backgroundImage: _getImage(user['avatar']),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          onlineUsers.contains(user['_id'])
+                                              ? Colors.green
+                                              : Colors.grey,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+
                             const SizedBox(width: 16),
                             Expanded(
                               child: Text(

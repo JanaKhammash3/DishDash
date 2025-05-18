@@ -32,7 +32,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  
+  socket_io_client: ^2.0.3+1
   shared_preferences: ^2.2.1
   fl_chart: ^0.63.0
   http: ^1.2.1

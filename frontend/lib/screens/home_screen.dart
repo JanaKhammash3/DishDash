@@ -14,6 +14,7 @@ import 'package:frontend/screens/grocery_screen.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import './category_filters.dart';
 import 'package:frontend/screens/recommendations_widget.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class HomeScreen extends StatefulWidget {
   final String userId;
@@ -45,6 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final r = (ratings ?? []).cast<num>();
     return r.isEmpty ? 0.0 : r.reduce((a, b) => a + b) / r.length;
   }
+
+  late IO.Socket socket;
 
   final List<Map<String, String>> allIngredients = [
     {'name': 'Egg', 'image': 'assets/ingredients/egg.jpg'},
@@ -102,6 +105,24 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       }
+    });
+    initUserSocket();
+  }
+
+  void initUserSocket() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId'); // Make sure userId is saved
+
+    if (userId == null) return;
+
+    socket = IO.io('http://192.168.68.60:3000', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+    });
+
+    socket.on('connect', (_) {
+      print('✅ Connected to socket as $userId');
+      socket.emit('join', userId);
     });
   }
 
