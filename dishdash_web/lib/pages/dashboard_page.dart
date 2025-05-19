@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dishdash_web/pages/stores_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,13 +31,13 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> fetchStats() async {
     try {
       final userRes = await http.get(
-        Uri.parse('http://192.168.68.60:3000/api/users'),
+        Uri.parse('http://192.168.1.4:3000/api/users'),
       );
       final storeRes = await http.get(
-        Uri.parse('http://192.168.68.60:3000/api/stores'),
+        Uri.parse('http://192.168.1.4:3000/api/stores'),
       );
       final recipeRes = await http.get(
-        Uri.parse('http://192.168.68.60:3000/api/recipes'),
+        Uri.parse('http://192.168.1.4:3000/api/recipes'),
       );
 
       if (userRes.statusCode == 200 &&
@@ -185,7 +186,12 @@ class _DashboardPageState extends State<DashboardPage> {
             isExpanded: expanded,
             tooltip: 'Stores',
             isActive: activeTab == 'Stores',
-            onTap: () => setState(() => activeTab = 'Stores'),
+            onTap: () {
+              setState(() {
+                activeTab = 'Stores';
+                currentPage = StoresPage();
+              });
+            },
           ),
           SidebarItem(
             icon: Icons.receipt_long,
