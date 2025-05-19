@@ -1531,6 +1531,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (authorName != null && authorAvatar != null)
                           Row(
                             children: [
+                              const Text(
+                                'By ',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
                               CircleAvatar(
                                 radius: 10,
                                 backgroundImage: MemoryImage(
