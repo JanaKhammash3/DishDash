@@ -18,6 +18,7 @@ import 'package:frontend/screens/calory_score_screen.dart' as saved;
 import 'package:frontend/screens/following_screen.dart';
 import 'package:frontend/screens/followers_screen.dart';
 import 'package:frontend/screens/update_survey_screen.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -32,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String name = '';
   String email = '';
   String? avatarBase64;
-
+  late IO.Socket socket;
   bool isDarkMode = true;
 
   final ImagePicker _picker = ImagePicker();
@@ -41,11 +42,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     fetchUserProfile();
+    connectSocket(); // 👈 ADD THIS
   }
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/profile/${widget.userId}',
+      'http://192.168.68.60:3000/api/profile/${widget.userId}',
     );
 
     try {
@@ -65,6 +67,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       debugPrint('Error fetching profile: $e');
     }
+  }
+
+  void connectSocket() {
+    socket = IO.io('http://192.168.68.60:3000', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+    });
+
+    socket.onConnect((_) {
+      print('✅ Socket connected from ProfileScreen');
+      socket.emit('join', widget.userId); // 👈 JOIN socket
+    });
+
+    socket.onDisconnect((_) {
+      print('🔌 Socket disconnected from ProfileScreen');
+    });
   }
 
   void _showScrapeRecipeModal() {
@@ -111,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           final response = await http.post(
                             Uri.parse(
-                              'http://192.168.1.4:3000/api/users/${widget.userId}/scrape-pin',
+                              'http://192.168.68.60:3000/api/users/${widget.userId}/scrape-pin',
                             ),
                             headers: {'Content-Type': 'application/json'},
                             body: jsonEncode({'url': url}),
@@ -179,7 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final base64String = base64Encode(compressedBytes);
 
       final url = Uri.parse(
-        'http://192.168.1.4:3000/api/profile/${widget.userId}/avatar',
+        'http://192.168.68.60:3000/api/profile/${widget.userId}/avatar',
       );
 
       final response = await http.put(
@@ -202,8 +220,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
+    try {
+      // Notify the backend that this user is going offline
+      if (socket.connected) {
+        socket.emit('userOffline', widget.userId);
+        socket.disconnect();
+      }
+    } catch (e) {
+      debugPrint('Socket error on logout: $e');
+    }
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
@@ -490,12 +519,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
+              onPressed: _logout,
               icon: const Icon(Icons.logout, color: Colors.white),
               label: const Text(
                 'Logout',

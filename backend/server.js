@@ -83,6 +83,15 @@ io.on('connection', (socket) => {
     // ✅ Notify all clients this user is online
     io.emit('userOnlineStatus', { userId, online: true });
   });
+  socket.on('userOffline', (userId) => {
+    console.log(`🚪 User ${userId} manually logged out`);
+  
+    if (users[userId]) {
+      delete users[userId];
+      io.emit('userOnlineStatus', { userId, online: false });
+      console.log(`🔴 User ${userId} marked offline by logout`);
+    }
+  });
 
   socket.on('send_message', async (data) => {
     const { senderId, receiverId, message } = data;
