@@ -19,8 +19,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget currentPage = const Center(child: CircularProgressIndicator());
 
   bool isSidebarExpanded = false;
-
-  final Color fadedGreen = const Color(0xFF3E5E3E); // hover background
+  String activeTab = 'Dashboard';
 
   @override
   void initState() {
@@ -72,117 +71,149 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: const Color(0xFF304D30),
+      drawer: isSmallScreen ? Drawer(child: buildSidebar(true)) : null,
       body: Row(
         children: [
-          MouseRegion(
-            onEnter: (_) => setState(() => isSidebarExpanded = true),
-            onExit: (_) => setState(() => isSidebarExpanded = false),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: isSidebarExpanded ? 200 : 70,
-              color: const Color(0xFF1E3920),
+          if (!isSmallScreen)
+            MouseRegion(
+              onEnter: (_) => setState(() => isSidebarExpanded = true),
+              onExit: (_) => setState(() => isSidebarExpanded = false),
+              child: buildSidebar(false),
+            ),
+          Expanded(child: currentPage),
+        ],
+      ),
+    );
+  }
+
+  Widget buildSidebar(bool forceExpanded) {
+    final expanded = forceExpanded || isSidebarExpanded;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: expanded ? 200 : 70,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1E3920), Color(0xFF304D30)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 30),
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Column(
                 children: [
-                  const SizedBox(height: 30),
-                  if (isSidebarExpanded)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Column(
-                        children: [
-                          // Bigger logo
-                          Image.asset(
-                            'assets/Login.png',
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: const [
-                              Icon(
-                                Icons.admin_panel_settings,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  'Admin Panel',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                  Image.asset(
+                    'assets/Login.png',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.admin_panel_settings,
+                        color: Colors.white,
+                        size: 20,
                       ),
-                    )
-                  else
-                    const Icon(Icons.admin_panel_settings, color: Colors.white),
-
-                  const SizedBox(height: 30),
-
-                  SidebarItem(
-                    icon: Icons.dashboard,
-                    label: 'Dashboard',
-                    isExpanded: isSidebarExpanded,
-                    onTap: () {
-                      setState(() {
-                        currentPage = DashboardHome(
-                          totalUsers: totalUsers,
-                          totalStores: totalStores,
-                          totalRecipes: totalRecipes,
-                          users: users,
-                          stores: stores,
-                        );
-                      });
-                    },
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Admin Panel',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  SidebarItem(
-                    icon: Icons.people,
-                    label: 'Users',
-                    isExpanded: isSidebarExpanded,
-                    onTap: () => setState(() => currentPage = UsersPage()),
-                  ),
-                  SidebarItem(
-                    icon: Icons.store,
-                    label: 'Stores',
-                    isExpanded: isSidebarExpanded,
-                    onTap: () {},
-                  ),
-                  SidebarItem(
-                    icon: Icons.receipt_long,
-                    label: 'Recipes',
-                    isExpanded: isSidebarExpanded,
-                    onTap: () {},
-                  ),
-                  SidebarItem(
-                    icon: Icons.flag,
-                    label: 'Challenges',
-                    isExpanded: isSidebarExpanded,
-                    onTap: () {},
-                  ),
-                  const Spacer(),
-                  SidebarItem(
-                    icon: Icons.logout,
-                    label: 'Logout',
-                    isExpanded: isSidebarExpanded,
-                    onTap: logout,
-                    color: Colors.redAccent,
-                  ),
-                  const SizedBox(height: 20),
                 ],
               ),
-            ),
+            )
+          else
+            const Icon(Icons.admin_panel_settings, color: Colors.white),
+          const SizedBox(height: 30),
+          SidebarItem(
+            icon: Icons.dashboard,
+            label: 'Dashboard',
+            isExpanded: expanded,
+            tooltip: 'Dashboard',
+            isActive: activeTab == 'Dashboard',
+            onTap: () {
+              setState(() {
+                activeTab = 'Dashboard';
+                currentPage = DashboardHome(
+                  totalUsers: totalUsers,
+                  totalStores: totalStores,
+                  totalRecipes: totalRecipes,
+                  users: users,
+                  stores: stores,
+                );
+              });
+            },
           ),
-          // Main content
-          Expanded(child: currentPage),
+          SidebarItem(
+            icon: Icons.people,
+            label: 'Users',
+            isExpanded: expanded,
+            tooltip: 'Users',
+            isActive: activeTab == 'Users',
+            onTap:
+                () => setState(() {
+                  activeTab = 'Users';
+                  currentPage = UsersPage();
+                }),
+          ),
+          SidebarItem(
+            icon: Icons.store,
+            label: 'Stores',
+            isExpanded: expanded,
+            tooltip: 'Stores',
+            isActive: activeTab == 'Stores',
+            onTap: () => setState(() => activeTab = 'Stores'),
+          ),
+          SidebarItem(
+            icon: Icons.receipt_long,
+            label: 'Recipes',
+            isExpanded: expanded,
+            tooltip: 'Recipes',
+            isActive: activeTab == 'Recipes',
+            onTap: () => setState(() => activeTab = 'Recipes'),
+          ),
+          SidebarItem(
+            icon: Icons.flag,
+            label: 'Challenges',
+            isExpanded: expanded,
+            tooltip: 'Challenges',
+            isActive: activeTab == 'Challenges',
+            onTap: () => setState(() => activeTab = 'Challenges'),
+          ),
+          const Spacer(),
+          SidebarItem(
+            icon: Icons.logout,
+            label: 'Logout',
+            isExpanded: expanded,
+            tooltip: 'Logout',
+            isActive: false,
+            onTap: logout,
+            color: Colors.lightGreen,
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -195,6 +226,8 @@ class SidebarItem extends StatefulWidget {
   final VoidCallback? onTap;
   final bool isExpanded;
   final Color? color;
+  final String? tooltip;
+  final bool isActive;
 
   const SidebarItem({
     required this.icon,
@@ -202,6 +235,8 @@ class SidebarItem extends StatefulWidget {
     this.onTap,
     required this.isExpanded,
     this.color,
+    this.tooltip,
+    this.isActive = false,
   });
 
   @override
@@ -213,36 +248,44 @@ class _SidebarItemState extends State<SidebarItem> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isHovered ? const Color(0xFF3E5E3E) : Colors.transparent;
+    final bgColor =
+        widget.isActive
+            ? Colors.white.withOpacity(0.1)
+            : isHovered
+            ? const Color(0xFF3E5E3E)
+            : Colors.transparent;
 
     return MouseRegion(
       onEnter: (_) => setState(() => isHovered = true),
       onExit: (_) => setState(() => isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          color: bgColor,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            mainAxisAlignment:
-                widget.isExpanded
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.center,
-            children: [
-              Icon(widget.icon, color: widget.color ?? Colors.white),
-              if (widget.isExpanded) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    widget.label,
-                    overflow: TextOverflow.fade,
-                    softWrap: false,
-                    style: TextStyle(color: widget.color ?? Colors.white),
+      child: Tooltip(
+        message: widget.isExpanded ? '' : widget.tooltip ?? widget.label,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            color: bgColor,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              mainAxisAlignment:
+                  widget.isExpanded
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
+              children: [
+                Icon(widget.icon, color: widget.color ?? Colors.white),
+                if (widget.isExpanded) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: TextStyle(color: widget.color ?? Colors.white),
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
