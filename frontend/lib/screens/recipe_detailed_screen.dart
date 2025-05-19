@@ -77,6 +77,78 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
     }
   }
 
+  Future<void> _showNutritionModal() async {
+    final url = Uri.parse('http://192.168.68.60:3000/api/analyze-nutrition');
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'title': widget.title,
+        'ingredients': widget.ingredients,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) {
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "🥦 Nutrition Breakdown",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                _buildNutrientRow("🍗 Protein", "${data['protein']}g"),
+                _buildNutrientRow("🧈 Fat", "${data['fat']}g"),
+                _buildNutrientRow("🍞 Carbs", "${data['carbs']}g"),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  label: const Text("Close"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[700],
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to analyze nutrition")),
+      );
+    }
+  }
+
+  Widget _buildNutrientRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          Text(value, style: const TextStyle(fontSize: 16)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isBase64 = widget.imagePath.startsWith('/9j');
@@ -206,6 +278,25 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
           ],
 
           const SizedBox(height: 40),
+          ElevatedButton.icon(
+            onPressed: _showNutritionModal,
+            icon: const Icon(Icons.restaurant),
+            label: const Text("Analyze Nutrition"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
           ElevatedButton.icon(
             onPressed: translating ? null : _toggleTranslation,
             icon: const Icon(Icons.translate),

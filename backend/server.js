@@ -38,7 +38,6 @@ app.use('/images', express.static(path.join(__dirname, './public/images')));
 app.use('/api/chats', chatRoutes);
 app.use(storeRoutes);
 app.use('/api', require('./routes/storeRoutes'));
-app.use('/api/stores', require('./routes/storeRoutes'));
 const nutritionRoutes = require('./routes/nutritionRoutes');
 app.use('/api', nutritionRoutes);
 
@@ -74,20 +73,25 @@ const users = {};
 io.on('connection', (socket) => {
   console.log('🟢 Socket connected:', socket.id);
 
+  let currentUserId = null;
+
   socket.on('join', (userId) => {
     users[userId] = socket.id;
+    currentUserId = userId;
     console.log(`👤 User ${userId} joined with socket ID: ${socket.id}`);
+
+    // ✅ Notify all clients this user is online
+    io.emit('userOnlineStatus', { userId, online: true });
   });
 
   socket.on('send_message', async (data) => {
     const { senderId, receiverId, message } = data;
-  
-    // Save to DB
+
     const chat = new Chat({ senderId, receiverId, message });
     await chat.save();
-  
+
     const populatedSender = await User.findById(senderId).select('name avatar');
-  
+
     const messagePayload = {
       ...data,
       timestamp: chat.timestamp,
@@ -97,31 +101,39 @@ io.on('connection', (socket) => {
         avatar: populatedSender?.avatar || '',
       },
     };
-  
-    // ✅ Send to receiver (if online)
+
     const receiverSocket = users[receiverId];
     if (receiverSocket) {
       io.to(receiverSocket).emit('receive_message', messagePayload);
     }
-  
-    // ✅ Also send to sender so their own UI updates instantly with name/avatar
+
     const senderSocket = users[senderId];
     if (senderSocket) {
       io.to(senderSocket).emit('receive_message', messagePayload);
     }
   });
-  
 
   socket.on('disconnect', () => {
+    let disconnectedUserId = null;
+
     for (const uid in users) {
       if (users[uid] === socket.id) {
+        disconnectedUserId = uid;
         delete users[uid];
         break;
       }
     }
-    console.log('🔴 Socket disconnected:', socket.id);
+
+    if (disconnectedUserId) {
+      // ✅ Notify all clients this user went offline
+      io.emit('userOnlineStatus', { userId: disconnectedUserId, online: false });
+      console.log(`🔴 User ${disconnectedUserId} is now OFFLINE`);
+    }
+
+    console.log('🔌 Socket disconnected:', socket.id);
   });
 });
+
 const frontendPath = path.join(__dirname, '../frontend_web/build');
 app.use(express.static(frontendPath));
 
