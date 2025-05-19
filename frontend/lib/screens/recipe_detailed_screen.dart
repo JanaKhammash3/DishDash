@@ -78,7 +78,7 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
   }
 
   Future<void> _showNutritionModal() async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/analyze-nutrition');
+    final url = Uri.parse('http://192.168.1.4:3000/api/analyze-nutrition');
 
     final response = await http.post(
       url,

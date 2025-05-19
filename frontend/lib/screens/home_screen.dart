@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (userId == null) return;
 
-    socket = IO.io('http://192.168.68.60:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
     });
