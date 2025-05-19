@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   avatar: { type: String, default: '' }, // User's profile picture URL
+  bio: { type: String, default: '' }, // ✅ Optional
+
   location: {
     latitude: { type: Number },
     longitude: { type: Number }
@@ -13,6 +15,8 @@ const userSchema = new mongoose.Schema({
   allergies: [{ type: String }],
   calorieScore: { type: Number, default: 0 },
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // ✅ If you want to store them directly
+
   recipes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' }],
   savedPlans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MealPlan' }],
   currentGroceryList: [{ type: String }],

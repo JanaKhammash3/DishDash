@@ -131,13 +131,22 @@ exports.login = async (req, res) => {
 // Get full user profile (excluding password)
 exports.getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('following', '_id') // only need IDs
+      .lean();
+
     if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.following = (user.following || []).map(f => f._id.toString());
+
     res.status(200).json(user);
   } catch (err) {
+    console.error('❌ getUserProfile error:', err.message);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 // Update full profile
 exports.updateProfile = async (req, res) => {
@@ -195,7 +204,8 @@ exports.saveRecipeToUser = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (user.recipes.includes(recipeId)) {
+    const alreadySaved = user.recipes.some(id => id.toString() === recipeId.toString());
+    if (alreadySaved) {
       return res.status(400).json({ message: 'Recipe already saved' });
     }
 
@@ -208,6 +218,7 @@ exports.saveRecipeToUser = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 exports.unsaveRecipe = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -216,9 +227,12 @@ exports.unsaveRecipe = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    user.recipes = user.recipes.filter(
-      id => id.toString() !== recipeId.toString()
-    );
+    const before = user.recipes.length;
+    user.recipes = user.recipes.filter(id => id.toString() !== recipeId.toString());
+
+    if (user.recipes.length === before) {
+      return res.status(400).json({ message: 'Recipe was not in saved list' });
+    }
 
     await user.save();
     res.status(200).json({ message: 'Recipe removed from saved list' });
@@ -226,6 +240,7 @@ exports.unsaveRecipe = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 exports.getSavedRecipes = async (req, res) => {
   const user = await User.findById(req.params.id).populate('recipes');
   res.json(user.recipes);
@@ -326,24 +341,26 @@ exports.toggleFollow = async (req, res) => {
 
   if (!user || !target) return res.status(404).json({ message: "User not found" });
 
-  const isFollowing = user.following.includes(targetUserId);
+  const isFollowing = user.following.some(id => id.toString() === targetUserId);
 
   if (isFollowing) {
-    user.following.pull(targetUserId);
+    user.following = user.following.filter(id => id.toString() !== targetUserId);
   } else {
     user.following.push(targetUserId);
   }
 
-  await user.save();
+  await user.save(); // ✅ persist to DB
 
   const followers = await User.countDocuments({ following: targetUserId });
 
   res.json({
-    following: user.following,
+    following: user.following.map(id => id.toString()),
     isFollowing: !isFollowing,
     followers
   });
 };
+
+
 exports.getFollowerCount = async (req, res) => {
   try {
     const { id } = req.params; // id of profile being viewed
@@ -565,11 +582,14 @@ exports.updateAvailableIngredients = async (req, res) => {
 };
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id) // ✅ FIXED
-      .populate('following', 'name avatar')
+    const user = await User.findById(req.params.id)
+      .populate('following', 'name avatar _id') // ensure _id is included
       .lean();
 
     if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Add an array of just the followed user IDs
+    user.followingIds = (user.following || []).map(f => f._id.toString());
 
     res.json(user);
   } catch (err) {
@@ -577,6 +597,7 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 // GET list of followers
 exports.getFollowers = async (req, res) => {
   try {

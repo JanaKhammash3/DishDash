@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/followers_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   List<dynamic> posts = [];
   bool isFollowing = false;
   int followerCount = 0;
-  final String baseUrl = 'http://192.168.68.60:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   List<dynamic> messages = [];
   TextEditingController _chatController = TextEditingController();
   @override
@@ -36,11 +37,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     userId = prefs.getString('userId');
 
-    await fetchUser(); // loads profile info
-    await fetchFollowerCount(); // loads the follower count
-    await fetchIsFollowing(); // loads follow/unfollow status
-    await fetchUserProfile(); // loads saved recipes
-    await fetchUserPosts(); // fetch their posts
+    if (userId == null) return;
+
+    await Future.wait([
+      fetchUser(),
+      fetchUserProfile(),
+      fetchFollowerCount(),
+      fetchIsFollowing(userId!, widget.userId),
+      fetchUserPosts(),
+    ]);
   }
 
   Future<void> fetchFollowerCount() async {
@@ -55,21 +60,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  Future<void> fetchIsFollowing() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentUserId = prefs.getString('userId');
-    userId = currentUserId;
-
-    if (currentUserId == null) return;
-
+  Future<void> fetchIsFollowing(
+    String currentUserId,
+    String targetUserId,
+  ) async {
     final res = await http.get(
       Uri.parse('$baseUrl/api/profile/$currentUserId'),
     );
     if (res.statusCode == 200) {
       final data = json.decode(res.body);
-      final List following = data['following'] ?? [];
+      final List<String> following =
+          (data['following'] ?? []).map<String>((id) {
+            // Ensure both are strings
+            return id is Map ? id['_id'].toString() : id.toString();
+          }).toList();
+
       setState(() {
-        isFollowing = following.contains(widget.userId);
+        isFollowing = following.contains(targetUserId.toString());
       });
     }
   }
@@ -121,7 +128,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     socket.onDisconnect((_) => print('🔌 Disconnected'));
   }
 
+  bool _isSaving = false;
+
   Future<void> toggleSave(String recipeId) async {
+    if (_isSaving) return;
+    _isSaving = true;
+
     final isSaved = savedRecipeIds.contains(recipeId);
     final route = isSaved ? '/unsaveRecipe' : '/saveRecipe';
     final res = await http.post(
@@ -129,15 +141,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'recipeId': recipeId}),
     );
-    if (res.statusCode == 200) {
-      setState(() {
-        if (isSaved) {
-          savedRecipeIds.remove(recipeId);
-        } else {
-          savedRecipeIds.add(recipeId);
-        }
-      });
+
+    _isSaving = false;
+
+    if (res.statusCode != 200) {
+      print('❌ Failed to toggle save: ${res.body}');
+      return;
     }
+
+    print('✅ Toggled save for $recipeId: ${!isSaved}');
+    setState(() {
+      isSaved ? savedRecipeIds.remove(recipeId) : savedRecipeIds.add(recipeId);
+    });
   }
 
   void openCommentModal(String recipeId) async {
@@ -352,21 +367,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+  bool _isTogglingFollow = false;
+
   Future<void> toggleFollow() async {
+    if (_isTogglingFollow) return;
+    _isTogglingFollow = true;
+
     final res = await http.post(
       Uri.parse('$baseUrl/api/users/toggleFollow'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'userId': userId, 'targetUserId': widget.userId}),
     );
 
+    _isTogglingFollow = false;
+
     if (res.statusCode == 200) {
       final result = json.decode(res.body);
       setState(() {
         isFollowing = result['isFollowing'];
+        followerCount = result['followers'];
       });
-
-      // 🔁 refetch follower count
-      await fetchFollowerData();
+      print('Toggled follow: $isFollowing');
+    } else {
+      print('❌ Failed to toggle follow');
     }
   }
 
@@ -622,11 +645,52 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 fontSize: 18,
                               ),
                             ),
-                            Text(
-                              '$followerCount followers',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => FollowersScreen(
+                                          userId: widget.userId,
+                                        ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.people_alt_outlined,
+                                      size: 16,
+                                      color: Colors.black54,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '$followerCount followers',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.chevron_right,
+                                      size: 16,
+                                      color: Colors.black38,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],

@@ -18,7 +18,7 @@ const {
   saveGroceryList,
   getRecommendations,
   updateSurvey,
-   getAvailableIngredients,
+  getAvailableIngredients,
   updateAvailableIngredients,
   getProfile,
   getFollowers,
@@ -27,41 +27,43 @@ const {
   updateCustomRecipe
 } = require('../controllers/userController');
 
-// Auth & profile
+// ✅ Auth & Profile
 router.post('/register', register);
 router.post('/login', login);
 router.get('/profile/:id', getProfile);
 router.put('/profile/:id', updateProfile);
-router.patch('/updateAllergies/:id', updateAllergies);
 router.put('/profile/:id/avatar', uploadAvatar);
+router.patch('/updateAllergies/:id', updateAllergies);
 
-// Recipe-related
+// ✅ Recipes
 router.post('/:userId/saveRecipe', saveRecipeToUser);
 router.post('/:userId/unsaveRecipe', unsaveRecipe);
 router.get('/:id/savedRecipes', getSavedRecipes);
 router.post('/:userId/customRecipe', createCustomRecipe);
 router.get('/:userId/myRecipes', getMyRecipes);
+router.put('/recipes/:recipeId', updateCustomRecipe);
 
-// Follow system
+// ✅ Follow System
 router.post('/toggleFollow', toggleFollow);
 router.get('/:id/followers/count', getFollowerCount);
 router.get('/followers/:userId', getFollowers);
 
-// ✅ Grocery list
+// ✅ Grocery & Ingredients
 router.get('/:userId/grocery-list', getGroceryList);
 router.post('/:userId/grocery-list', saveGroceryList);
-// ✅ Available Ingredients Routes
 router.get('/:userId/available-ingredients', getAvailableIngredients);
 router.put('/:userId/available-ingredients', updateAvailableIngredients);
 
-
-module.exports = router;
-router.get('/:id/followers/count', getFollowerCount);
+// ✅ Survey & Recommendations
+router.put('/:id/survey', updateSurvey);
 router.get('/:id/recommendations', getRecommendations);
-router.put('/users/:id/survey', updateSurvey);
-const User = require('../models/User'); // ✅ Required for GET /
 
+// ✅ Scraping
+router.post('/:userId/scrape-pin', scrapeAndSaveRecipe);
+
+// ✅ Users management
 router.get('/', async (req, res) => {
+  const User = require('../models/User');
   try {
     const users = await User.find();
     res.status(200).json(users);
@@ -70,11 +72,6 @@ router.get('/', async (req, res) => {
   }
 });
 router.delete('/:id', deleteUser);
-router.post('/users/:userId/scrape-pin', scrapeAndSaveRecipe);
-router.put('/recipes/:recipeId', updateCustomRecipe);
 
-
-
-
-
-
+// ✅ Export
+module.exports = router;

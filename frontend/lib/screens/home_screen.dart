@@ -78,29 +78,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String customTag = '';
 
+  late final ScrollController _scrollController;
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
-    _pageController = PageController();
-    Timer.periodic(const Duration(seconds: 8), (timer) {
-      if (_pageController.hasClients && mounted) {
-        final listLength =
-            showSurveyRecommendations
-                ? surveyRecommendations.length
-                : mealTimeRecommendations.length;
+    _scrollController = ScrollController();
 
-        if (listLength > 0) {
-          final nextPage = (_currentPage + 1) % listLength;
-          _pageController.animateToPage(
-            nextPage,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-          );
-          setState(() {
-            _currentPage = nextPage;
-          });
-        }
+    Timer.periodic(const Duration(seconds: 7), (timer) {
+      if (_scrollController.hasClients && mounted) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final currentOffset = _scrollController.offset;
+        const scrollAmount = 260.0; // adjust based on your card width + spacing
+
+        final nextOffset = currentOffset + scrollAmount;
+
+        _scrollController.animateTo(
+          nextOffset >= maxScroll ? 0 : nextOffset,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
       }
     });
   }
@@ -243,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
     final uri = Uri.http(
-      '192.168.68.60:3000',
+      '192.168.1.4:3000',
       '/api/recipes/filter',
       queryParams,
     );
@@ -273,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.60:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -307,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.1.4:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -320,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/recipes');
+    final url = Uri.parse('http://192.168.1.4:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -333,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/$userId/saveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -347,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -360,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes({String? category}) async {
-    String baseUrl = 'http://192.168.68.60:3000/api/recipes/filter';
+    String baseUrl = 'http://192.168.1.4:3000/api/recipes/filter';
     Uri url;
 
     if (category != null && category.isNotEmpty) {
@@ -418,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.60:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -489,9 +487,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 120,
-          child: PageView.builder(
-            controller: _pageController,
+          height: 130, // or whatever fits your placeCard height
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
             itemCount: currentList.length,
             itemBuilder: (context, index) {
               final recipe = currentList[index];
@@ -522,15 +521,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                child: placeCard(
-                  recipe['title'],
-                  recipe['author']?['name'] ?? 'Unknown',
-                  imagePath,
-                  rating: _averageRating(recipe['ratings']),
-                  authorName: recipe['author']?['name'],
-                  authorAvatar: recipe['author']?['avatar'],
-                  onSave: recipe['onSave'],
-                  isSaved: recipe['isSaved'] ?? false,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: placeCard(
+                    recipe['title'],
+                    recipe['author']?['name'] ?? 'Unknown',
+                    imagePath,
+                    rating: _averageRating(recipe['ratings']),
+                    authorName: recipe['author']?['name'],
+                    authorAvatar: recipe['author']?['avatar'],
+                    onSave: recipe['onSave'],
+                    isSaved: recipe['isSaved'] ?? false,
+                  ),
                 ),
               );
             },
@@ -1144,7 +1146,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final rawPath = recipe['image'] ?? '';
               final imagePath =
                   rawPath.startsWith('/images/')
-                      ? 'http://192.168.68.60:3000$rawPath'
+                      ? 'http://192.168.1.4:3000$rawPath'
                       : rawPath;
 
               final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/StoreMapScreen.dart';
 import 'package:http/http.dart' as http;
@@ -27,9 +28,50 @@ class _GroceryScreenState extends State<GroceryScreen> {
     _loadAvailableIngredients();
   }
 
+  String normalizeIngredientName(String raw) {
+    final units = [
+      'tsp',
+      'tbsp',
+      'cup',
+      'oz',
+      'ounce',
+      'ounces',
+      'grams',
+      'gram',
+      'kg',
+      'g',
+      'ml',
+      'ltr',
+      'teaspoon',
+      'tablespoon',
+      'pound',
+      'lbs',
+    ];
+
+    final parts = raw.toLowerCase().split(RegExp(r'\s+'));
+
+    int index = 0;
+    while (index < parts.length &&
+        (RegExp(r'^[\d\/.]+$').hasMatch(parts[index]) ||
+            units.contains(parts[index]))) {
+      index++;
+    }
+
+    final nameOnly = parts.sublist(index).join(' ').trim();
+
+    // Capitalize the first letter of each word
+    return nameOnly
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
+  }
+
   Future<void> _loadIngredients() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/mealplans/user/${widget.userId}/grocery-list',
+      'http://192.168.1.4:3000/api/mealplans/user/${widget.userId}/grocery-list',
     );
 
     final response = await http.get(url);
@@ -43,7 +85,8 @@ class _GroceryScreenState extends State<GroceryScreen> {
       final Map<String, Map<String, dynamic>> ingredientMap = {};
 
       for (var item in rawItems) {
-        final name = item is String ? item : item['ingredient'];
+        final rawName = item is String ? item : item['ingredient'];
+        final name = normalizeIngredientName(rawName.toString());
         final recipe = item is Map<String, dynamic> ? item['recipe'] : null;
 
         DateTime? scheduledTime;
@@ -105,7 +148,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadAvailableIngredients() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -118,7 +161,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _saveIngredients() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/grocery-list',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
     );
     final ingredients =
         groceryItems.map((item) => item['name'] as String).toList();
@@ -145,7 +188,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     print('📤 Attempting to save available ingredients: $ingredientsList');
 
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
     );
 
     try {
@@ -170,7 +213,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> recordPurchase(String storeId, String ingredient) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/stores/$storeId/purchase',
+      'http://192.168.1.4:3000/api/stores/$storeId/purchase',
     );
 
     final response = await http.post(
@@ -271,7 +314,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   void _showStoreSelection(String itemName) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
+      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
     );
     final response = await http.get(url);
 
@@ -347,7 +390,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
   }
 
   void _addAvailableIngredient(String name) async {
-    final normalized = name.toLowerCase();
+    final normalized = normalizeIngredientName(name);
 
     // Always add to availableIngredients set
     setState(() {
@@ -801,7 +844,7 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
 
   Future<void> fetchStorePrices() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
+      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
     );
 
     try {
@@ -851,6 +894,7 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
                     'store': store['name'],
                     'lat': lat,
                     'lng': lng,
+                    'image': store['image'], // ✅ include image here
                     'price': (item?['price'] ?? 0.0).toDouble(),
                     'distance': dist,
                   };
@@ -879,8 +923,8 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.itemName} Prices'),
-        backgroundColor: Colors.white,
-        foregroundColor: green,
+        backgroundColor: green,
+        foregroundColor: Colors.white,
       ),
       body:
           isLoading
