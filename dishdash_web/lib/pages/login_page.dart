@@ -23,25 +23,21 @@ class LoginPage extends StatelessWidget {
       print('🛂 Login response: $data');
 
       final user = data['user'];
-      final role = data['type']; // ✅ FIXED
       final userId = user['_id'];
+      final type = data['type'];
+      final role = data['role'] ?? user['role'] ?? type;
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userId', userId);
 
-      if (role == 'store') {
-        await prefs.setString(
-          'storeId',
-          userId,
-        ); // ✅ Save storeId for use in dashboard
-        Navigator.pushReplacementNamed(context, '/store');
-      } else if (role == 'admin') {
+      if (role == 'admin') {
         Navigator.pushReplacementNamed(context, '/dashboard');
+      } else if (role == 'store') {
+        await prefs.setString('storeId', userId);
+        Navigator.pushReplacementNamed(context, '/store');
       } else {
         _showError(context, 'Access denied. Invalid role.');
       }
-    } else {
-      _showError(context, 'Invalid credentials');
     }
   }
 
