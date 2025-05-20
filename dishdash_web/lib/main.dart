@@ -1,3 +1,4 @@
+import 'package:dishdash_web/pages/stores_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
@@ -17,7 +18,11 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'DishDash Admin',
       initialRoute: '/',
-      routes: {'/': (_) => LoginPage(), '/dashboard': (_) => DashboardPage()},
+      routes: {
+        '/': (_) => LoginPage(),
+        '/dashboard': (_) => DashboardPage(),
+        '/store': (_) => StoresDashboard(), // ✅ Add this route
+      },
     );
   }
 }

@@ -20,16 +20,25 @@ class LoginPage extends StatelessWidget {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
+      print('🛂 Login response: $data');
+
       final user = data['user'];
-      final role = user['role'];
+      final role = data['type']; // ✅ FIXED
       final userId = user['_id'];
 
-      if (role == 'admin') {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userId', userId);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userId', userId);
+
+      if (role == 'store') {
+        await prefs.setString(
+          'storeId',
+          userId,
+        ); // ✅ Save storeId for use in dashboard
+        Navigator.pushReplacementNamed(context, '/store');
+      } else if (role == 'admin') {
         Navigator.pushReplacementNamed(context, '/dashboard');
       } else {
-        _showError(context, 'Access denied. You are not an admin.');
+        _showError(context, 'Access denied. Invalid role.');
       }
     } else {
       _showError(context, 'Invalid credentials');
