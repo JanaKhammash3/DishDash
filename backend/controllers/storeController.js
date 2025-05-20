@@ -1,4 +1,6 @@
 // controllers/storeController.js
+const mongoose = require('mongoose');
+
 const Store = require('../models/Store');
 
 exports.getNearbyStores = async (req, res) => {
@@ -32,21 +34,40 @@ exports.comparePrices = async (req, res) => {
 
 exports.addStore = async (req, res) => {
   try {
-   const { name, location, items, image } = req.body;
+    const {
+      name,
+      email,
+      password,
+      telephone,
+      location,
+      image,
+      items = [], // allow optional initial items
+      openHours
+    } = req.body;
 
-const newStore = await Store.create({
-  name,
-  location,
-  items,
-  image, // ✅ include this
-});
+    const store = new Store({
+      name,
+      email,
+      password,
+      telephone,
+      location,
+      image,
+      openHours,
+      items: items.map(item => ({
+        ...item,
+        _id: new mongoose.Types.ObjectId() // ensure item has a unique ID
+      }))
+    });
 
+    await store.save();
 
-    res.status(201).json(newStore);
+    res.status(201).json({ message: 'Store registered successfully', store });
   } catch (err) {
+    console.error('❌ Store registration failed:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 exports.getStorePrices = async (req, res) => {
   const { item } = req.query;
@@ -68,37 +89,41 @@ exports.getStorePrices = async (req, res) => {
   }
 };
 
-
-
-// POST /api/stores/:storeId/items
-exports.addItemToStore = async (req, res) => {
-  const { storeId } = req.params;
-  const { name, price } = req.body;
-
-  if (!name || price == null) {
-    return res.status(400).json({ message: 'Name and price are required' });
-  }
-
+// ➕ Add item to store
+const addItemToStore = async (req, res) => {
   try {
-    const store = await Store.findById(storeId);
-    if (!store) return res.status(404).json({ message: 'Store not found' });
+    const { storeId } = req.params;
+    const { name, price, status, category } = req.body;
 
-    const existingItem = store.items.find(
-      item => item.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (existingItem) {
-      return res.status(400).json({ message: 'Item already exists in the store' });
+    if (!name || price == null || !status || !category) {
+      return res.status(400).json({ error: 'All fields are required' });
     }
 
-    store.items.push({ name, price });
-    await store.save();
+    const newItem = {
+      _id: new mongoose.Types.ObjectId(),
+      name,
+      price,
+      status,
+      category
+    };
 
-    res.status(200).json({ message: 'Item added', items: store.items });
+    const store = await Store.findById(storeId);
+    if (!store) return res.status(404).json({ error: 'Store not found' });
+
+    await Store.updateOne(
+      { _id: storeId },
+      { $push: { items: newItem } }
+    );
+
+    res.status(200).json({ message: 'Item added successfully', item: newItem });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('❌ Error adding item:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// ✅ Make sure to export this
+exports.addItemToStore = addItemToStore;
 
 
 exports.getStoreById = async (req, res) => {
@@ -240,3 +265,48 @@ exports.rateStore = async (req, res) => {
   }
 };
 
+exports.updateStoreItem = async (req, res) => {
+  const { storeId, itemId } = req.params;
+  const { name, price, image, category, status } = req.body;
+
+  try {
+    const store = await Store.findById(storeId);
+    if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    const item = store.items.id(itemId);
+    if (!item) return res.status(404).json({ message: 'Item not found' });
+
+    // Update fields
+    if (name !== undefined) item.name = name;
+    if (price !== undefined) item.price = price;
+    if (image !== undefined) item.image = image;
+    if (category !== undefined) item.category = category;
+    if (status !== undefined) item.status = status;
+
+    await store.save();
+    res.status(200).json({ message: 'Item updated successfully', item });
+  } catch (err) {
+    console.error('❌ Error updating item:', err.message);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.deleteStoreItem = async (req, res) => {
+  const { storeId, itemId } = req.params;
+
+  try {
+    const store = await Store.findById(storeId);
+    if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    const item = store.items.id(itemId);
+    if (!item) return res.status(404).json({ message: 'Item not found' });
+
+    item.remove();
+    await store.save();
+
+    res.status(200).json({ message: 'Item deleted successfully' });
+  } catch (err) {
+    console.error('❌ Error deleting item:', err.message);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};

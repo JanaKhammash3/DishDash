@@ -1,11 +1,14 @@
 const mongoose = require('mongoose');
 
 const storeItemSchema = new mongoose.Schema({
+  _id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
   name: { type: String, required: true },
   price: { type: Number, required: true },
   image: { type: String },
   category: { type: String },
-}, { _id: false });
+  status: { type: String, enum: ['Available', 'Out of Stock', 'Will be Available Soon'], default: 'Available' }
+}, { _id: false }); // keep false only if you're not using unique IDs
+
 
 const purchaseSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

@@ -14,14 +14,14 @@ const {
   getStoresWithItems,
   getStoreById,
   recordPurchase,
-  rateStore 
+  rateStore,
+  updateStoreItem,
+  deleteStoreItem
 } = require('../controllers/storeController');
 
 // ➕ Add a new store
 router.post('/add', addStore);
 
-// 📦 Add item to specific store
-router.post('/stores/:storeId/items', addItemToStore);
 
 // 📍 Get nearby stores by coordinates
 router.get('/nearby', getNearbyStores);
@@ -31,6 +31,7 @@ router.get('/stores/:storeId', getStoreById);
 
 // 📊 Compare item prices across stores
 router.get('/compare', comparePrices);
+
 
 // 📦 Return flat list of all items across all stores (used in some screens)
 router.get('/store-items', async (req, res) => {
@@ -49,6 +50,9 @@ router.get('/store-items', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch store items' });
   }
 });
+
+// 📦 Add item to specific store
+router.post('/:storeId/add-item', addItemToStore);
 
 // ✅ New controller-based version
 router.get('/api/stores-with-items', getStoresWithItems);
@@ -114,6 +118,26 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch stores', error: err.message });
   }
 });
+
+// ✏️ Update item (uses controller)
+router.put('/stores/:storeId/items/:itemId', updateStoreItem);
+
+// 🗑️ Delete item (uses controller)
+router.delete('/stores/:storeId/items/:itemId', deleteStoreItem);
+
+
+// 📥 Get all items for a specific store
+router.get('/stores/:storeId/items', async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.storeId);
+    if (!store) return res.status(404).json({ error: 'Store not found' });
+
+    res.json(store.items);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch store items', detail: err.message });
+  }
+});
+
 
 
 module.exports = router;
