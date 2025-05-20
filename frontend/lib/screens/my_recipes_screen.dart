@@ -167,12 +167,90 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       controller: TextEditingController(text: ingredients),
                       onChanged: (v) => ingredients = v,
                     ),
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Calories'),
-                      keyboardType: TextInputType.number,
-                      controller: TextEditingController(text: calories),
-                      onChanged: (v) => calories = v,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            decoration: const InputDecoration(
+                              labelText: 'Calories',
+                            ),
+                            keyboardType: TextInputType.number,
+                            controller: TextEditingController(text: calories),
+                            onChanged: (val) => calories = val,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: green,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: () async {
+                            final ingrList =
+                                ingredients
+                                    .split(',')
+                                    .map((e) => e.trim())
+                                    .where((e) => e.isNotEmpty)
+                                    .toList();
+
+                            if (ingrList.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter ingredients first',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            setModalState(() => calories = 'Analyzing...');
+
+                            try {
+                              final res = await http.post(
+                                Uri.parse(
+                                  'http://192.168.68.60:3000/api/analyze-nutrition',
+                                ),
+                                headers: {'Content-Type': 'application/json'},
+                                body: jsonEncode({
+                                  'title': title,
+                                  'ingredients': ingrList,
+                                }),
+                              );
+
+                              if (res.statusCode == 200) {
+                                final data = jsonDecode(res.body);
+                                setModalState(
+                                  () => calories = data['calories'].toString(),
+                                );
+                              } else {
+                                setModalState(() => calories = '');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Failed to analyze calories'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setModalState(() => calories = '');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Error analyzing calories'),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text(
+                            'Analyze Calories',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
+
                     TextField(
                       decoration: const InputDecoration(
                         labelText: 'Description',
@@ -413,11 +491,90 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       ),
                       onChanged: (val) => ingredients = val,
                     ),
-                    TextField(
-                      decoration: const InputDecoration(labelText: 'Calories'),
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) => calories = val,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            decoration: const InputDecoration(
+                              labelText: 'Calories',
+                            ),
+                            keyboardType: TextInputType.number,
+                            controller: TextEditingController(text: calories),
+                            onChanged: (val) => calories = val,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: green,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: () async {
+                            final ingrList =
+                                ingredients
+                                    .split(',')
+                                    .map((e) => e.trim())
+                                    .where((e) => e.isNotEmpty)
+                                    .toList();
+
+                            if (ingrList.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter ingredients first',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            setModalState(() => calories = 'Analyzing...');
+
+                            try {
+                              final res = await http.post(
+                                Uri.parse(
+                                  'http://192.168.68.60:3000/api/analyze-nutrition',
+                                ),
+                                headers: {'Content-Type': 'application/json'},
+                                body: jsonEncode({
+                                  'title': title,
+                                  'ingredients': ingrList,
+                                }),
+                              );
+
+                              if (res.statusCode == 200) {
+                                final data = jsonDecode(res.body);
+                                setModalState(
+                                  () => calories = data['calories'].toString(),
+                                );
+                              } else {
+                                setModalState(() => calories = '');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Failed to analyze calories'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setModalState(() => calories = '');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Error analyzing calories'),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text(
+                            'Analyze Calories',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
+
                     TextField(
                       decoration: const InputDecoration(
                         labelText: 'Description',
