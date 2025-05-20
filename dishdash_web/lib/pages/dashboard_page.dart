@@ -202,7 +202,7 @@ class _DashboardPageState extends State<DashboardPage> {
             isActive: activeTab == 'Recipes',
             onTap:
                 () => setState(() {
-                  activeTab = 'Users';
+                  activeTab = 'Recipes';
                   currentPage = RecipesPage();
                 }),
           ),
