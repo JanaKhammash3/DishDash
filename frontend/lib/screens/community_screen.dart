@@ -18,6 +18,7 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen> {
   String selectedCategory = 'users'; // default
   List<dynamic> posts = [];
+
   List<String> savedRecipeIds = [];
   String? userId;
 
@@ -34,6 +35,30 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final date = DateTime.tryParse(isoString);
     if (date == null) return '';
     return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> sendNotification({
+    required String recipientId,
+    required String recipientModel,
+    required String senderId,
+    required String senderModel,
+    required String type,
+    required String message,
+    String? relatedId,
+  }) async {
+    await http.post(
+      Uri.parse('$baseUrl/api/notifications'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'recipientId': recipientId,
+        'recipientModel': recipientModel,
+        'senderId': senderId,
+        'senderModel': senderModel,
+        'type': type,
+        'message': message,
+        'relatedId': relatedId,
+      }),
+    );
   }
 
   ImageProvider _getImageProvider(String? imageString) {
@@ -115,7 +140,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   Future<void> toggleLike(String recipeId, int index) async {
     if (userId == null) return;
-
+    final post = posts[index];
     final res = await http.post(
       Uri.parse('$baseUrl/api/recipes/$recipeId/like'),
       headers: {'Content-Type': 'application/json'},
@@ -128,6 +153,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
         posts[index]['likes'] = result['likes'];
         posts[index]['liked'] = result['liked'];
       });
+      if (result['liked'] == true && post['author']?['_id'] != userId) {
+        await sendNotification(
+          recipientId: post['author']['_id'],
+          recipientModel: 'User',
+          senderId: userId!,
+          senderModel: 'User',
+          type: 'like',
+          message: 'liked your recipe "${post['title']}"',
+          relatedId: recipeId,
+        );
+      }
     }
   }
 
@@ -505,7 +541,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     );
 
                     if (res.statusCode == 201) {
-                      // ✅ increment commentCount in local post
                       final postIndex = posts.indexWhere(
                         (p) => p['_id'] == recipeId,
                       );
@@ -514,6 +549,20 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           posts[postIndex]['commentCount'] =
                               (posts[postIndex]['commentCount'] ?? 0) + 1;
                         });
+
+                        final post = posts[postIndex];
+                        if (post['author']?['_id'] != userId) {
+                          await sendNotification(
+                            recipientId: post['author']['_id'],
+                            recipientModel: 'User',
+                            senderId: userId!,
+                            senderModel: 'User',
+                            type: 'comment',
+                            message:
+                                'commented on your recipe "${post['title']}"',
+                            relatedId: recipeId,
+                          );
+                        }
                       }
 
                       Navigator.pop(context);

@@ -15,6 +15,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import './category_filters.dart';
 import 'package:frontend/screens/recommendations_widget.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:frontend/screens/NotificationScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userId;
@@ -27,7 +28,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late PageController _pageController;
   int _currentPage = 0;
-
+  int unreadCount = 0;
   List<dynamic> mealTimeRecommendations = [];
   List<dynamic> surveyRecommendations = [];
   String selectedCategory = '';
@@ -87,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    fetchUnreadCount();
     _scrollController = ScrollController();
 
     Timer.periodic(const Duration(seconds: 7), (timer) {
@@ -105,6 +107,18 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
     initUserSocket();
+  }
+
+  Future<void> fetchUnreadCount() async {
+    final res = await http.get(
+      Uri.parse(
+        'http://192.168.68.60:3000/api/notifications/${widget.userId}/unread-count',
+      ),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      setState(() => unreadCount = data['count'] ?? 0);
+    }
   }
 
   void initUserSocket() async {
@@ -791,12 +805,52 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         const Spacer(),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.notifications,
-                            color: CupertinoColors.activeOrange,
-                          ),
-                          onPressed: () {},
+                        Stack(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.notifications,
+                                color: CupertinoColors.activeOrange,
+                              ),
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => NotificationScreen(
+                                          userId: widget.userId,
+                                        ),
+                                  ),
+                                );
+                                await fetchUnreadCount(); // refresh count on return
+                              },
+                            ),
+                            if (unreadCount > 0)
+                              Positioned(
+                                right: 6,
+                                top: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 14,
+                                    minHeight: 14,
+                                  ),
+                                  child: Text(
+                                    '$unreadCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
