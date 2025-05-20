@@ -64,6 +64,23 @@ class _StoresDashboardState extends State<StoresDashboard>
     }
   }
 
+  ImageProvider _getAvatarImageProvider(String? avatar) {
+    if (avatar == null || avatar.isEmpty) {
+      return const AssetImage('assets/default_avatar.png');
+    }
+
+    if (avatar.startsWith('http')) {
+      return NetworkImage(avatar);
+    }
+
+    if (avatar.startsWith('/9j')) {
+      return MemoryImage(base64Decode(avatar));
+    }
+
+    // fallback if it's a filename from MongoDB like 'avatar123.png'
+    return NetworkImage('http://192.168.1.4:3000/images/$avatar');
+  }
+
   Future<void> _fetchItemsByStore(String id) async {
     try {
       const baseUrl = 'http://192.168.1.4:3000';
@@ -93,15 +110,50 @@ class _StoresDashboardState extends State<StoresDashboard>
     }
   }
 
+  double _calculateAverage(List<dynamic>? ratings) {
+    if (ratings == null || ratings.isEmpty) return 0.0;
+
+    double total = 0;
+    int count = 0;
+
+    for (var r in ratings) {
+      if (r is Map && r['value'] != null) {
+        total += (r['value'] as num).toDouble();
+        count++;
+      }
+    }
+
+    return count == 0 ? 0.0 : total / count;
+  }
+
   Future<void> _fetchStoreInfo(String id) async {
     try {
       const baseUrl = 'http://192.168.1.4:3000'; // your backend IP
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id'));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+
+        // 🟢 Fetch user data for each rating
+        if (data['ratings'] != null) {
+          for (var rating in data['ratings']) {
+            final userId = rating['userId'];
+            final userRes = await http.get(
+              Uri.parse('$baseUrl/api/users/profile/$userId'),
+            );
+
+            if (userRes.statusCode == 200) {
+              final userData = jsonDecode(userRes.body);
+              rating['user'] = userData; // add user data to each rating
+            } else {
+              rating['user'] = null;
+            }
+          }
+        }
+
         setState(() {
           storeData = data;
         });
+        averageRating = _calculateAverage(data['ratings']);
       } else {
         print('❌ Failed to fetch store info');
       }
@@ -136,175 +188,193 @@ class _StoresDashboardState extends State<StoresDashboard>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            child: SizedBox(
-              width: 300,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        editItem == null ? 'Add New Item' : 'Edit Item',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Item Name',
-                          prefixIcon: const Icon(Icons.label_outline),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: priceController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Price',
-                          prefixIcon: const Icon(Icons.attach_money),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Status',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 10,
-                        children:
-                            statuses.map((status) {
-                              final isSelected =
-                                  selectedStatus == status['label'];
-                              return ChoiceChip(
-                                label: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      status['icon'],
-                                      size: 18,
-                                      color:
-                                          isSelected
-                                              ? Colors.white
-                                              : status['color'],
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text(status['label']),
-                                  ],
-                                ),
-                                selected: isSelected,
-                                selectedColor: status['color'],
-                                backgroundColor: Colors.grey[200],
-                                labelStyle: TextStyle(
-                                  color:
-                                      isSelected ? Colors.white : Colors.black,
-                                ),
-                                onSelected: (_) {
-                                  setState(
-                                    () => selectedStatus = status['label'],
-                                  );
-                                },
-                              );
-                            }).toList(),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
-                          minimumSize: const Size.fromHeight(45),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: const Icon(Icons.check),
-                        label: Text(
-                          editItem == null ? 'Add Item' : 'Update Item',
-                        ),
-
-                        onPressed: () async {
-                          final name = nameController.text.trim();
-                          final price =
-                              double.tryParse(priceController.text.trim()) ??
-                              0.0;
-
-                          if (name.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Item name is required"),
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (storeId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "❌ Store ID not found. Please log in again.",
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final newItem = {
-                            'name': name,
-                            'price': price,
-                            'status': selectedStatus,
-                            'category': category,
-                          };
-
-                          const baseUrl =
-                              'http://192.168.1.4:3000'; // replace with your backend IP
-
-                          try {
-                            final response = await http.post(
-                              Uri.parse(
-                                '$baseUrl/api/stores/$storeId/add-item',
-                              ),
-                              headers: {'Content-Type': 'application/json'},
-                              body: jsonEncode(newItem),
-                            );
-
-                            if (response.statusCode == 200) {
-                              await _fetchItemsByStore(
-                                storeId!,
-                              ); // 🟢 Refresh items globally
-                              Navigator.pop(context);
-                            } else {
-                              final errorMessage =
-                                  jsonDecode(response.body)['error'] ??
-                                  'Unknown error';
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '❌ Failed to save item: $errorMessage',
-                                  ),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('❌ Error: $e')),
-                            );
-                          }
-                        },
-                      ),
-                    ],
+            child: Container(
+              width: 350,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      editItem == null ? 'Add New Item' : 'Edit Item',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF304D30),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Name
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Item Name',
+                        prefixIcon: const Icon(Icons.label_outline),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Price
+                    TextField(
+                      controller: priceController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Price',
+                        prefixIcon: const Icon(Icons.attach_money),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Status label
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Status',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Status chips
+                    Wrap(
+                      spacing: 10,
+                      children:
+                          statuses.map((status) {
+                            final isSelected =
+                                selectedStatus == status['label'];
+                            return ChoiceChip(
+                              label: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    status['icon'],
+                                    size: 18,
+                                    color:
+                                        isSelected
+                                            ? Colors.white
+                                            : status['color'],
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(status['label']),
+                                ],
+                              ),
+                              selected: isSelected,
+                              selectedColor: status['color'],
+                              backgroundColor: Colors.grey[200],
+                              labelStyle: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                              ),
+                              onSelected: (_) {
+                                setState(
+                                  () => selectedStatus = status['label'],
+                                );
+                              },
+                            );
+                          }).toList(),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // Submit Button
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[700],
+                        foregroundColor: Colors.white, // ✅ White text
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.check),
+                      label: Text(
+                        editItem == null ? 'Add Item' : 'Update Item',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      onPressed: () async {
+                        final name = nameController.text.trim();
+                        final price =
+                            double.tryParse(priceController.text.trim()) ?? 0.0;
+
+                        if (name.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Item name is required"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (storeId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "❌ Store ID not found. Please log in again.",
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final newItem = {
+                          'name': name,
+                          'price': price,
+                          'status': selectedStatus,
+                          'category': category,
+                        };
+
+                        const baseUrl = 'http://192.168.1.4:3000';
+
+                        try {
+                          final response = await http.post(
+                            Uri.parse('$baseUrl/api/stores/$storeId/add-item'),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode(newItem),
+                          );
+
+                          if (response.statusCode == 200) {
+                            await _fetchItemsByStore(storeId!);
+                            Navigator.pop(context);
+                          } else {
+                            final errorMessage =
+                                jsonDecode(response.body)['error'] ??
+                                'Unknown error';
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '❌ Failed to save item: $errorMessage',
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('❌ Error: $e')),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -491,6 +561,7 @@ class _StoresDashboardState extends State<StoresDashboard>
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
+          // ⭐ Ratings Section
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -499,43 +570,87 @@ class _StoresDashboardState extends State<StoresDashboard>
                   builder:
                       (_) => AlertDialog(
                         title: const Text("Ratings"),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            ListTile(title: Text("⭐ 5 - User A")),
-                            ListTile(title: Text("⭐ 4 - User B")),
-                            ListTile(title: Text("⭐ 3 - User C")),
-                          ],
+                        content: SizedBox(
+                          width: 300,
+                          child:
+                              storeData?['ratings'] != null &&
+                                      storeData!['ratings'] is List &&
+                                      storeData!['ratings'].isNotEmpty
+                                  ? ListView(
+                                    shrinkWrap: true,
+                                    children: List<Widget>.from(
+                                      storeData!['ratings'].map((r) {
+                                        final user = r['user'];
+                                        final String name =
+                                            user?['name'] ?? 'Unknown';
+                                        final String? userAvatar =
+                                            user?['avatar'];
+
+                                        return ListTile(
+                                          leading: CircleAvatar(
+                                            backgroundImage:
+                                                _getAvatarImageProvider(
+                                                  userAvatar,
+                                                ),
+                                          ),
+                                          title: Text(name),
+                                          trailing: Text(
+                                            '⭐ ${r['value'] ?? 0}',
+                                          ),
+                                        );
+                                      }),
+                                    ),
+                                  )
+                                  : const Text("No ratings yet."),
                         ),
                       ),
                 );
               },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange[100],
-                  borderRadius: BorderRadius.circular(10),
+              child: Card(
+                elevation: 6,
+                shadowColor: Colors.orange.withOpacity(0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Average Rating',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$averageRating ⭐',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                color: Colors.orange[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.star_rate, color: Colors.orange),
+                          SizedBox(width: 6),
+                          Text(
+                            'Average Rating',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      Text(
+                        '$averageRating ⭐',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
+
           const SizedBox(width: 12),
+
+          // 🛒 Purchases Section
           Expanded(
             child: GestureDetector(
               onTap: () {
@@ -544,38 +659,80 @@ class _StoresDashboardState extends State<StoresDashboard>
                   builder:
                       (_) => AlertDialog(
                         title: const Text("Purchases"),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            ListTile(title: Text("🛒 User A bought 3 items")),
-                            ListTile(title: Text("🛒 User B bought 5 items")),
-                            ListTile(title: Text("🛒 User C bought 1 item")),
-                          ],
+                        content: SizedBox(
+                          width: 300,
+                          child:
+                              storeData?['purchases'] != null &&
+                                      storeData!['purchases'] is List &&
+                                      storeData!['purchases'].isNotEmpty
+                                  ? ListView(
+                                    shrinkWrap: true,
+                                    children: List<Widget>.from(
+                                      storeData!['purchases'].map((p) {
+                                        final user = p['userId'];
+                                        final String name =
+                                            user is Map
+                                                ? (user['name'] ?? 'Unknown')
+                                                : 'Unknown';
+                                        final String? avatar =
+                                            user is Map ? user['avatar'] : null;
+                                        final int count = p['count'] ?? 1;
+
+                                        return ListTile(
+                                          leading: CircleAvatar(
+                                            backgroundImage:
+                                                _getAvatarImageProvider(avatar),
+                                          ),
+                                          title: Text(name),
+                                          subtitle: Text(
+                                            "🛒 Bought $count items",
+                                          ),
+                                        );
+                                      }),
+                                    ),
+                                  )
+                                  : const Text("No purchases yet."),
                         ),
                       ),
                 );
               },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green[100],
-                  borderRadius: BorderRadius.circular(10),
+              child: Card(
+                elevation: 6,
+                shadowColor: Colors.green.withOpacity(0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Total Purchases',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$totalPurchases 🛒',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                color: Colors.green[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.shopping_cart, color: Colors.green),
+                          SizedBox(width: 6),
+                          Text(
+                            'Total Purchases',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      Text(
+                        '$totalPurchases 🛒',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -715,6 +872,44 @@ class _StoresDashboardState extends State<StoresDashboard>
             child: Column(
               children: [
                 // ✅ Store Header UI
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.storefront,
+                          color: Color(0xFF304D30),
+                          size: 32,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Welcome back, ${storeData?['name'] ?? 'Store Owner'}!',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF304D30),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
                 // Category Tab Content
                 Expanded(

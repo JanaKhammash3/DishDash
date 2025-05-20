@@ -112,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final userId = prefs.getString('userId');
     if (userId == null) return;
 
-    socket = IO.io('http://192.168.68.60:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false, // 👈 disable auto
     });
@@ -267,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
     final uri = Uri.http(
-      '192.168.68.60:3000',
+      '192.168.1.4:3000',
       '/api/recipes/filter',
       queryParams,
     );
@@ -297,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.60:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -331,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.1.4:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -344,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.68.60:3000/api/recipes');
+    final url = Uri.parse('http://192.168.1.4:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -357,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/$userId/saveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -371,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -384,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes({String? category}) async {
-    String baseUrl = 'http://192.168.68.60:3000/api/recipes/filter';
+    String baseUrl = 'http://192.168.1.4:3000/api/recipes/filter';
     Uri url;
 
     if (category != null && category.isNotEmpty) {
@@ -442,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.60:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -1172,7 +1172,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final rawPath = recipe['image'] ?? '';
               final imagePath =
                   rawPath.startsWith('/images/')
-                      ? 'http://192.168.68.60:3000$rawPath'
+                      ? 'http://192.168.1.4:3000$rawPath'
                       : rawPath;
 
               final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];
