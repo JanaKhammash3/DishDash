@@ -61,6 +61,30 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     );
   }
 
+  Future<void> sendNotification({
+    required String recipientId,
+    required String recipientModel,
+    required String senderId,
+    required String senderModel,
+    required String type,
+    required String message,
+    String? relatedId,
+  }) async {
+    await http.post(
+      Uri.parse('http://192.168.68.60:3000/api/notifications'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'recipientId': recipientId,
+        'recipientModel': recipientModel,
+        'senderId': senderId,
+        'senderModel': senderModel,
+        'type': type,
+        'message': message,
+        'relatedId': relatedId,
+      }),
+    );
+  }
+
   Future<void> saveIngredientsToPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String> allIngredients = [];
@@ -513,6 +537,29 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                                       );
 
                                       if (addResponse.statusCode == 200) {
+                                        final now = DateTime.now();
+                                        final tomorrow = DateTime(
+                                          now.year,
+                                          now.month,
+                                          now.day + 1,
+                                        );
+
+                                        if (selectedDate!.year ==
+                                                tomorrow.year &&
+                                            selectedDate!.month ==
+                                                tomorrow.month &&
+                                            selectedDate!.day == tomorrow.day) {
+                                          await sendNotification(
+                                            recipientId: widget.userId,
+                                            recipientModel: 'User',
+                                            senderId: widget.userId,
+                                            senderModel: 'User',
+                                            type: 'Alerts',
+                                            message:
+                                                'Reminder: "${selectedRecipe!['title']}" is planned for tomorrow!',
+                                            relatedId: selectedRecipe!['_id'],
+                                          );
+                                        }
                                         setState(() {
                                           plannedMeals.add({
                                             'planId': planId,

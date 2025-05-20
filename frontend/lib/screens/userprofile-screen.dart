@@ -103,6 +103,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() {
         posts[index]['likes'] = result['likes'];
       });
+      final post = posts[index];
+      if (result['liked'] == true && widget.userId != userId) {
+        final post = posts[index];
+        await sendNotification(
+          recipientId: widget.userId,
+          recipientModel: 'User',
+          senderId: userId!,
+          senderModel: 'User',
+          type: 'like',
+          message: 'liked your recipe "${post['title']}"',
+          relatedId: recipeId,
+        );
+      }
     }
   }
 
@@ -292,6 +305,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     onPressed: () async {
                       final content = _controller.text.trim();
                       if (content.isEmpty) return;
+
                       final res = await http.post(
                         Uri.parse('$baseUrl/api/comments/$recipeId'),
                         headers: {'Content-Type': 'application/json'},
@@ -300,7 +314,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           'content': content,
                         }),
                       );
+
                       if (res.statusCode == 201) {
+                        // Notify if not commenting on your own post
+                        final post = posts.firstWhere(
+                          (p) => p['_id'] == recipeId,
+                          orElse: () => null,
+                        );
+                        if (post != null && widget.userId != userId) {
+                          await sendNotification(
+                            recipientId: widget.userId,
+                            recipientModel: 'User',
+                            senderId: userId!,
+                            senderModel: 'User',
+                            type: 'comment',
+                            message:
+                                'commented on your recipe "${post['title']}"',
+                            relatedId: recipeId,
+                          );
+                        }
+
                         Navigator.pop(context);
                         fetchUserPosts(); // Refresh
                       }
@@ -311,6 +344,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
             ),
           ),
+    );
+  }
+
+  Future<void> sendNotification({
+    required String recipientId,
+    required String recipientModel,
+    required String senderId,
+    required String senderModel,
+    required String type,
+    required String message,
+    String? relatedId,
+  }) async {
+    await http.post(
+      Uri.parse('$baseUrl/api/notifications'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'recipientId': recipientId,
+        'recipientModel': recipientModel,
+        'senderId': senderId,
+        'senderModel': senderModel,
+        'type': type,
+        'message': message,
+        'relatedId': relatedId,
+      }),
     );
   }
 
@@ -380,16 +437,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
 
     _isTogglingFollow = false;
-
     if (res.statusCode == 200) {
       final result = json.decode(res.body);
       setState(() {
         isFollowing = result['isFollowing'];
         followerCount = result['followers'];
       });
-      print('Toggled follow: $isFollowing');
-    } else {
-      print('❌ Failed to toggle follow');
+
+      if (result['isFollowing']) {
+        await sendNotification(
+          recipientId: widget.userId,
+          recipientModel: 'User',
+          senderId: userId!,
+          senderModel: 'User',
+          type: 'follow',
+          message: 'started following you',
+          relatedId: userId,
+        );
+      }
     }
   }
 
@@ -578,7 +643,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             final message = _chatController.text.trim();
                             if (message.isEmpty) return;
 
@@ -589,6 +654,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             };
 
                             socket.emit('send_message', msgData);
+                            await sendNotification(
+                              recipientId: widget.userId,
+                              recipientModel: 'User',
+                              senderId: userId!,
+                              senderModel: 'User',
+                              type: 'message',
+                              message: 'sent you a message',
+                              relatedId: null,
+                            );
                             _chatController
                                 .clear(); // just clear, don’t add message manually
                           },

@@ -1,9 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const { sendNotification, getUserNotifications, markAsSeen } = require('../controllers/notificationController');
+const {
+  createNotification,
+  getNotifications,
+  markAsRead,
+  getUnreadCount,
+  getUserNotifications,
+} = require('../controllers/notificationController');
 
-router.post('/', sendNotification);
+router.post('/', createNotification);
+
+// ✅ Put this before /:userId
+router.get('/:userId/unread-count', getUnreadCount);
+
+// 📩 Get notifications by model
+router.get('/:id/:model', getNotifications);
+
+// ✅ This must be LAST
 router.get('/:userId', getUserNotifications);
-router.put('/:id/seen', markAsSeen);
+
+// ✅ Mark as read
+router.patch('/read/:notificationId', markAsRead);
 
 module.exports = router;
