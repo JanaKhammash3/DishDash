@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dashboard_home.dart';
 import 'users_page.dart';
+import 'recipes_page.dart';
 
 class DashboardPage extends StatefulWidget {
   @override
@@ -193,7 +194,11 @@ class _DashboardPageState extends State<DashboardPage> {
             isExpanded: expanded,
             tooltip: 'Recipes',
             isActive: activeTab == 'Recipes',
-            onTap: () => setState(() => activeTab = 'Recipes'),
+            onTap:
+                () => setState(() {
+                  activeTab = 'Users';
+                  currentPage = RecipesPage();
+                }),
           ),
           SidebarItem(
             icon: Icons.flag,
