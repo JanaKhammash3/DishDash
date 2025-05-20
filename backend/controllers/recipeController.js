@@ -1,6 +1,6 @@
 // ✅ Full Recipe Controller (Node.js) with Ingredient & Difficulty Filtering
 const Recipe = require('../models/Recipe');
-
+const Comment = require('../models/Comment');
 exports.createCustomRecipe = async (req, res) => {
   try {
     const {
@@ -270,4 +270,55 @@ exports.getAllRecipesAdmin = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+// controllers/recipeController.js
+exports.getFullRecipeDetails = async (req, res) => {
+  try {
+    const recipe = await Recipe.findById(req.params.id)
+      .populate('author', 'name avatar')
+      .populate('likes', 'name avatar')
+      .lean();
+
+    if (!recipe) {
+      return res.status(404).json({ message: 'Recipe not found' });
+    }
+
+    // remove fields
+    delete recipe.createdAt;
+    delete recipe.updatedAt;
+    delete recipe.image;
+
+    // Format ratings
+    recipe.ratedBy = (recipe.ratings || []).map(r =>
+      typeof r === 'object' && r.user
+        ? { user: r.user, value: r.value }
+        : { user: null, value: r }
+    );
+
+    // 🆕 Fetch comments from Comment model
+    const comments = await Comment.find({ recipeId: req.params.id })
+      .populate('userId', 'name avatar')
+      .lean();
+
+    // Attach nicely to the recipe object
+    recipe.comments = comments.map(c => ({
+      user: c.userId,
+      text: c.content,
+      createdAt: c.createdAt
+    }));
+
+    res.json(recipe);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+// controllers/recipeController.js
+exports.deleteReciperoot = async (req, res) => {
+  try {
+    await Recipe.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Recipe deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 

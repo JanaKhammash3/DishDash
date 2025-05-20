@@ -20,8 +20,10 @@ class _RecipesPageState extends State<RecipesPage> {
     {'label': 'Vegan', 'icon': Icons.eco},
     {'label': 'Vegetarian', 'icon': Icons.spa},
     {'label': 'Keto', 'icon': Icons.local_fire_department},
+    {'label': 'Low-Carb', 'icon': Icons.scale}, // new
     {'label': 'Lunch', 'icon': Icons.lunch_dining},
     {'label': 'Dinner', 'icon': Icons.dinner_dining},
+    {'label': 'Breakfast', 'icon': Icons.free_breakfast}, // new
     {'label': 'Snack', 'icon': Icons.fastfood},
   ];
 
@@ -29,6 +31,160 @@ class _RecipesPageState extends State<RecipesPage> {
   void initState() {
     super.initState();
     fetchRecipes();
+  }
+
+  void _showRecipeDetailsModal(Map<String, dynamic> recipe) async {
+    final response = await http.get(
+      Uri.parse(
+        'http://192.168.68.60:3000/api/recipes/${recipe['_id']}/full-details',
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load recipe details')),
+      );
+      return;
+    }
+
+    final detailed = jsonDecode(response.body);
+
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text(detailed['title'] ?? 'Recipe Details'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (detailed['description'] != null) ...[
+                      const Text(
+                        "📝 Description:",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(detailed['description']),
+                      const SizedBox(height: 10),
+                    ],
+                    const Text(
+                      "🍽️ Ingredients:",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ...List.from(
+                      detailed['ingredients'] ?? [],
+                    ).map((i) => Text('• $i')),
+
+                    const SizedBox(height: 10),
+                    const Text(
+                      "📋 Instructions:",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(detailed['instructions'] ?? 'N/A'),
+
+                    const SizedBox(height: 10),
+                    Text("🔥 Calories: ${detailed['calories']}"),
+                    Text("🕒 Prep Time: ${detailed['prepTime']} min"),
+                    Text("🥗 Diet: ${detailed['diet']}"),
+                    Text("⏰ Meal Time: ${detailed['mealTime']}"),
+                    Text("⚙️ Difficulty: ${detailed['difficulty']}"),
+
+                    if (detailed['author'] != null) ...[
+                      const SizedBox(height: 10),
+                      const Text(
+                        "👤 Author:",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(detailed['author']['name'] ?? 'N/A'),
+                    ],
+
+                    const SizedBox(height: 10),
+                    const Text(
+                      "⭐ Ratings by users:",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ...List.from(detailed['ratedBy'] ?? []).map((r) {
+                      final user = r['user'];
+                      final value = r['value'];
+                      return Text(
+                        "• ${user?['name'] ?? 'Unknown'} rated $value",
+                      );
+                    }),
+
+                    const SizedBox(height: 10),
+                    const Text(
+                      "👍 Liked by:",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ...List.from(
+                      detailed['likes'] ?? [],
+                    ).map((u) => Text("• ${u['name']}")),
+
+                    const SizedBox(height: 10),
+                    const Text(
+                      "💬 Comments:",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ...List.from(detailed['comments'] ?? []).map((c) {
+                      final user = c['user'];
+                      return Text(
+                        "• ${user?['name'] ?? 'Unknown'}: ${c['text']}",
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _deleteRecipe(String recipeId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Delete Recipe"),
+            content: const Text("Are you sure you want to delete this recipe?"),
+            actions: [
+              TextButton(
+                child: const Text("Cancel"),
+                onPressed: () => Navigator.pop(context, false),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text("Delete"),
+                onPressed: () => Navigator.pop(context, true),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm != true) return;
+
+    final response = await http.delete(
+      Uri.parse('http://192.168.68.60:3000/api/recipes/$recipeId'),
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        allRecipes.removeWhere((r) => r['_id'] == recipeId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Recipe deleted successfully')),
+      );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to delete recipe')));
+    }
   }
 
   Future<void> fetchRecipes() async {
@@ -224,8 +380,6 @@ class _RecipesPageState extends State<RecipesPage> {
                 ),
               ),
 
-              const SizedBox(height: 30),
-
               // 📦 Recipe Grid
               Wrap(
                 spacing: 20,
@@ -263,6 +417,26 @@ class _RecipesPageState extends State<RecipesPage> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            Text(
+                              'by ${recipe['author']?['name'] ?? 'System'}',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 10,
+                              ),
+                            ),
+
+                            Row(
+                              children: [
+                                Icon(Icons.star, color: Colors.amber, size: 16),
+                                SizedBox(width: 4),
+                                Text(
+                                  _averageRating(
+                                    recipe['ratings'],
+                                  ).toStringAsFixed(1),
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               '${recipe['calories']} kcal • ${recipe['difficulty'] ?? 'Easy'}',
@@ -270,6 +444,30 @@ class _RecipesPageState extends State<RecipesPage> {
                                 color: Colors.grey[600],
                                 fontSize: 12,
                               ),
+                            ),
+
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.info_outline,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed:
+                                      () => _showRecipeDetailsModal(recipe),
+                                  tooltip: 'View Details',
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _deleteRecipe(recipe['_id']),
+                                  tooltip: 'Delete Recipe',
+                                ),
+                              ],
                             ),
                           ],
                         ),
