@@ -112,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> fetchUnreadCount() async {
     final res = await http.get(
       Uri.parse(
-        'http://192.168.68.60:3000/api/notifications/${widget.userId}/unread-count',
+        'http://192.168.1.4:3000/api/notifications/${widget.userId}/unread-count',
       ),
     );
     if (res.statusCode == 200) {

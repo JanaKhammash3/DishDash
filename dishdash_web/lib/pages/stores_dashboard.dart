@@ -346,11 +346,28 @@ class _StoresDashboardState extends State<StoresDashboard>
                         const baseUrl = 'http://192.168.1.4:3000';
 
                         try {
-                          final response = await http.post(
-                            Uri.parse('$baseUrl/api/stores/$storeId/add-item'),
-                            headers: {'Content-Type': 'application/json'},
-                            body: jsonEncode(newItem),
-                          );
+                          http.Response response;
+
+                          if (editItem != null && editItem['_id'] != null) {
+                            // ✅ UPDATE existing item
+                            final itemId = editItem['_id'];
+                            response = await http.put(
+                              Uri.parse(
+                                '$baseUrl/api/stores/$storeId/items/$itemId',
+                              ),
+                              headers: {'Content-Type': 'application/json'},
+                              body: jsonEncode(newItem),
+                            );
+                          } else {
+                            // ✅ ADD new item
+                            response = await http.post(
+                              Uri.parse(
+                                '$baseUrl/api/stores/$storeId/add-item',
+                              ),
+                              headers: {'Content-Type': 'application/json'},
+                              body: jsonEncode(newItem),
+                            );
+                          }
 
                           if (response.statusCode == 200) {
                             await _fetchItemsByStore(storeId!);
@@ -516,7 +533,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                           ),
                           const SizedBox(width: 8),
                           PopupMenuButton<String>(
-                            onSelected: (value) {
+                            onSelected: (value) async {
                               if (value == 'Edit') {
                                 _showItemDialog(
                                   category,
@@ -524,11 +541,39 @@ class _StoresDashboardState extends State<StoresDashboard>
                                   index: originalIndex,
                                 );
                               } else if (value == 'Delete') {
-                                setState(() {
-                                  itemsByCategory[category]!.removeAt(
-                                    originalIndex,
+                                final String itemId = item['_id'];
+                                const baseUrl = 'http://192.168.1.4:3000';
+
+                                try {
+                                  final res = await http.delete(
+                                    Uri.parse(
+                                      '$baseUrl/api/stores/$storeId/items/$itemId',
+                                    ),
                                   );
-                                });
+
+                                  if (res.statusCode == 200) {
+                                    setState(() {
+                                      itemsByCategory[category]!.removeAt(
+                                        originalIndex,
+                                      );
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("✅ Item deleted."),
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text("❌ Failed: ${res.body}"),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("❌ Error: $e")),
+                                  );
+                                }
                               }
                             },
                             itemBuilder:

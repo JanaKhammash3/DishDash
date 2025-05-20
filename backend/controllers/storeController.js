@@ -273,40 +273,60 @@ exports.updateStoreItem = async (req, res) => {
     const store = await Store.findById(storeId);
     if (!store) return res.status(404).json({ message: 'Store not found' });
 
+    // Find the item in the embedded items array
     const item = store.items.id(itemId);
     if (!item) return res.status(404).json({ message: 'Item not found' });
 
-    // Update fields
+    // Update only provided fields
     if (name !== undefined) item.name = name;
     if (price !== undefined) item.price = price;
     if (image !== undefined) item.image = image;
     if (category !== undefined) item.category = category;
     if (status !== undefined) item.status = status;
 
-    await store.save();
-    res.status(200).json({ message: 'Item updated successfully', item });
+    // Save the parent document (Store)
+    await store.save({ validateBeforeSave: false });
+
+    res.status(200).json({ message: '✅ Item updated successfully', item });
   } catch (err) {
     console.error('❌ Error updating item:', err.message);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
+
 exports.deleteStoreItem = async (req, res) => {
   const { storeId, itemId } = req.params;
 
   try {
+    // Fetch store by ID
     const store = await Store.findById(storeId);
-    if (!store) return res.status(404).json({ message: 'Store not found' });
+    if (!store) {
+      return res.status(404).json({ message: 'Store not found' });
+    }
 
-    const item = store.items.id(itemId);
-    if (!item) return res.status(404).json({ message: 'Item not found' });
+    // Check if item exists
+    const itemExists = store.items.some(
+      item => item._id.toString() === itemId
+    );
+    if (!itemExists) {
+      return res.status(404).json({ message: 'Item not found in store' });
+    }
 
-    item.remove();
-    await store.save();
+    // Remove the item from the embedded array
+    store.items.pull({ _id: itemId });
+
+    // Save without triggering full schema validation
+    await store.save({ validateBeforeSave: false });
 
     res.status(200).json({ message: 'Item deleted successfully' });
   } catch (err) {
     console.error('❌ Error deleting item:', err.message);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({
+      message: 'Server error',
+      error: err.message,
+    });
   }
 };
+
+
