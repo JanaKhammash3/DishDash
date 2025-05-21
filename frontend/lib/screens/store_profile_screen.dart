@@ -35,6 +35,29 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     _startClosingCountdown();
   }
 
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Vegetables':
+        return Icons.grass;
+      case 'Fruits':
+        return Icons.apple;
+      case 'Dairy':
+        return Icons.icecream;
+      case 'Meat':
+        return Icons.set_meal;
+      case 'Grains & Pasta':
+        return Icons.rice_bowl;
+      case 'Condiments':
+        return Icons.soup_kitchen;
+      case 'Canned Goods':
+        return Icons.lunch_dining;
+      case 'Frozen Food':
+        return Icons.ac_unit;
+      default:
+        return Icons.category;
+    }
+  }
+
   void _setStoreLocation() {
     final location = widget.store['location'];
     debugPrint('📦 Full location value: $location');
@@ -57,6 +80,17 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     }
 
     setState(() {});
+  }
+
+  Map<String, List<Map<String, dynamic>>> _groupItemsByCategory(List items) {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+
+    for (var item in items) {
+      final category = item['category']?.toString() ?? 'Other';
+      grouped.putIfAbsent(category, () => []).add(item as Map<String, dynamic>);
+    }
+
+    return grouped;
   }
 
   Future<void> _fetchUserLocation() async {
@@ -203,6 +237,45 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
       }
     }
     return raw;
+  }
+
+  Widget _buildStatusChip(String? status) {
+    Color bgColor;
+    String label;
+
+    switch (status) {
+      case 'Available':
+        bgColor = Colors.green;
+        label = 'Available';
+        break;
+      case 'Out of Stock':
+        bgColor = Colors.red;
+        label = 'Out of Stock';
+        break;
+      case 'Will be Available Soon':
+        bgColor = Colors.orange;
+        label = 'Coming Soon';
+        break;
+      default:
+        bgColor = Colors.grey;
+        label = 'Unknown';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: bgColor,
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        ),
+      ),
+    );
   }
 
   @override
@@ -464,23 +537,57 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
               ),
             ),
             const Divider(),
-            ...items.map((item) {
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                leading: const Icon(Icons.shopping_cart_outlined),
-                title: Text(item['name']),
-                trailing: Text(
-                  '\$${item['price']}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: green,
+            ..._groupItemsByCategory(items).entries.map((entry) {
+              final category = entry.key;
+              final categoryItems = entry.value;
+
+              return Theme(
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  initiallyExpanded: false,
+                  title: Row(
+                    children: [
+                      Icon(_getCategoryIcon(category), color: green),
+                      const SizedBox(width: 8),
+                      Text(
+                        category,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: green,
+                        ),
+                      ),
+                    ],
                   ),
+                  children:
+                      categoryItems.map((item) {
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          leading: const Icon(
+                            Icons.shopping_cart_outlined,
+                            color: Colors.black54,
+                          ),
+                          title: Text(item['name']),
+                          subtitle: Row(
+                            children: [_buildStatusChip(item['status'])],
+                          ),
+                          trailing: Text(
+                            '\$${item['price']}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: green,
+                            ),
+                          ),
+                        );
+                      }).toList(),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

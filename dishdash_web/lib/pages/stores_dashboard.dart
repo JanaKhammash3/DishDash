@@ -19,12 +19,12 @@ class _StoresDashboardState extends State<StoresDashboard>
   final Map<String, List<Map<String, dynamic>>> itemsByCategory = {
     'Vegetables': [],
     'Fruits': [],
-    'Dairy': [],
+    'Dairy': [], //اجبان والبان
     'Meat': [],
-    'Bakery': [],
-    'Seafood': [],
-    'Beverages': [],
-    'Frozen': [],
+    'Grains & Pasta': [], //حبوب
+    'Condiments': [], //بهارات
+    'Canned Goods': [],
+    'Frozen Food': [],
   };
 
   final TextEditingController nameController = TextEditingController();
@@ -793,17 +793,17 @@ class _StoresDashboardState extends State<StoresDashboard>
         return Icons.grass;
       case 'Fruits':
         return Icons.apple;
-      case 'Dairy':
+      case 'Dairy': // أجبان وألبان
         return Icons.icecream;
       case 'Meat':
         return Icons.set_meal;
-      case 'Bakery':
-        return Icons.bakery_dining;
-      case 'Seafood':
-        return Icons.set_meal_outlined;
-      case 'Beverages':
-        return Icons.local_drink;
-      case 'Frozen':
+      case 'Grains & Pasta': // حبوب
+        return Icons.rice_bowl;
+      case 'Condiments': // بهارات
+        return Icons.soup_kitchen;
+      case 'Canned Goods':
+        return Icons.inventory_2;
+      case 'Frozen Food':
         return Icons.ac_unit;
       default:
         return Icons.category;
