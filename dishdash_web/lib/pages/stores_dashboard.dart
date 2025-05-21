@@ -400,16 +400,29 @@ class _StoresDashboardState extends State<StoresDashboard>
     );
   }
 
-  Color? _getStatusColor(String status) {
+  Color _getChipColor(String status) {
     switch (status) {
       case 'Available':
-        return Colors.green[200];
+        return Colors.green.withOpacity(0.2);
       case 'Out of Stock':
-        return Colors.red[200];
+        return Colors.red.withOpacity(0.2);
       case 'Will be Available Soon':
-        return Colors.orange[200];
+        return Colors.orange.withOpacity(0.2);
       default:
-        return Colors.grey[200];
+        return Colors.grey.withOpacity(0.2);
+    }
+  }
+
+  Color _getTextColor(String status) {
+    switch (status) {
+      case 'Available':
+        return Colors.green[800]!;
+      case 'Out of Stock':
+        return Colors.red[800]!;
+      case 'Will be Available Soon':
+        return Colors.orange[800]!;
+      default:
+        return Colors.black87;
     }
   }
 
@@ -454,20 +467,35 @@ class _StoresDashboardState extends State<StoresDashboard>
             children: [
               Expanded(
                 child: TextField(
+                  onChanged: (val) => setState(() => searchQuery = val),
                   decoration: InputDecoration(
                     hintText: 'Search items...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Color(0xFF304D30),
                     ),
+                    filled: true,
+                    fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(
-                      vertical: 0,
-                      horizontal: 12,
+                      vertical: 14,
+                      horizontal: 16,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF304D30),
+                        width: 1.5,
+                      ),
                     ),
                   ),
-                  onChanged: (val) {
-                    setState(() => searchQuery = val);
-                  },
                 ),
               ),
               const SizedBox(width: 8),
@@ -529,9 +557,28 @@ class _StoresDashboardState extends State<StoresDashboard>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Chip(
-                            label: Text(item['status']),
-                            backgroundColor: _getStatusColor(item['status']),
+                            label: Text(
+                              item['status'],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: _getTextColor(item['status']),
+                              ),
+                            ),
+                            backgroundColor: _getChipColor(item['status']),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: _getTextColor(
+                                  item['status'],
+                                ).withOpacity(0.5),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
                           ),
+
                           const SizedBox(width: 8),
                           PopupMenuButton<String>(
                             onSelected: (value) async {
