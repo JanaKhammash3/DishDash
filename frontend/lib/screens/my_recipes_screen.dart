@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/recipe_screen.dart';
+import 'package:frontend/screens/AiRecipeFormScreen.dart';
 
 class MyRecipesScreen extends StatefulWidget {
   final String userId;
@@ -917,6 +918,36 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       },
                     ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AiRecipeFormScreen(userId: widget.userId),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 16,
+                ),
+                elevation: 4,
+              ),
+              icon: const Icon(Icons.auto_awesome, color: Colors.white),
+              label: const Text(
+                'Generate with AI',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+          ),
+
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: ElevatedButton.icon(
