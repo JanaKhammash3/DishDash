@@ -25,7 +25,7 @@ class _StoresPageState extends State<StoresPage> {
   }
 
   Future<void> fetchStores() async {
-    final uri = Uri.http('192.168.1.4:3000', '/api/stores', {
+    final uri = Uri.http('192.168.68.60:3000', '/api/stores', {
       'search': searchQuery,
       'sort': sortBy,
       'minRating': '$minRating',
@@ -58,7 +58,7 @@ class _StoresPageState extends State<StoresPage> {
     }
     if (image.startsWith('http')) return NetworkImage(image);
     if (image.startsWith('/9j')) return MemoryImage(base64Decode(image));
-    return NetworkImage('http://192.168.1.4:3000/images/$image');
+    return NetworkImage('http://192.168.68.60:3000/images/$image');
   }
 
   Widget buildFilterSection() {

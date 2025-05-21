@@ -23,7 +23,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   List<dynamic> posts = [];
   bool isFollowing = false;
   int followerCount = 0;
-  final String baseUrl = 'http://192.168.1.4:3000';
+  final String baseUrl = 'http://192.168.68.60:3000';
   List<dynamic> messages = [];
   TextEditingController _chatController = TextEditingController();
   @override
