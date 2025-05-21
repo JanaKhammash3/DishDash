@@ -40,7 +40,7 @@ app.use(storeRoutes);
 app.use('/api', require('./routes/storeRoutes'));
 const nutritionRoutes = require('./routes/nutritionRoutes');
 app.use('/api', nutritionRoutes);
-
+app.use('/api/ai', require('./routes/aiRoutes'));
 app.post('/translate', async (req, res) => {
   const { text, target } = req.body;
 

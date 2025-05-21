@@ -78,12 +78,12 @@ class _StoresDashboardState extends State<StoresDashboard>
     }
 
     // fallback if it's a filename from MongoDB like 'avatar123.png'
-    return NetworkImage('http://192.168.1.4:3000/images/$avatar');
+    return NetworkImage('http://192.168.68.60:3000/images/$avatar');
   }
 
   Future<void> _fetchItemsByStore(String id) async {
     try {
-      const baseUrl = 'http://192.168.1.4:3000';
+      const baseUrl = 'http://192.168.68.60:3000';
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id/items'));
 
       if (res.statusCode == 200) {
@@ -128,7 +128,7 @@ class _StoresDashboardState extends State<StoresDashboard>
 
   Future<void> _fetchStoreInfo(String id) async {
     try {
-      const baseUrl = 'http://192.168.1.4:3000'; // your backend IP
+      const baseUrl = 'http://192.168.68.60:3000'; // your backend IP
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id'));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -344,7 +344,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                           'category': category,
                         };
 
-                        const baseUrl = 'http://192.168.1.4:3000';
+                        const baseUrl = 'http://192.168.68.60:3000';
 
                         try {
                           http.Response response;
@@ -543,7 +543,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                                 );
                               } else if (value == 'Delete') {
                                 final String itemId = item['_id'];
-                                const baseUrl = 'http://192.168.1.4:3000';
+                                const baseUrl = 'http://192.168.68.60:3000';
 
                                 try {
                                   final res = await http.delete(
