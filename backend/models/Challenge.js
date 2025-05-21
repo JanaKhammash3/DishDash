@@ -1,13 +1,31 @@
-// models/Challenge.js
+
 const mongoose = require('mongoose');
 
 const challengeSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    description: String,
-    startDate: Date,
-    endDate: Date,
-    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    topRecipes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' }]
-  });
-  
-  module.exports = mongoose.model('Challenge', challengeSchema);
+  title: { type: String, required: true },
+  description: { type: String },
+  type: { 
+    type: String, 
+    enum: [
+      'Recipe Creation', 
+      'Meal Planning', 
+      'Grocery', 
+      'Community Engagement', 
+      'Health Tracking',
+      'Bookmarking'
+    ],
+    required: true
+  },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  reward: { type: String }, // e.g., "Badge", "Points"
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  submissions: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    recipe: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' }, // For recipe challenges
+    completedAt: { type: Date }
+  }]
+}, { timestamps: true });
+
+module.exports = mongoose.model('Challenge', challengeSchema);
