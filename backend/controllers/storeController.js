@@ -128,7 +128,8 @@ exports.addItemToStore = addItemToStore;
 
 exports.getStoreById = async (req, res) => {
   try {
-    const store = await Store.findById(req.params.storeId);
+const store = await Store.findById(req.params.storeId)
+  .populate('purchases.userId', 'name avatar');
     if (!store) return res.status(404).json({ message: 'Store not found' });
 
     res.status(200).json(store); // ✅ Return full store object
@@ -142,30 +143,44 @@ exports.recordPurchase = async (req, res) => {
   const { storeId } = req.params;
   const { userId, ingredient } = req.body;
 
+  // ✅ Check required fields
   if (!userId || !ingredient) {
-    return res.status(400).json({ message: 'userId and ingredient are required' });
+    return res.status(400).json({
+      message: 'userId and ingredient are required',
+    });
   }
 
   try {
     const store = await Store.findById(storeId);
-    if (!store) return res.status(404).json({ message: 'Store not found' });
+    if (!store) {
+      return res.status(404).json({ message: 'Store not found' });
+    }
+
+    // ✅ Ensure purchases array exists
+    const purchases = store.purchases || [];
 
     // ✅ Prevent duplicate purchase entries
-    const alreadyPurchased = store.purchases.some(p =>
-      p.userId.toString() === userId && p.ingredient.toLowerCase() === ingredient.toLowerCase()
+    const alreadyPurchased = purchases.some((p) =>
+      p?.userId?.toString() === userId &&
+      p?.ingredient?.toLowerCase() === ingredient.toLowerCase()
     );
 
     if (alreadyPurchased) {
       return res.status(200).json({ message: 'Purchase already recorded' });
     }
 
+    // ✅ Push new purchase
     store.purchases.push({ userId, ingredient });
-    await store.save();
 
-    res.status(200).json({ message: 'Purchase recorded successfully' });
+    await store.save({ validateBeforeSave: false });
+
+    return res.status(200).json({ message: 'Purchase recorded successfully' });
   } catch (err) {
     console.error('❌ Error recording purchase:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    return res.status(500).json({
+      message: 'Server error',
+      error: err.message,
+    });
   }
 };
 

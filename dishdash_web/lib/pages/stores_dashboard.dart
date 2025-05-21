@@ -152,6 +152,7 @@ class _StoresDashboardState extends State<StoresDashboard>
 
         setState(() {
           storeData = data;
+          totalPurchases = (data['purchases'] as List?)?.length ?? 0;
         });
         averageRating = _calculateAverage(data['ratings']);
       } else {
@@ -713,15 +714,19 @@ class _StoresDashboardState extends State<StoresDashboard>
                                   ? ListView(
                                     shrinkWrap: true,
                                     children: List<Widget>.from(
-                                      storeData!['purchases'].map((p) {
-                                        final user = p['userId'];
+                                      (storeData!['purchases'] as List).map<
+                                        Widget
+                                      >((purchase) {
+                                        final user = purchase['userId'];
                                         final String name =
-                                            user is Map
-                                                ? (user['name'] ?? 'Unknown')
-                                                : 'Unknown';
+                                            user is Map && user['name'] != null
+                                                ? user['name']
+                                                : 'Unknown User';
                                         final String? avatar =
                                             user is Map ? user['avatar'] : null;
-                                        final int count = p['count'] ?? 1;
+                                        final String item =
+                                            purchase['ingredient'] ??
+                                            'Unknown Item';
 
                                         return ListTile(
                                           leading: CircleAvatar(
@@ -729,9 +734,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                                                 _getAvatarImageProvider(avatar),
                                           ),
                                           title: Text(name),
-                                          subtitle: Text(
-                                            "🛒 Bought $count items",
-                                          ),
+                                          subtitle: Text('🛒 Purchased: $item'),
                                         );
                                       }),
                                     ),
