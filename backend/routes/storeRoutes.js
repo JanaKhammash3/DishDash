@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Store = require('../models/Store');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
-
 
 const {
   getNearbyStores,
@@ -17,24 +15,28 @@ const {
   rateStore,
   getAllStores,
   updateStoreItem,
-  deleteStoreItem
+  deleteStoreItem,
+  deleteStore
 } = require('../controllers/storeController');
+
+const Store = require('../models/Store');
 
 // ➕ Add a new store
 router.post('/add', addStore);
 
+// 🔍 Get stores with items (used for grocery/store mapping)
+router.get('/api/stores-with-items', getStoresWithItems);
+
+// 🔍 Get a store by ID
+router.get('/stores/:storeId', getStoreById);
 
 // 📍 Get nearby stores by coordinates
 router.get('/nearby', getNearbyStores);
 
-// 🔎 Get a store by ID
-router.get('/stores/:storeId', getStoreById);
-
 // 📊 Compare item prices across stores
 router.get('/compare', comparePrices);
 
-
-// 📦 Return flat list of all items across all stores (used in some screens)
+// 📦 Return flat list of all items across all stores
 router.get('/store-items', async (req, res) => {
   try {
     const stores = await Store.find();
@@ -52,33 +54,13 @@ router.get('/store-items', async (req, res) => {
   }
 });
 
-// 📦 Add item to specific store
-router.post('/:storeId/add-item', addItemToStore);
+// 🛒 Record purchase for a store
+router.post('/:storeId/purchase', recordPurchase);
 
-// ✅ New controller-based version
-router.get('/api/stores-with-items', getStoresWithItems);
+// ⭐ Rate store
+router.post('/stores/:storeId/rate', rateStore);
 
-
-// ✅ NEW: Search stores by item name
-router.get('/api/stores/search', async (req, res) => {
-  const { item } = req.query;
-  if (!item) return res.status(400).json({ error: 'Missing item query' });
-
-  try {
-    const stores = await Store.find({
-      "items.name": { $regex: new RegExp(item, 'i') },
-    });
-    res.json(stores);
-  } catch (err) {
-    console.error('❌ Error in search:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// 🧮 (Optional) Keep this if used elsewhere
-router.get('/api/stores', getStorePrices);
-
-
+// 📷 Upload or update store image
 router.patch('/stores/:storeId/image', upload.single('image'), async (req, res) => {
   try {
     const storeId = req.params.storeId;
@@ -107,88 +89,6 @@ router.patch('/stores/:storeId/image', upload.single('image'), async (req, res) 
   }
 });
 
-
-router.post('/:storeId/purchase', recordPurchase);
-
-router.post('/stores/:storeId/rate', rateStore);
-router.get('/', async (req, res) => {
-  try {
-    const stores = await Store.find();
-    res.status(200).json(stores);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch stores', error: err.message });
-  }
-});
-
-// ✏️ Update item (uses controller)
-router.put('/stores/:storeId/items/:itemId', updateStoreItem);
-
-// 🗑️ Delete item (uses controller)
-router.delete('/stores/:storeId/items/:itemId', deleteStoreItem);
-
-router.get('/', async (req, res) => {
-  try {
-    const {
-      search = '',
-      sort = 'name',
-      minRating = 0,
-      minPurchases = 0
-    } = req.query;
-
-    const matchConditions = [
-      {
-        $or: [
-          { name: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-        ]
-      },
-      {
-        $expr: {
-          $gte: [
-            {
-              $cond: {
-                if: { $gt: [{ $size: '$ratings' }, 0] },
-                then: { $avg: '$ratings.value' },
-                else: 0
-              }
-            },
-            parseFloat(minRating)
-          ]
-        }
-      },
-      {
-        $expr: {
-          $gte: [{ $size: '$purchases' }, parseInt(minPurchases) || 0]
-        }
-      }
-    ];
-
-    const sortStage = sort === 'rating'
-      ? { avgRating: -1 }
-      : { name: 1 };
-
-    const stores = await Store.aggregate([
-      { $match: { $and: matchConditions } },
-      {
-        $addFields: {
-          avgRating: {
-            $cond: {
-              if: { $gt: [{ $size: '$ratings' }, 0] },
-              then: { $avg: '$ratings.value' },
-              else: 0
-            }
-          }
-        }
-      },
-      { $sort: sortStage }
-    ]);
-
-    res.status(200).json(stores);
-  } catch (err) {
-    console.error('❌ Error in GET /api/stores:', err.message);
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
 // 📥 Get all items for a specific store
 router.get('/stores/:storeId/items', async (req, res) => {
   try {
@@ -201,7 +101,35 @@ router.get('/stores/:storeId/items', async (req, res) => {
   }
 });
 
+// ➕ Add item to specific store
+router.post('/:storeId/add-item', addItemToStore);
+
+// ✏️ Update store item
+router.put('/stores/:storeId/items/:itemId', updateStoreItem);
+
+// 🗑️ Delete store item
+router.delete('/stores/:storeId/items/:itemId', deleteStoreItem);
+
+// 🔍 Search stores by item name
+router.get('/api/stores/search', async (req, res) => {
+  const { item } = req.query;
+  if (!item) return res.status(400).json({ error: 'Missing item query' });
+
+  try {
+    const stores = await Store.find({
+      "items.name": { $regex: new RegExp(item, 'i') },
+    });
+    res.json(stores);
+  } catch (err) {
+    console.error('❌ Error in item-based search:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ✅ Simple GET /stores route for search by name/email
 router.get('/stores', getAllStores);
+
+router.delete('/stores/:storeId', deleteStore);
 
 
 module.exports = router;

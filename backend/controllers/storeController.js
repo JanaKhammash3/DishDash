@@ -344,42 +344,34 @@ exports.deleteStoreItem = async (req, res) => {
   }
 };
 
-// ✅ GET /api/stores?search=&sort=&minRating=&minPurchases=
+// ✅ GET /api/stores?search=
+// ✅ GET /api/stores?search=&sort=name|rating
 exports.getAllStores = async (req, res) => {
   try {
-    const { search = '', sort = 'name', minRating = 0, minPurchases = 0 } = req.query;
+    const { search = '', sort = 'name' } = req.query;
 
-    let query = {
-      $and: [
-        {
-          $or: [
-            { name: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-          ],
-        },
-        {
-          $expr: {
-            $gte: [{ $size: "$ratings" }, parseInt(minRating)]
-          }
-        },
-        {
-          $expr: {
-            $gte: [{ $size: "$purchases" }, parseInt(minPurchases)]
-          }
-        }
+    const query = {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
       ]
     };
 
     const stores = await Store.find(query).lean();
 
+    // Calculate avgRating for each store
+    for (let store of stores) {
+      const ratings = store.ratings || [];
+      store.avgRating = ratings.length
+        ? ratings.reduce((sum, r) => sum + (r.value || 0), 0) / ratings.length
+        : 0;
+    }
+
+    // Sort
     if (sort === 'rating') {
-      stores.sort((a, b) => {
-        const avgA = a.ratings?.reduce((sum, r) => sum + r.value, 0) / (a.ratings?.length || 1);
-        const avgB = b.ratings?.reduce((sum, r) => sum + r.value, 0) / (b.ratings?.length || 1);
-        return avgB - avgA;
-      });
+      stores.sort((a, b) => b.avgRating - a.avgRating); // high to low
     } else {
-      stores.sort((a, b) => a.name.localeCompare(b.name));
+      stores.sort((a, b) => a.name.localeCompare(b.name)); // A-Z
     }
 
     res.status(200).json(stores);
@@ -388,3 +380,23 @@ exports.getAllStores = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+// 🗑️ Delete a store
+// storeController.js
+
+exports.deleteStore = async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const store = await Store.findByIdAndDelete(storeId);
+
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    res.status(200).json({ message: '✅ Store deleted successfully.' });
+  } catch (err) {
+    console.error('❌ Error deleting store:', err.message);
+    res.status(500).json({ error: 'Server error', detail: err.message });
+  }
+};
+
