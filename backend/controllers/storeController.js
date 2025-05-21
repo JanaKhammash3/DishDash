@@ -329,4 +329,47 @@ exports.deleteStoreItem = async (req, res) => {
   }
 };
 
+// ✅ GET /api/stores?search=&sort=&minRating=&minPurchases=
+exports.getAllStores = async (req, res) => {
+  try {
+    const { search = '', sort = 'name', minRating = 0, minPurchases = 0 } = req.query;
 
+    let query = {
+      $and: [
+        {
+          $or: [
+            { name: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+          ],
+        },
+        {
+          $expr: {
+            $gte: [{ $size: "$ratings" }, parseInt(minRating)]
+          }
+        },
+        {
+          $expr: {
+            $gte: [{ $size: "$purchases" }, parseInt(minPurchases)]
+          }
+        }
+      ]
+    };
+
+    const stores = await Store.find(query).lean();
+
+    if (sort === 'rating') {
+      stores.sort((a, b) => {
+        const avgA = a.ratings?.reduce((sum, r) => sum + r.value, 0) / (a.ratings?.length || 1);
+        const avgB = b.ratings?.reduce((sum, r) => sum + r.value, 0) / (b.ratings?.length || 1);
+        return avgB - avgA;
+      });
+    } else {
+      stores.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    res.status(200).json(stores);
+  } catch (err) {
+    console.error('❌ Error in getAllStores:', err.message);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};

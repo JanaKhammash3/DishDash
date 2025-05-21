@@ -15,6 +15,7 @@ const {
   getStoreById,
   recordPurchase,
   rateStore,
+  getAllStores,
   updateStoreItem,
   deleteStoreItem
 } = require('../controllers/storeController');
@@ -125,7 +126,69 @@ router.put('/stores/:storeId/items/:itemId', updateStoreItem);
 // 🗑️ Delete item (uses controller)
 router.delete('/stores/:storeId/items/:itemId', deleteStoreItem);
 
+router.get('/', async (req, res) => {
+  try {
+    const {
+      search = '',
+      sort = 'name',
+      minRating = 0,
+      minPurchases = 0
+    } = req.query;
 
+    const matchConditions = [
+      {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ]
+      },
+      {
+        $expr: {
+          $gte: [
+            {
+              $cond: {
+                if: { $gt: [{ $size: '$ratings' }, 0] },
+                then: { $avg: '$ratings.value' },
+                else: 0
+              }
+            },
+            parseFloat(minRating)
+          ]
+        }
+      },
+      {
+        $expr: {
+          $gte: [{ $size: '$purchases' }, parseInt(minPurchases) || 0]
+        }
+      }
+    ];
+
+    const sortStage = sort === 'rating'
+      ? { avgRating: -1 }
+      : { name: 1 };
+
+    const stores = await Store.aggregate([
+      { $match: { $and: matchConditions } },
+      {
+        $addFields: {
+          avgRating: {
+            $cond: {
+              if: { $gt: [{ $size: '$ratings' }, 0] },
+              then: { $avg: '$ratings.value' },
+              else: 0
+            }
+          }
+        }
+      },
+      { $sort: sortStage }
+    ]);
+
+    res.status(200).json(stores);
+  } catch (err) {
+    console.error('❌ Error in GET /api/stores:', err.message);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
 // 📥 Get all items for a specific store
 router.get('/stores/:storeId/items', async (req, res) => {
   try {
@@ -138,6 +201,7 @@ router.get('/stores/:storeId/items', async (req, res) => {
   }
 });
 
+router.get('/stores', getAllStores);
 
 
 module.exports = router;
