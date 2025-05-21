@@ -28,6 +28,18 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
   bool isUploading = false;
   late TabController _tabController;
 
+  final categoryIcons = {
+    'Vegetables': Icons.eco,
+    'Fruits': Icons.local_grocery_store,
+    'Meat': Icons.restaurant_menu,
+    'Dairy': Icons.icecream,
+    'Bakery': Icons.bakery_dining,
+    'Seafood': Icons.set_meal,
+    'Beverages': Icons.local_drink,
+    'Frozen': Icons.ac_unit,
+    'Other': Icons.category,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +63,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
     }
   }
 
+  Map<String, List<Map<String, dynamic>>> categorizedItems = {};
+
   Future<void> fetchStoreInfo() async {
     final url = Uri.parse(
       'http://192.168.68.60:3000/api/stores/${widget.storeId}',
@@ -59,14 +73,147 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
+        // Group items by category
+        final fetchedItems = List<Map<String, dynamic>>.from(
+          data['items'] ?? [],
+        );
+
+        // Group items by category
+        final Map<String, List<Map<String, dynamic>>> grouped = {};
+        for (var item in fetchedItems) {
+          final category = item['category'] ?? 'Uncategorized';
+          if (!grouped.containsKey(category)) {
+            grouped[category] = [];
+          }
+          grouped[category]!.add(item);
+        }
+
         setState(() {
           storeData = data;
-          items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+          items = fetchedItems; // ✅ Make sure to store raw items too
+          categorizedItems = grouped;
         });
       }
     } catch (e) {
       debugPrint('Error fetching store info: $e');
     }
+  }
+
+  _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Vegetables':
+        return Icons.grass;
+      case 'Fruits':
+        return Icons.apple;
+      case 'Dairy':
+        return Icons.icecream;
+      case 'Meat':
+        return Icons.set_meal;
+      case 'Grains & Pasta':
+        return Icons.rice_bowl;
+      case 'Condiments':
+        return Icons.soup_kitchen;
+      case 'Canned Goods':
+        return Icons.lunch_dining;
+      case 'Frozen Food':
+        return Icons.ac_unit;
+      default:
+        return Icons.category;
+    }
+  }
+
+  Widget _buildItemsByCategorySection() {
+    if (categorizedItems.isEmpty) {
+      return const Text('No items found.');
+    }
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.2,
+      children:
+          categorizedItems.entries.map((entry) {
+            final category = entry.key;
+            final items = entry.value;
+            final icon = _getCategoryIcon(category);
+            final count = items.length;
+
+            // ✅ Count status types
+            final available =
+                items.where((item) => item['status'] == 'Available').length;
+            final outOfStock =
+                items.where((item) => item['status'] == 'Out of Stock').length;
+            final comingSoon =
+                items
+                    .where((item) => item['status'] == 'Will be Available Soon')
+                    .length;
+
+            return GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder:
+                      (_) => AlertDialog(
+                        title: Text(category),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children:
+                              items
+                                  .map(
+                                    (item) => ListTile(
+                                      leading: const Icon(Icons.fastfood),
+                                      title: Text(item['name']),
+                                      subtitle: Text(
+                                        'Price: \$${item['price']} • ${item['status']}',
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                        ),
+                      ),
+                );
+              },
+              child: Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                color: Colors.green[50],
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 36, color: green),
+                      const SizedBox(height: 10),
+                      Text(
+                        category,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '$count item(s)',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      // ✅ Status summary
+                      Text(
+                        '✔️ $available | ❌ $outOfStock | ⏳ $comingSoon',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+    );
   }
 
   Future<void> pickAndUploadImage() async {
@@ -167,27 +314,25 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      backgroundColor: Colors.white,
       builder:
           (_) => Padding(
             padding: const EdgeInsets.all(16),
-            child:
-                items.isEmpty
-                    ? const Text('No items added.')
-                    : ListView.builder(
-                      itemCount: items.length,
-                      itemBuilder: (_, index) {
-                        final item = items[index];
-                        return Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.fastfood, color: green),
-                            title: Text(item['name']?.toString() ?? 'Unnamed'),
-                            subtitle: Text(
-                              'Price: \$${item['price']?.toString() ?? '0.00'}',
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Items by Category",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: _buildItemsByCategorySection(),
+                  ),
+                ),
+              ],
+            ),
           ),
     );
   }
