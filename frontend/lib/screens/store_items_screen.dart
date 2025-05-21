@@ -19,7 +19,7 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
     with SingleTickerProviderStateMixin {
   List<dynamic> stores = [];
   List<dynamic> filteredStores = [];
-  final String baseUrl = 'http://192.168.0.101:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   String searchQuery = '';
   Position? userPosition;
   late TabController _tabController;

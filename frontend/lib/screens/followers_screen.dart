@@ -23,7 +23,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
 
   Future<void> fetchFollowers() async {
     final url = Uri.parse(
-      'http://192.168.0.101:3000/api/users/followers/${widget.userId}',
+      'http://192.168.1.4:3000/api/users/followers/${widget.userId}',
     );
     final res = await http.get(url);
 
@@ -44,7 +44,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
     } else if (avatar != null && avatar.startsWith('/9j')) {
       return MemoryImage(base64Decode(avatar));
     } else if (avatar != null && avatar.isNotEmpty) {
-      return NetworkImage('http://192.168.0.101:3000/images/$avatar');
+      return NetworkImage('http://192.168.1.4:3000/images/$avatar');
     } else {
       return const AssetImage('assets/placeholder.png');
     }
