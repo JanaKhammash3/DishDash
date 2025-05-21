@@ -309,7 +309,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                 try {
                   final response = await http.post(
                     Uri.parse(
-                      'http://192.168.1.4:3000/api/stores/${widget.store['_id']}/rate',
+                      'http://192.168.0.101:3000/api/stores/${widget.store['_id']}/rate',
                     ),
 
                     headers: {'Content-Type': 'application/json'},
