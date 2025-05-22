@@ -22,10 +22,16 @@ exports.getAllChallenges = async (req, res) => {
 
 exports.getChallengeById = async (req, res) => {
   try {
-    const challenge = await Challenge.findById(req.params.id);
+    const challenge = await Challenge.findById(req.params.id)
+      .populate('participants', 'name avatar'); // 👈 only fetch name and avatar
+
+    if (!challenge) {
+      return res.status(404).json({ error: 'Challenge not found' });
+    }
+
     res.json(challenge);
   } catch (err) {
-    res.status(404).json({ error: 'Challenge not found' });
+    res.status(400).json({ error: err.message });
   }
 };
 

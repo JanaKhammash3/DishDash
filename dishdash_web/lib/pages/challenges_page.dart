@@ -35,6 +35,23 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
     }
   }
 
+  ImageProvider _getImageProvider(String? image) {
+    if (image == null || image.isEmpty) {
+      return const AssetImage('assets/placeholder.png');
+    } else if (image.startsWith('http')) {
+      return NetworkImage(image);
+    } else if (image.startsWith('/9j')) {
+      // Base64 JPEG prefix
+      try {
+        return MemoryImage(base64Decode(image));
+      } catch (_) {
+        return const AssetImage('assets/placeholder.png');
+      }
+    } else {
+      return const AssetImage('assets/placeholder.png');
+    }
+  }
+
   Future<void> saveChallenge() async {
     final challengeData = {
       'title': _titleController.text,
@@ -60,6 +77,58 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
       }
       fetchChallenges();
       Navigator.pop(context);
+    }
+  }
+
+  Future<void> _showParticipantsModal(String challengeId) async {
+    final response = await http.get(
+      Uri.parse('http://192.168.68.60:3000/api/challenges/$challengeId'),
+    );
+
+    if (response.statusCode == 200) {
+      final challenge = jsonDecode(response.body);
+      final participants = challenge['participants'] ?? [];
+
+      showDialog(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text('Participants'),
+              content: SizedBox(
+                width: 400,
+                height: 400,
+                child:
+                    participants.isEmpty
+                        ? const Center(child: Text('No participants yet.'))
+                        : ListView.builder(
+                          itemCount: participants.length,
+                          itemBuilder: (context, index) {
+                            final user = participants[index];
+                            final avatar = user['avatar'];
+                            final name = user['name'] ?? 'Unknown';
+
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: _getImageProvider(avatar),
+                              ),
+
+                              title: Text(name),
+                            );
+                          },
+                        ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load participants')),
+      );
     }
   }
 
@@ -293,6 +362,16 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
                                           () => _openChallengeDialog(
                                             existingChallenge: challenge,
                                           ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.people,
+                                      ), // 👈 participants icon
+                                      onPressed:
+                                          () => _showParticipantsModal(
+                                            challenge['_id'],
+                                          ),
+                                      tooltip: 'Participants',
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete),
