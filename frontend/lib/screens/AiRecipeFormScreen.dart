@@ -34,7 +34,7 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
 
     final response = await http.post(
       Uri.parse(
-        'http://192.168.1.4:3000/api/users/${widget.userId}/custom-recipes',
+        'http://192.168.68.60:3000/api/users/${widget.userId}/custom-recipes',
       ),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
@@ -71,7 +71,7 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
     setState(() => isLoading = true);
 
     final response = await http.post(
-      Uri.parse('http://192.168.1.4:3000/api/ai/generate-recipe'),
+      Uri.parse('http://192.168.68.60:3000/api/ai/generate-recipe'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         "mealTime": mealTime,

@@ -13,7 +13,7 @@ exports.createChallenge = async (req, res) => {
 
 exports.getAllChallenges = async (req, res) => {
   try {
-    const challenges = await Challenge.find();
+    const challenges = await Challenge.find().sort({ updatedAt: -1 });
     res.json(challenges);
   } catch (err) {
     res.status(500).json({ error: err.message });

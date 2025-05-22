@@ -18,11 +18,11 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen> {
   String selectedCategory = 'users'; // default
   List<dynamic> posts = [];
-
+  List<String> joinedChallengeIds = [];
   List<String> savedRecipeIds = [];
   String? userId;
 
-  final String baseUrl = 'http://192.168.1.4:3000'; // Adjust for your setup
+  final String baseUrl = 'http://192.168.68.60:3000'; // Adjust for your setup
 
   @override
   void initState() {
@@ -35,6 +35,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final date = DateTime.tryParse(isoString);
     if (date == null) return '';
     return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> joinChallenge(String challengeId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/challenges/$challengeId/join'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'userId': userId}),
+    );
+    if (response.statusCode == 200) {
+      setState(() {
+        joinedChallengeIds.add(challengeId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You joined the challenge!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to join challenge.')),
+      );
+    }
   }
 
   Future<void> sendNotification({
@@ -83,6 +103,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
     await fetchPosts();
   }
 
+  Future<void> fetchChallenges() async {
+    setState(() => posts = []); // Clear any recipe data
+    final res = await http.get(Uri.parse('$baseUrl/api/challenges'));
+    if (res.statusCode == 200) {
+      setState(() {
+        posts = json.decode(res.body);
+      });
+    }
+  }
+
   Future<void> fetchUserProfile() async {
     final res = await http.get(Uri.parse('$baseUrl/api/profile/$userId'));
     if (res.statusCode == 200) {
@@ -94,6 +124,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Future<void> fetchPosts() async {
+    setState(() => posts = []);
     final res = await http.get(Uri.parse('$baseUrl/api/recipes'));
 
     if (res.statusCode == 200) {
@@ -190,16 +221,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return ElevatedButton.icon(
       onPressed: () {
         if (value == 'stores') {
-          // 👉 Instead of just filtering, open store items screen
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const StoreItemsScreen()),
           );
         } else {
-          // regular filter logic for 'users' or 'challenges'
-          if (selectedCategory != value) {
-            setState(() => selectedCategory = value);
+          setState(() => selectedCategory = value);
+          if (value == 'users') {
             fetchPosts();
+          } else if (value == 'challenges') {
+            fetchChallenges();
           }
         }
       },
@@ -210,6 +241,69 @@ class _CommunityScreenState extends State<CommunityScreen> {
         foregroundColor: isSelected ? Colors.white : Colors.black,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+  }
+
+  Widget _buildChallengeJoinCard(Map post, int index) {
+    final isJoined = joinedChallengeIds.contains(post['_id']);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.flag,
+                  color: Colors.deepOrange,
+                ), // You can change color
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    post['title'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+            Text(post['description'] ?? ''),
+            const SizedBox(height: 6),
+            Text(
+              'Type: ${post['type']}',
+              style: const TextStyle(fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'From ${post['startDate']?.split('T')[0]} to ${post['endDate']?.split('T')[0]}',
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: isJoined ? null : () => joinChallenge(post['_id']),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: green,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(isJoined ? 'Joined ✅' : 'Join Challenge'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -260,137 +354,144 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             (post['likes'] as List?)?.contains(userId) ?? false;
                         final isSaved = savedRecipeIds.contains(recipeId);
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 4,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ListTile(
-                                leading: CircleAvatar(
-                                  backgroundImage: _getImageProvider(
-                                    author?['avatar'],
+                        if (selectedCategory == 'challenges') {
+                          return _buildChallengeJoinCard(post, index);
+                        } else {
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundImage: _getImageProvider(
+                                      author?['avatar'],
+                                    ),
                                   ),
-                                ),
-                                title: Text(author?['name'] ?? 'Unknown'),
-                                trailing:
-                                    author?['_id'] != userId
-                                        ? ElevatedButton(
-                                          onPressed: () async {
-                                            await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder:
-                                                    (_) => UserProfileScreen(
-                                                      userId:
-                                                          author?['_id'] ?? '',
-                                                    ),
+                                  title: Text(author?['name'] ?? 'Unknown'),
+                                  trailing:
+                                      author?['_id'] != userId
+                                          ? ElevatedButton(
+                                            onPressed: () async {
+                                              await Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (_) => UserProfileScreen(
+                                                        userId:
+                                                            author?['_id'] ??
+                                                            '',
+                                                      ),
+                                                ),
+                                              );
+                                              await fetchPosts();
+                                              await fetchUserProfile();
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: green,
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 6,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
                                               ),
-                                            );
-                                            await fetchPosts();
-                                            await fetchUserProfile();
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: green,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 14,
-                                              vertical: 6,
                                             ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
+                                            child: const Text(
+                                              'Profile',
+                                              style: TextStyle(fontSize: 12),
                                             ),
-                                          ),
-                                          child: const Text(
-                                            'Profile',
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        )
-                                        : null,
-                              ),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image(
-                                  image: _getImageProvider(post['image']),
-                                  width: double.infinity,
-                                  height: 200,
-                                  fit: BoxFit.cover,
+                                          )
+                                          : null,
                                 ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                  vertical: 4,
-                                ),
-                                child: Text(
-                                  post['title'] ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image(
+                                    image: _getImageProvider(post['image']),
+                                    width: double.infinity,
+                                    height: 200,
+                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                  vertical: 8,
-                                ),
-                                child: Text(post['description'] ?? ''),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16.0,
-                                  vertical: 4,
-                                ),
-                                child: Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        liked
-                                            ? Icons.favorite
-                                            : Icons.favorite_border,
-                                        color: liked ? Colors.red : Colors.grey,
-                                      ),
-                                      onPressed:
-                                          () => toggleLike(recipeId, index),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0,
+                                    vertical: 4,
+                                  ),
+                                  child: Text(
+                                    post['title'] ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    Text('${post['likes']?.length ?? 0}'),
-                                    const SizedBox(width: 12),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.comment,
-                                        color: Colors.grey,
-                                      ),
-                                      onPressed:
-                                          () => openCommentModal(recipeId),
-                                    ),
-                                    Text('${post['commentCount'] ?? 0}'),
-                                    const Spacer(),
-                                    IconButton(
-                                      icon: Icon(
-                                        isSaved
-                                            ? Icons.bookmark
-                                            : Icons.bookmark_outline,
-                                        color:
-                                            isSaved
-                                                ? Colors.black
-                                                : Colors.grey,
-                                      ),
-                                      onPressed: () => toggleSave(recipeId),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0,
+                                    vertical: 8,
+                                  ),
+                                  child: Text(post['description'] ?? ''),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0,
+                                    vertical: 4,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          liked
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          color:
+                                              liked ? Colors.red : Colors.grey,
+                                        ),
+                                        onPressed:
+                                            () => toggleLike(recipeId, index),
+                                      ),
+                                      Text('${post['likes']?.length ?? 0}'),
+                                      const SizedBox(width: 12),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.comment,
+                                          color: Colors.grey,
+                                        ),
+                                        onPressed:
+                                            () => openCommentModal(recipeId),
+                                      ),
+                                      Text('${post['commentCount'] ?? 0}'),
+                                      const Spacer(),
+                                      IconButton(
+                                        icon: Icon(
+                                          isSaved
+                                              ? Icons.bookmark
+                                              : Icons.bookmark_outline,
+                                          color:
+                                              isSaved
+                                                  ? Colors.black
+                                                  : Colors.grey,
+                                        ),
+                                        onPressed: () => toggleSave(recipeId),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
                       },
                     ),
                   ),
