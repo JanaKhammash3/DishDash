@@ -37,6 +37,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/images', express.static(path.join(__dirname, './public/images')));
 app.use('/api/chats', chatRoutes);
 app.use(storeRoutes);
+app.use('/api/posts', require('./routes/postRoutes'));
 app.use('/api', require('./routes/storeRoutes'));
 const nutritionRoutes = require('./routes/nutritionRoutes');
 app.use('/api', nutritionRoutes);
