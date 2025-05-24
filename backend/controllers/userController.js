@@ -583,13 +583,18 @@ exports.updateAvailableIngredients = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
-      .populate('following', 'name avatar _id') // ensure _id is included
+      .populate('following', 'name avatar _id')
       .lean();
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Add an array of just the followed user IDs
+    // Add following IDs
     user.followingIds = (user.following || []).map(f => f._id.toString());
+
+    // 🔥 Add followers list by reverse lookup
+    const followers = await User.find({ following: req.params.id }).select('_id name avatar').lean();
+    user.followers = followers; // 👈 add this line
+    user.followerCount = followers.length; // 👈 and this
 
     res.json(user);
   } catch (err) {
@@ -597,6 +602,7 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // GET list of followers
 exports.getFollowers = async (req, res) => {

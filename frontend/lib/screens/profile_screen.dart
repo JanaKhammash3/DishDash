@@ -36,19 +36,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? avatarBase64;
   late IO.Socket socket;
   bool isDarkMode = true;
+  int followerCount = 0;
+  int followingCount = 0;
+  String? currentUserId;
+  int likesCount = 0;
 
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
+    loadCurrentUserId();
     fetchUserProfile();
-    connectSocket(); // 👈 ADD THIS
+    connectSocket();
+    fetchUserLikes(); // <-- add this
+  }
+
+  Future<void> loadCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      currentUserId = prefs.getString('userId');
+    });
+  }
+
+  Future<void> fetchUserLikes() async {
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/posts/likes-count/${widget.userId}',
+    );
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          likesCount = data['totalLikes'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching likes: $e');
+    }
   }
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/profile/${widget.userId}',
+      'http://192.168.1.4:3000/api/profile/${widget.userId}',
     );
 
     try {
@@ -59,6 +90,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           name = data['name'];
           email = data['email'];
           avatarBase64 = data['avatar'];
+          followerCount =
+              data['followers'] is List
+                  ? data['followers'].length
+                  : data['followers'] ?? 0;
+
+          followingCount =
+              data['following'] is List
+                  ? data['following'].length
+                  : data['following'] ?? 0;
         });
       } else {
         ScaffoldMessenger.of(
@@ -71,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void connectSocket() {
-    socket = IO.io('http://192.168.68.60:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
     });
@@ -130,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           final response = await http.post(
                             Uri.parse(
-                              'http://192.168.68.60:3000/api/users/${widget.userId}/scrape-pin',
+                              'http://192.168.1.4:3000/api/users/${widget.userId}/scrape-pin',
                             ),
                             headers: {'Content-Type': 'application/json'},
                             body: jsonEncode({'url': url}),
@@ -198,7 +238,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final base64String = base64Encode(compressedBytes);
 
       final url = Uri.parse(
-        'http://192.168.68.60:3000/api/profile/${widget.userId}/avatar',
+        'http://192.168.1.4:3000/api/profile/${widget.userId}/avatar',
       );
 
       final response = await http.put(
@@ -239,6 +279,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
+    );
+  }
+
+  Widget _followStatButton(String label, int count, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              '$count',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatButton(String label, String value, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  Widget _statBox(IconData icon, String label, int value) {
+    return Column(
+      children: [
+        Icon(icon, color: green),
+        const SizedBox(height: 4),
+        Text(
+          value.toString(),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+      ],
     );
   }
 
@@ -369,18 +477,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
-          const SizedBox(height: 20),
-          Center(
-            child: Column(
-              children: [
-                Stack(
-                  children: [
-                    CircleAvatar(
+          // Header + Avatar + Info + Stats
+          Column(
+            children: [
+              const SizedBox(height: 24),
+
+              // Avatar with green border and edit icon at bottom right
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: green,
+                        width: 3,
+                      ), // ✅ green border
+                    ),
+                    child: CircleAvatar(
                       radius: 50,
+                      backgroundImage:
+                          avatarBase64 != null
+                              ? MemoryImage(base64Decode(avatarBase64!))
+                              : null,
                       backgroundColor: Colors.grey.shade300,
-                      backgroundImage: avatarImage,
                       child:
-                          avatarImage == null
+                          avatarBase64 == null
                               ? const Icon(
                                 Icons.person,
                                 size: 40,
@@ -388,38 +511,151 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               )
                               : null,
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 4,
-                      child: GestureDetector(
-                        onTap: _pickAndUploadImage,
-                        child: CircleAvatar(
-                          radius: 14,
-                          backgroundColor: CupertinoColors.activeOrange,
-                          child: const Icon(
-                            Icons.edit,
-                            size: 16,
-                            color: Colors.white,
+                  ),
+
+                  // ✅ Edit icon overlaid
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: _pickAndUploadImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                        ),
+                        child: Icon(Icons.edit, size: 18, color: green),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // Name and email
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                email,
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Stats
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // FOLLOWING with ripple
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => FollowingScreen(userId: widget.userId),
                           ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0,
+                          vertical: 8,
+                        ),
+                        child: _statBox(
+                          Icons.group_add,
+                          'Following',
+                          followingCount,
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // FOLLOWERS with ripple
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => FollowersScreen(userId: widget.userId),
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0,
+                          vertical: 8,
+                        ),
+                        child: _statBox(
+                          Icons.group,
+                          'Followers',
+                          followerCount,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // LIKES (no ripple for now)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0,
+                      vertical: 8,
+                    ),
+                    child: _statBox(Icons.favorite, 'Likes', likesCount),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Follow button
+              if (currentUserId != widget.userId)
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // TODO: toggle follow/unfollow
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: green,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  icon: const Icon(Icons.person_add, color: Colors.white),
+                  label: const Text(
+                    'Follow',
+                    style: TextStyle(color: Colors.white),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(email, style: const TextStyle(color: Colors.grey)),
-              ],
-            ),
+
+              const SizedBox(height: 24),
+            ],
           ),
-          const SizedBox(height: 30),
+
+          // Now your recipe cards etc. below:
+          // Now your recipe cards etc. below:
           _buildCard(
             Icons.restaurant_menu,
             'My Recipes',
@@ -448,7 +684,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
-
           const SizedBox(height: 10),
           _buildCard(
             Icons.fitness_center,
@@ -520,7 +755,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
-
           const SizedBox(height: 30),
           Center(
             child: ElevatedButton.icon(
