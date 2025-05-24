@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/ChatsScreen.dart' as chats;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -459,6 +460,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 MaterialPageRoute(
                   builder:
                       (_) => saved.CaloryScoreScreen(userId: widget.userId),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          _buildCard(
+            Icons.chat,
+            'Chatting',
+            'Communicate with your friends',
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => chats.ChatsScreen(userId: widget.userId),
                 ),
               );
             },

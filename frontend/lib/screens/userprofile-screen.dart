@@ -492,6 +492,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (res.statusCode == 200) {
       messages = json.decode(res.body);
     }
+    await http.post(
+      Uri.parse('$baseUrl/api/chats/markAsRead'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'senderId': widget.userId, // you are reading their messages
+        'receiverId': userId, // you are the receiver here
+      }),
+    );
 
     showModalBottomSheet(
       context: context,
