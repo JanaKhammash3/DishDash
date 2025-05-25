@@ -25,6 +25,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
   List<dynamic> messages = [];
   bool socketInitialized = false;
   final ImagePicker picker = ImagePicker();
+  Set<String> onlineUserIds = {}; // ✅ Add this line
+  final ScrollController _chatScrollController = ScrollController();
 
   @override
   void initState() {
@@ -60,6 +62,20 @@ class _ChatsScreenState extends State<ChatsScreen> {
         }
         fetchChatUsers();
       });
+
+      socket.on('userOnlineStatus', (data) {
+        final String id = data['userId'];
+        final bool isOnline = data['online'];
+
+        setState(() {
+          if (isOnline) {
+            onlineUserIds.add(id);
+          } else {
+            onlineUserIds.remove(id);
+          }
+        });
+      });
+
       socketInitialized = true;
     }
   }
@@ -97,6 +113,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
       Uri.parse('$baseUrl/api/chats/${widget.userId}/$recipientId'),
     );
     messages = res.statusCode == 200 ? json.decode(res.body) : [];
+
+    // 👇 Scroll to bottom after messages load
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.jumpTo(
+          _chatScrollController.position.maxScrollExtent,
+        );
+      }
+    });
 
     await markAsRead(recipientId);
 
@@ -136,7 +161,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         const SizedBox(height: 12),
                         Expanded(
                           child: ListView.builder(
-                            controller: scrollController,
+                            controller:
+                                _chatScrollController, // ✅ use the controller here
                             itemCount: messages.length,
                             itemBuilder: (_, index) {
                               final msg = messages[index];
@@ -232,6 +258,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                               horizontal: 12,
                                               vertical: 10,
                                             ),
+                                            constraints: BoxConstraints(
+                                              maxWidth:
+                                                  MediaQuery.of(
+                                                    context,
+                                                  ).size.width *
+                                                  0.65, // 👈 max width 75%
+                                            ),
                                             decoration: BoxDecoration(
                                               color:
                                                   isMe
@@ -288,6 +321,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                                                     .black87,
                                                         fontSize: 14,
                                                       ),
+                                                      softWrap: true,
                                                     ),
                                                   ),
                                                 const SizedBox(height: 4),
@@ -334,6 +368,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         if (selectedImageBytes != null)
                           Stack(
                             alignment: Alignment.topRight,
+
                             children: [
                               Container(
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -352,6 +387,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                   Icons.close,
                                   color: Colors.red,
                                 ),
+
                                 onPressed:
                                     () => setModalState(
                                       () => selectedImageBytes = null,
@@ -411,7 +447,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                       'name': currentUserData['name'],
                                       'avatar': currentUserData['avatar'],
                                     },
-
                                     'message': message,
                                     'image': image,
                                     'timestamp':
@@ -419,6 +454,19 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                   });
                                   _controller.clear();
                                   selectedImageBytes = null;
+                                });
+
+                                // 👇 Scroll to bottom after UI updates
+                                Future.delayed(Duration(milliseconds: 100), () {
+                                  if (_chatScrollController.hasClients) {
+                                    _chatScrollController.animateTo(
+                                      _chatScrollController
+                                          .position
+                                          .maxScrollExtent,
+                                      duration: Duration(milliseconds: 300),
+                                      curve: Curves.easeOut,
+                                    );
+                                  }
                                 });
                               },
                               style: ElevatedButton.styleFrom(
@@ -478,9 +526,31 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 itemBuilder: (context, index) {
                   final user = chatUsers[index];
                   return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: _getAvatar(user['avatar']),
+                    leading: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundImage: _getAvatar(user['avatar']),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color:
+                                  onlineUserIds.contains(user['_id'])
+                                      ? Colors.green
+                                      : Colors.grey,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+
                     title: Text(
                       user['name'] ?? 'User',
                       style: TextStyle(
@@ -492,7 +562,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
                       ),
                     ),
                     subtitle: Text(
-                      user['lastMessage'] ?? '',
+                      user['lastMessage']?.isNotEmpty == true
+                          ? user['lastMessage']
+                          : onlineUserIds.contains(user['_id'])
+                          ? 'Online'
+                          : 'Offline',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -503,6 +577,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         color: Colors.grey[700],
                       ),
                     ),
+
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
