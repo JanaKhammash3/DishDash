@@ -43,17 +43,18 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isBase64 = widget.imagePath.startsWith(
-      '/9j',
-    ); // Simple JPEG base64 check
-    final isNetwork = widget.imagePath.startsWith('http');
-
     ImageProvider imageProvider;
-    if (isBase64) {
-      imageProvider = MemoryImage(base64Decode(widget.imagePath));
-    } else if (isNetwork) {
-      imageProvider = NetworkImage(widget.imagePath);
-    } else {
+    try {
+      final isLikelyBase64 =
+          widget.imagePath.length > 100 && !widget.imagePath.contains('http');
+      if (isLikelyBase64) {
+        imageProvider = MemoryImage(base64Decode(widget.imagePath));
+      } else if (widget.imagePath.startsWith('http')) {
+        imageProvider = NetworkImage(widget.imagePath);
+      } else {
+        imageProvider = const AssetImage('assets/placeholder.png');
+      }
+    } catch (_) {
       imageProvider = const AssetImage('assets/placeholder.png');
     }
 
