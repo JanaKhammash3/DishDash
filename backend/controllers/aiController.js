@@ -1,4 +1,5 @@
 const { OpenAI } = require('openai');
+require('dotenv').config();
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -79,5 +80,72 @@ Respond ONLY in this exact format (no intro or explanation):
   } catch (err) {
     console.error('❌ Error:', err.message);
     res.status(500).json({ error: 'Failed to generate recipe or image.' });
+  }
+};
+
+
+
+
+
+exports.imageToRecipe = async (req, res) => {
+  const { image } = req.body;
+
+  if (!image) {
+    return res.status(400).json({ error: 'Image is required as base64' });
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text:
+                "Analyze this food image and generate a recipe including: title, description, ingredients, instructions, calories. Return ONLY JSON with this format:\n\n" +
+                `{
+  "title": "...",
+  "description": "...",
+  "ingredients": ["..."],
+  "instructions": ["..."],
+  "calories": number
+}`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${image}`,
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 1000,
+    });
+    const raw = response.choices[0].message.content;
+    console.log('🧠 Vision AI Raw Response:', raw);
+    
+    let cleaned = raw.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/```json|```/g, '').trim();
+    }
+    
+    let recipe;
+    try {
+      recipe = JSON.parse(cleaned);
+    } catch (e) {
+      console.error('❌ Parse failed:', cleaned);
+      return res.status(500).json({ error: 'Failed to parse recipe. AI response may not be in proper format.', raw });
+    }
+
+    // Attach the original image for frontend preview
+    recipe.image = image;
+
+    res.json(recipe);
+  } catch (err) {
+    console.error("❌ Error generating recipe from image:", err.message);
+    res.status(500).json({ error: 'Failed to generate recipe from image.' });
   }
 };
