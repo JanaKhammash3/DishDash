@@ -4,21 +4,43 @@ const mongoose = require('mongoose');
 
 // Send message
 exports.sendMessage = async (req, res) => {
-  const { senderId, receiverId, message } = req.body;
+  try {
+    const { senderId, receiverId, message, image } = req.body;
 
-  if (!senderId || !receiverId || !message) {
-    return res.status(400).json({ message: 'Missing fields' });
+    if (!senderId || !receiverId || (!message && !image)) {
+      return res.status(400).json({ message: 'Message or image is required' });
+    }
+
+    const chat = new Chat({
+      senderId: mongoose.Types.ObjectId(senderId),      // <-- FIX HERE
+      receiverId: mongoose.Types.ObjectId(receiverId),  // <-- FIX HERE
+      message,
+      image,
+      isRead: false,
+    });
+
+    await chat.save();
+
+    res.status(201).json(chat);
+  } catch (err) {
+    console.error('Send message error:', err.message);
+    res.status(500).json({ error: err.message });
   }
+};
 
-  const chat = new Chat({
-    senderId,
-    receiverId,
-    message,
-    isRead: false // ✅ mark as unread
-  });
-  await chat.save();
 
-  res.status(201).json(chat);
+// GET /api/chats/unread-count/:userId
+exports.getUnreadCount = async (req, res) => {
+  try {
+    const count = await Chat.countDocuments({
+      receiverId: new mongoose.Types.ObjectId(req.params.userId),
+      isRead: false,
+    });
+    res.json({ count });
+  } catch (err) {
+    console.error('Unread count error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // Get conversation between two users
@@ -32,11 +54,13 @@ exports.getConversation = async (req, res) => {
     ]
   })
     .sort({ timestamp: 1 })
+    .select('senderId receiverId message image timestamp') // ✅ include image
     .populate('senderId', 'name avatar')
     .populate('receiverId', 'name avatar');
 
   res.json(messages);
 };
+
 
 // Mark all messages from otherUserId → userId as read
 exports.markMessagesAsRead = async (req, res) => {
@@ -87,6 +111,7 @@ exports.getChatUsers = async (req, res) => {
             ]
           },
           lastMessage: { $first: '$message' },
+          lastImage: { $first: '$image' }, // 👈 capture image too
           lastTimestamp: { $first: '$timestamp' },
           unreadCount: {
             $sum: {
@@ -113,12 +138,20 @@ exports.getChatUsers = async (req, res) => {
         }
       },
       { $unwind: '$user' },
+
+      // ✅ Use [Image] fallback if message is empty but image exists
       {
         $project: {
           _id: '$user._id',
           name: '$user.name',
           avatar: '$user.avatar',
-          lastMessage: 1,
+          lastMessage: {
+            $cond: [
+              { $eq: ['$lastMessage', ''] },
+              '[Image]',
+              '$lastMessage'
+            ]
+          },
           lastTimestamp: 1,
           unreadCount: 1
         }
@@ -134,3 +167,4 @@ exports.getChatUsers = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+

@@ -14,7 +14,8 @@ const {
   toggleLike,
   getAllRecipesAdmin,
   getFullRecipeDetails,
-  deleteReciperoot
+  deleteReciperoot,
+  getRecipeCountByUser
 } = require('../controllers/recipeController');
 
 // ✅ Specific routes first
@@ -33,6 +34,7 @@ router.get('/:id', getRecipeById);
 router.get('/admin/all', getAllRecipesAdmin);
 router.get('/:id/full-details', getFullRecipeDetails);
 router.delete('/:id', deleteReciperoot);
+router.get('/count/:userId', getRecipeCountByUser);
 
 
 module.exports = router;

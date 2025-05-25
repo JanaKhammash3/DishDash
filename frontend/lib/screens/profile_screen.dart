@@ -39,29 +39,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int followerCount = 0;
   int followingCount = 0;
   String? currentUserId;
-  int likesCount = 0;
+  int recipeCount = 0;
+  int unreadCount = 0;
 
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    loadCurrentUserId();
+    loadCurrentUserId(); // ✅ will fetch unread messages after setting currentUserId
     fetchUserProfile();
     connectSocket();
-    fetchUserLikes(); // <-- add this
+    fetchRecipeCount();
   }
 
   Future<void> loadCurrentUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      currentUserId = prefs.getString('userId');
-    });
+    final id = prefs.getString('userId');
+    if (id != null) {
+      setState(() => currentUserId = id);
+      await fetchUnreadMessages(); // 🔁 move inside and wait
+    }
   }
 
-  Future<void> fetchUserLikes() async {
+  Future<void> fetchRecipeCount() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/posts/likes-count/${widget.userId}',
+      'http://192.168.1.4:3000/api/recipes/count/${widget.userId}',
     );
 
     try {
@@ -69,11 +72,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          likesCount = data['totalLikes'];
+          recipeCount = data['count'];
         });
       }
     } catch (e) {
-      debugPrint('Error fetching likes: $e');
+      debugPrint('Error fetching recipe count: $e');
+    }
+  }
+
+  Future<void> fetchUnreadMessages() async {
+    if (currentUserId == null) {
+      print('⚠️ currentUserId is null');
+      return;
+    }
+
+    final url = 'http://192.168.1.4:3000/api/chats/unread-count/$currentUserId';
+    print('📡 Calling: $url');
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      print('📡 Status: ${response.statusCode}');
+      print('📡 Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          unreadCount = data['count'] ?? 0;
+        });
+        print('🔔 Unread messages count set: $unreadCount');
+      } else {
+        print('❌ Failed to fetch: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception: $e');
     }
   }
 
@@ -474,309 +505,313 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      body: Stack(
         children: [
-          // Header + Avatar + Info + Stats
-          Column(
+          // Main scrollable content
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             children: [
-              const SizedBox(height: 24),
-
-              // Avatar with green border and edit icon at bottom right
-              Stack(
-                alignment: Alignment.bottomRight,
+              // Header + Avatar + Info + Stats
+              Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: green,
-                        width: 3,
-                      ), // ✅ green border
-                    ),
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundImage:
-                          avatarBase64 != null
-                              ? MemoryImage(base64Decode(avatarBase64!))
-                              : null,
-                      backgroundColor: Colors.grey.shade300,
-                      child:
-                          avatarBase64 == null
-                              ? const Icon(
-                                Icons.person,
-                                size: 40,
-                                color: Colors.white70,
-                              )
-                              : null,
-                    ),
-                  ),
+                  const SizedBox(height: 24),
 
-                  // ✅ Edit icon overlaid
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _pickAndUploadImage,
-                      child: Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: const BoxDecoration(
+                  // Avatar with green border and edit icon at bottom right
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white,
+                          border: Border.all(color: green, width: 3),
                         ),
-                        child: Icon(Icons.edit, size: 18, color: green),
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundImage:
+                              avatarBase64 != null
+                                  ? MemoryImage(base64Decode(avatarBase64!))
+                                  : null,
+                          backgroundColor: Colors.grey.shade300,
+                          child:
+                              avatarBase64 == null
+                                  ? const Icon(
+                                    Icons.person,
+                                    size: 40,
+                                    color: Colors.white70,
+                                  )
+                                  : null,
+                        ),
                       ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: _pickAndUploadImage,
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                            ),
+                            child: Icon(Icons.edit, size: 18, color: green),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    email,
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Stats row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildStatBoxWithTap(
+                        icon: Icons.group_add,
+                        label: 'Following',
+                        value: followingCount,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => FollowingScreen(userId: widget.userId),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _buildStatBoxWithTap(
+                        icon: Icons.group,
+                        label: 'Followers',
+                        value: followerCount,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => FollowersScreen(userId: widget.userId),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _statBox(Icons.restaurant_menu, 'Recipes', recipeCount),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Follow button (if visiting other user)
+                  if (currentUserId != widget.userId)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: Toggle follow/unfollow logic
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: green,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                      icon: const Icon(Icons.person_add, color: Colors.white),
+                      label: const Text(
+                        'Follow',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+
+                  const SizedBox(height: 24),
                 ],
               ),
 
-              const SizedBox(height: 12),
-
-              // Name and email
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                email,
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Stats
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // FOLLOWING with ripple
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => FollowingScreen(userId: widget.userId),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12.0,
-                          vertical: 8,
-                        ),
-                        child: _statBox(
-                          Icons.group_add,
-                          'Following',
-                          followingCount,
-                        ),
-                      ),
+              // Cards
+              _buildCard(
+                Icons.restaurant_menu,
+                'My Recipes',
+                'Add or manage your custom recipes',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MyRecipesScreen(userId: widget.userId),
                     ),
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  // FOLLOWERS with ripple
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => FollowersScreen(userId: widget.userId),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12.0,
-                          vertical: 8,
-                        ),
-                        child: _statBox(
-                          Icons.group,
-                          'Followers',
-                          followerCount,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  // LIKES (no ripple for now)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0,
-                      vertical: 8,
-                    ),
-                    child: _statBox(Icons.favorite, 'Likes', likesCount),
-                  ),
-                ],
+                  );
+                },
               ),
-
-              const SizedBox(height: 16),
-
-              // Follow button
-              if (currentUserId != widget.userId)
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: toggle follow/unfollow
-                  },
+              const SizedBox(height: 10),
+              _buildCard(
+                Icons.bookmark,
+                'Saved Recipes',
+                'View your saved dishes and favorites',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) =>
+                              saved.SavedRecipesScreen(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
+              _buildCard(
+                Icons.fitness_center,
+                'Calorie Score',
+                'Track your nutritional progress',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => saved.CaloryScoreScreen(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
+              _buildCard(
+                Icons.assignment,
+                'Update Your Survey',
+                'Change dietary and lifestyle preferences',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UpdateSurveyScreen(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 30),
+              Center(
+                child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: green,
+                    backgroundColor: CupertinoColors.activeOrange,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
+                      horizontal: 24,
                       vertical: 12,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: const Icon(Icons.person_add, color: Colors.white),
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout, color: Colors.white),
                   label: const Text(
-                    'Follow',
+                    'Logout',
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
-
-              const SizedBox(height: 24),
+              ),
             ],
           ),
 
-          // Now your recipe cards etc. below:
-          // Now your recipe cards etc. below:
-          _buildCard(
-            Icons.restaurant_menu,
-            'My Recipes',
-            'Add or manage your custom recipes',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MyRecipesScreen(userId: widget.userId),
+          // Floating Chat Button
+          // Floating Chat Button
+          Positioned(
+            top: 20,
+            right: 20,
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: green,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: green.withOpacity(0.4),
+                        spreadRadius: 4,
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.chat_bubble_outline,
+                      color: Colors.white,
+                    ),
+                    iconSize: 26,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (_) => chats.ChatsScreen(userId: widget.userId),
+                        ),
+                      ).then((_) => fetchUnreadMessages()); // Refresh on return
+                    },
+                  ),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildCard(
-            Icons.bookmark,
-            'Saved Recipes',
-            'View your saved dishes and favorites',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (_) => saved.SavedRecipesScreen(userId: widget.userId),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildCard(
-            Icons.fitness_center,
-            'Calorie Score',
-            'Track your nutritional progress',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (_) => saved.CaloryScoreScreen(userId: widget.userId),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildCard(
-            Icons.chat,
-            'Chatting',
-            'Communicate with your friends',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => chats.ChatsScreen(userId: widget.userId),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildCard(
-            Icons.group,
-            'Following',
-            'View users and creators you follow',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FollowingScreen(userId: widget.userId),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildCard(
-            Icons.people_outline,
-            'Followers',
-            'View users who follow you',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FollowersScreen(userId: widget.userId),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildCard(
-            Icons.assignment,
-            'Update Your Survey',
-            'Change dietary and lifestyle preferences',
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => UpdateSurveyScreen(userId: widget.userId),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 30),
-          Center(
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: CupertinoColors.activeOrange,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: _logout,
-              icon: const Icon(Icons.logout, color: Colors.white),
-              label: const Text(
-                'Logout',
-                style: TextStyle(color: Colors.white),
-              ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 20,
+                        minHeight: 20,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatBoxWithTap({
+    required IconData icon,
+    required String label,
+    required int value,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+          child: _statBox(icon, label, value),
+        ),
       ),
     );
   }

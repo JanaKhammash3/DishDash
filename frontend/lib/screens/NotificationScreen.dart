@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/ChatsScreen.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
 
@@ -76,7 +77,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         : ListView.builder(
                           itemCount: notifications.length,
                           itemBuilder: (context, index) {
-                            final n = notifications[index];
+                            final n =
+                                notifications[index]; // 👈 This is the correct variable
                             final isRead = n['isRead'] ?? false;
                             final type = n['type'] ?? 'Alert';
                             final message = n['message'] ?? '';
@@ -102,25 +104,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                     isRead
                                         ? Colors.white
                                         : Colors.orange.shade50,
-                                leading: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 20,
-                                      backgroundImage:
-                                          n['senderId']?['avatar'] != null
-                                              ? MemoryImage(
-                                                base64Decode(
-                                                  n['senderId']['avatar'],
-                                                ),
+                                leading: CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage:
+                                      n['senderId']?['avatar'] != null
+                                          ? MemoryImage(
+                                            base64Decode(
+                                              n['senderId']['avatar'],
+                                            ),
+                                          )
+                                          : const AssetImage(
+                                                'assets/profile.png',
                                               )
-                                              : const AssetImage(
-                                                    'assets/profile.png',
-                                                  )
-                                                  as ImageProvider,
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
+                                              as ImageProvider,
                                 ),
                                 title: Text.rich(
                                   TextSpan(
@@ -155,6 +151,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                           },
                                         )
                                         : null,
+                                onTap: () {
+                                  if (type == 'message') {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/chats',
+                                      arguments: {
+                                        'userId': widget.userId,
+                                        'initialChatUserId':
+                                            n['senderId']['_id'],
+                                      },
+                                    );
+                                  }
+                                },
                               ),
                             );
                           },
