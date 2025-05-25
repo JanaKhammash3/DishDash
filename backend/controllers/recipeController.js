@@ -321,4 +321,14 @@ exports.deleteReciperoot = async (req, res) => {
   }
 };
 
+// Get number of recipes created by a specific user
+exports.getRecipeCountByUser = async (req, res) => {
+  try {
+    const count = await Recipe.countDocuments({ author: req.params.userId });
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 

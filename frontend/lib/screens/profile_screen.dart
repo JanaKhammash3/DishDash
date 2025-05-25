@@ -39,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int followerCount = 0;
   int followingCount = 0;
   String? currentUserId;
-  int likesCount = 0;
+  int recipeCount = 0;
   int unreadCount = 0;
 
   final ImagePicker _picker = ImagePicker();
@@ -50,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     loadCurrentUserId(); // ✅ will fetch unread messages after setting currentUserId
     fetchUserProfile();
     connectSocket();
-    fetchUserLikes();
+    fetchRecipeCount();
   }
 
   Future<void> loadCurrentUserId() async {
@@ -62,9 +62,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> fetchUserLikes() async {
+  Future<void> fetchRecipeCount() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/posts/likes-count/${widget.userId}',
+      'http://192.168.1.4:3000/api/recipes/count/${widget.userId}',
     );
 
     try {
@@ -72,11 +72,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          likesCount = data['totalLikes'];
+          recipeCount = data['count'];
         });
       }
     } catch (e) {
-      debugPrint('Error fetching likes: $e');
+      debugPrint('Error fetching recipe count: $e');
     }
   }
 
@@ -610,7 +610,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         },
                       ),
                       const SizedBox(width: 10),
-                      _statBox(Icons.favorite, 'Likes', likesCount),
+                      _statBox(Icons.restaurant_menu, 'Recipes', recipeCount),
                     ],
                   ),
 
