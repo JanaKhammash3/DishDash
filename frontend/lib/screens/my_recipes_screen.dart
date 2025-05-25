@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
 import 'package:frontend/screens/recipe_screen.dart';
 import 'package:frontend/screens/AiRecipeFormScreen.dart';
+import 'package:frontend/screens/image_torecipe.dart';
 
 class MyRecipesScreen extends StatefulWidget {
   final String userId;
@@ -930,6 +931,37 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                         );
                       },
                     ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => AiImageToRecipeScreen(userId: widget.userId),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.brown,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 16,
+                ),
+                elevation: 4,
+              ),
+              icon: const Icon(Icons.image, color: Colors.white),
+              label: const Text(
+                'Image to Recipe',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
