@@ -46,9 +46,9 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    fetchUserRecipes();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    fetchUserRecipes(); // runs every time the screen is rebuilt
   }
 
   Future<void> fetchUserRecipes() async {
