@@ -1,31 +1,44 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/colors.dart';
 
 class ChatsScreen extends StatefulWidget {
   final String userId;
-  const ChatsScreen({super.key, required this.userId});
+  final String? initialChatUserId;
+
+  const ChatsScreen({super.key, required this.userId, this.initialChatUserId});
 
   @override
   State<ChatsScreen> createState() => _ChatsScreenState();
 }
 
 class _ChatsScreenState extends State<ChatsScreen> {
-  final String baseUrl = 'http://192.168.68.60:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   List<dynamic> chatUsers = [];
   late IO.Socket socket;
   String? currentOpenChatUserId;
   List<dynamic> messages = [];
   bool socketInitialized = false;
+  final ImagePicker picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     initSocket();
-    fetchChatUsers();
+    fetchChatUsers().then((_) {
+      if (widget.initialChatUserId != null) {
+        final chatUser = chatUsers.firstWhere(
+          (u) => u['_id'] == widget.initialChatUserId,
+          orElse: () => null,
+        );
+        if (chatUser != null) _openChatModal(chatUser);
+      }
+    });
   }
 
   void initSocket() {
@@ -74,6 +87,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
   void _openChatModal(Map<String, dynamic> user) async {
     final recipientId = user['_id'];
     currentOpenChatUserId = recipientId;
+    Uint8List? selectedImageBytes;
+    final currentUserResponse = await http.get(
+      Uri.parse('$baseUrl/api/profile/${widget.userId}'),
+    );
+    final currentUserData = json.decode(currentUserResponse.body);
 
     final res = await http.get(
       Uri.parse('$baseUrl/api/chats/${widget.userId}/$recipientId'),
@@ -93,154 +111,332 @@ class _ChatsScreenState extends State<ChatsScreen> {
       builder:
           (_) => StatefulBuilder(
             builder: (context, setModalState) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                  top: 16,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Chat with ${user['name']}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+              return DraggableScrollableSheet(
+                expand: false,
+                initialChildSize: 0.85,
+                minChildSize: 0.5,
+                maxChildSize: 0.95,
+                builder: (_, scrollController) {
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                      top: 16,
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 400,
-                      child: ListView.builder(
-                        itemCount: messages.length,
-                        itemBuilder: (_, index) {
-                          final msg = messages[index];
-                          final isMe = msg['senderId']['_id'] == widget.userId;
-                          final time = DateTime.tryParse(
-                            msg['timestamp'] ?? '',
-                          );
-                          final formattedTime =
-                              time != null
-                                  ? '${time.hour}:${time.minute.toString().padLeft(2, '0')}'
-                                  : '';
+                    child: Column(
+                      children: [
+                        Text(
+                          'Chat with ${user['name']}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: ListView.builder(
+                            controller: scrollController,
+                            itemCount: messages.length,
+                            itemBuilder: (_, index) {
+                              final msg = messages[index];
+                              final isMe =
+                                  msg['senderId']['_id'] == widget.userId;
+                              final time = DateTime.tryParse(
+                                msg['timestamp'] ?? '',
+                              );
+                              final formattedTime =
+                                  time != null
+                                      ? '${time.hour}:${time.minute.toString().padLeft(2, '0')}'
+                                      : '';
 
-                          return Row(
-                            mainAxisAlignment:
-                                isMe
-                                    ? MainAxisAlignment.end
-                                    : MainAxisAlignment.start,
-                            children: [
-                              Flexible(
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 6,
-                                  ),
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: isMe ? green : Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        msg['senderId']['name'],
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color:
-                                              isMe
-                                                  ? Colors.white
-                                                  : Colors.black,
-                                          fontSize: 12,
-                                        ),
+                              final DateTime? currentDate = DateTime.tryParse(
+                                msg['timestamp'] ?? '',
+                              );
+                              final DateTime? previousDate =
+                                  index > 0
+                                      ? DateTime.tryParse(
+                                        messages[index - 1]['timestamp'] ?? '',
+                                      )
+                                      : null;
+
+                              final bool showDate =
+                                  index == 0 ||
+                                  (currentDate != null &&
+                                      previousDate != null &&
+                                      (currentDate.year != previousDate.year ||
+                                          currentDate.month !=
+                                              previousDate.month ||
+                                          currentDate.day != previousDate.day));
+
+                              final dateLabel =
+                                  time != null
+                                      ? '${time.day}/${time.month}/${time.year}'
+                                      : '';
+
+                              return Column(
+                                children: [
+                                  if (showDate)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        msg['message'],
-                                        style: TextStyle(
-                                          color:
-                                              isMe
-                                                  ? Colors.white
-                                                  : Colors.black,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Align(
-                                        alignment: Alignment.bottomRight,
-                                        child: Text(
-                                          formattedTime,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color:
-                                                isMe
-                                                    ? Colors.white70
-                                                    : Colors.black54,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[300],
+                                          borderRadius: BorderRadius.circular(
+                                            20,
                                           ),
                                         ),
+                                        child: Text(
+                                          dateLabel,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
                                       ),
-                                    ],
+                                    ),
+                                  Align(
+                                    alignment:
+                                        isMe
+                                            ? Alignment.centerRight
+                                            : Alignment.centerLeft,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          isMe
+                                              ? MainAxisAlignment.end
+                                              : MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        if (!isMe)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              right: 6,
+                                            ),
+                                            child: CircleAvatar(
+                                              radius: 16,
+                                              backgroundImage: _getAvatar(
+                                                msg['senderId']['avatar'],
+                                              ),
+                                            ),
+                                          ),
+                                        Flexible(
+                                          child: Container(
+                                            margin: const EdgeInsets.symmetric(
+                                              vertical: 6,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 10,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  isMe
+                                                      ? green
+                                                      : Colors.grey[200],
+                                              borderRadius: BorderRadius.only(
+                                                topLeft: const Radius.circular(
+                                                  16,
+                                                ),
+                                                topRight: const Radius.circular(
+                                                  16,
+                                                ),
+                                                bottomLeft: Radius.circular(
+                                                  isMe ? 16 : 0,
+                                                ),
+                                                bottomRight: Radius.circular(
+                                                  isMe ? 0 : 16,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                if ((msg['image'] ?? '')
+                                                    .isNotEmpty)
+                                                  ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                    child: Image.memory(
+                                                      base64Decode(
+                                                        msg['image'],
+                                                      ),
+                                                      width: 180,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                if ((msg['message'] ?? '')
+                                                    .isNotEmpty)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          top: 6,
+                                                        ),
+                                                    child: Text(
+                                                      msg['message'],
+                                                      style: TextStyle(
+                                                        color:
+                                                            isMe
+                                                                ? Colors.white
+                                                                : Colors
+                                                                    .black87,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                const SizedBox(height: 4),
+                                                Align(
+                                                  alignment:
+                                                      Alignment.bottomRight,
+                                                  child: Text(
+                                                    formattedTime,
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color:
+                                                          isMe
+                                                              ? Colors.white70
+                                                              : Colors
+                                                                  .grey[600],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        if (isMe)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 6,
+                                            ),
+                                            child: CircleAvatar(
+                                              radius: 16,
+                                              backgroundImage: _getAvatar(
+                                                msg['senderId']['avatar'],
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                        const Divider(),
+                        if (selectedImageBytes != null)
+                          Stack(
+                            alignment: Alignment.topRight,
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                height: 140,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  image: DecorationImage(
+                                    image: MemoryImage(selectedImageBytes!),
+                                    fit: BoxFit.cover,
                                   ),
                                 ),
                               ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.red,
+                                ),
+                                onPressed:
+                                    () => setModalState(
+                                      () => selectedImageBytes = null,
+                                    ),
+                              ),
                             ],
-                          );
-                        },
-                      ),
-                    ),
-                    const Divider(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _controller,
-                            decoration: const InputDecoration(
-                              hintText: 'Type a message...',
-                              border: OutlineInputBorder(),
-                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () async {
-                            final message = _controller.text.trim();
-                            if (message.isEmpty) return;
-
-                            final msgData = {
-                              'senderId': widget.userId,
-                              'receiverId': recipientId,
-                              'message': message,
-                            };
-
-                            socket.emit('send_message', msgData);
-                            setModalState(
-                              () => messages.add({
-                                'senderId': {
-                                  '_id': widget.userId,
-                                  'name': 'You',
-                                },
-                                'message': message,
-                                'timestamp': DateTime.now().toIso8601String(),
-                              }),
-                            );
-                            _controller.clear();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.image, color: green),
+                              onPressed: () async {
+                                final picked = await picker.pickImage(
+                                  source: ImageSource.gallery,
+                                );
+                                if (picked != null) {
+                                  final bytes = await picked.readAsBytes();
+                                  setModalState(
+                                    () => selectedImageBytes = bytes,
+                                  );
+                                }
+                              },
                             ),
-                          ),
-                          child: const Text('Send'),
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                decoration: const InputDecoration(
+                                  hintText: 'Type a message...',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final message = _controller.text.trim();
+                                final image =
+                                    selectedImageBytes != null
+                                        ? base64Encode(selectedImageBytes!)
+                                        : '';
+
+                                if (message.isEmpty && image.isEmpty) return;
+
+                                final msgData = {
+                                  'senderId': widget.userId,
+                                  'receiverId': recipientId,
+                                  'message': message,
+                                  'image': image,
+                                };
+
+                                socket.emit('send_message', msgData);
+
+                                setModalState(() {
+                                  messages.add({
+                                    'senderId': {
+                                      '_id': widget.userId,
+                                      'name': currentUserData['name'],
+                                      'avatar': currentUserData['avatar'],
+                                    },
+
+                                    'message': message,
+                                    'image': image,
+                                    'timestamp':
+                                        DateTime.now().toIso8601String(),
+                                  });
+                                  _controller.clear();
+                                  selectedImageBytes = null;
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: green,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                              ),
+                              child: const Text('Send'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),

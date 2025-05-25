@@ -662,15 +662,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             };
 
                             socket.emit('send_message', msgData);
-                            await sendNotification(
-                              recipientId: widget.userId,
-                              recipientModel: 'User',
-                              senderId: userId!,
-                              senderModel: 'User',
-                              type: 'message',
-                              message: 'sent you a message',
-                              relatedId: null,
-                            );
+
                             _chatController
                                 .clear(); // just clear, don’t add message manually
                           },

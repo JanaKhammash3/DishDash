@@ -10,6 +10,7 @@ const Chat = require('./models/chat');
 const User = require('./models/User');
 const storeRoutes = require('./routes/storeRoutes');
 const { translateText }= require( './translate.js');
+const Notification = require('./models/Notification');
 
 const app = express();
 app.use(cors());
@@ -37,7 +38,6 @@ app.use('/uploads', express.static('uploads'));
 app.use('/images', express.static(path.join(__dirname, './public/images')));
 app.use('/api/chats', chatRoutes);
 app.use(storeRoutes);
-app.use('/api/posts', require('./routes/postRoutes'));
 app.use('/api', require('./routes/storeRoutes'));
 const nutritionRoutes = require('./routes/nutritionRoutes');
 app.use('/api', nutritionRoutes);
@@ -94,34 +94,63 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('send_message', async (data) => {
-    const { senderId, receiverId, message } = data;
+ socket.on('send_message', async (data) => {
+  const { senderId, receiverId, message = '', image = '' } = data;
 
-    const chat = new Chat({ senderId, receiverId, message });
-    await chat.save();
+  if (!senderId || !receiverId || (!message && !image)) return;
 
-    const populatedSender = await User.findById(senderId).select('name avatar');
+  // Save the chat message
+  const chat = new Chat({ senderId, receiverId, message, image });
+  await chat.save();
 
-    const messagePayload = {
-      ...data,
-      timestamp: chat.timestamp,
-      senderId: {
-        _id: senderId,
-        name: populatedSender?.name || 'User',
-        avatar: populatedSender?.avatar || '',
-      },
-    };
+  // Populate sender details
+  const populatedSender = await User.findById(senderId).select('name avatar');
 
-    const receiverSocket = users[receiverId];
-    if (receiverSocket) {
-      io.to(receiverSocket).emit('receive_message', messagePayload);
-    }
+  // Build the message payload
+  const messagePayload = {
+    ...data,
+    timestamp: chat.timestamp,
+    senderId: {
+      _id: senderId,
+      name: populatedSender?.name || 'User',
+      avatar: populatedSender?.avatar || '',
+    },
+  };
 
-    const senderSocket = users[senderId];
-    if (senderSocket) {
-      io.to(senderSocket).emit('receive_message', messagePayload);
-    }
+  // Emit to receiver if online
+  const receiverSocket = users[receiverId];
+  if (receiverSocket) {
+    io.to(receiverSocket).emit('receive_message', messagePayload);
+  }
+
+  // Emit to sender as confirmation
+  const senderSocket = users[senderId];
+  if (senderSocket) {
+    io.to(senderSocket).emit('receive_message', messagePayload);
+  }
+
+  // 🔔 Compose preview message for notification
+  let contentPreview = '';
+  if (message && message.trim()) {
+    contentPreview = `sent you a message: ${message.length > 50 ? message.substring(0, 50) + '...' : message}`;
+  } else if (image && image.trim()) {
+    contentPreview = 'sent you an image';
+  }
+
+  // ✅ Save the notification
+  await Notification.create({
+    recipientId: receiverId,
+    recipientModel: 'User',
+    senderId: senderId,
+    senderModel: 'User',
+    type: 'message',
+    message: contentPreview,
+    relatedId: chat._id,
   });
+
+  console.log(`📨 Chat and notification sent from ${senderId} to ${receiverId}`);
+});
+
 
   socket.on('disconnect', () => {
     let disconnectedUserId = null;
