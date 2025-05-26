@@ -2,6 +2,7 @@
 const mongoose = require('mongoose');
 
 const Store = require('../models/Store');
+const Notification = require('../models/Notification'); // ✅ REQUIRED
 
 exports.getNearbyStores = async (req, res) => {
   try {
@@ -143,7 +144,6 @@ exports.recordPurchase = async (req, res) => {
   const { storeId } = req.params;
   const { userId, ingredient } = req.body;
 
-  // ✅ Check required fields
   if (!userId || !ingredient) {
     return res.status(400).json({
       message: 'userId and ingredient are required',
@@ -156,11 +156,7 @@ exports.recordPurchase = async (req, res) => {
       return res.status(404).json({ message: 'Store not found' });
     }
 
-    // ✅ Ensure purchases array exists
-    const purchases = store.purchases || [];
-
-    // ✅ Prevent duplicate purchase entries
-    const alreadyPurchased = purchases.some((p) =>
+    const alreadyPurchased = store.purchases?.some((p) =>
       p?.userId?.toString() === userId &&
       p?.ingredient?.toLowerCase() === ingredient.toLowerCase()
     );
@@ -169,20 +165,45 @@ exports.recordPurchase = async (req, res) => {
       return res.status(200).json({ message: 'Purchase already recorded' });
     }
 
-    // ✅ Push new purchase
+    // ✅ Step 1: Save the purchase
     store.purchases.push({ userId, ingredient });
-
     await store.save({ validateBeforeSave: false });
 
-    return res.status(200).json({ message: 'Purchase recorded successfully' });
+    // ✅ Step 2: Retrieve the newly added purchase (last one)
+    const latestPurchase = store.purchases[store.purchases.length - 1];
+
+    // ✅ Step 3: Create notification from that purchase
+    const notif = await Notification.create({
+  recipientId: store._id,
+  recipientModel: 'Store',
+  senderId: latestPurchase.userId,
+  senderModel: 'User',
+  type: 'purchase',
+  message: `A user purchased ${latestPurchase.ingredient} from your store.`,
+  relatedId: store._id,
+});
+
+// ✅ Populate sender info
+if (global.io) {
+  const populatedNotif = await Notification.findById(notif._id)
+    .populate('senderId', 'name avatar');
+    
+  global.io.emit(`storeNotification:${store._id}`, populatedNotif);
+}
+
+
+
+    return res.status(200).json({
+      message: '✅ Purchase recorded and notification sent',
+      purchase: latestPurchase,
+      notification: notif,
+    });
   } catch (err) {
     console.error('❌ Error recording purchase:', err);
-    return res.status(500).json({
-      message: 'Server error',
-      error: err.message,
-    });
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 
 exports.getStoresWithItems = async (req, res) => {
@@ -243,40 +264,56 @@ exports.rateStore = async (req, res) => {
 
   value = Number(value);
   if (!userId || isNaN(value) || value < 1 || value > 5) {
-    return res.status(400).json({ error: 'Invalid input. userId and value (1-5) are required.' });
+    return res.status(400).json({
+      error: 'Invalid input. userId and value (1-5) are required.'
+    });
   }
 
   try {
     const store = await Store.findById(storeId);
     if (!store) return res.status(404).json({ error: 'Store not found' });
 
-    const existing = store.ratings.find(r => r.userId.toString() === userId);
+    const existingRatingIndex = store.ratings.findIndex(
+      (r) => r.userId.toString() === userId
+    );
 
-    if (existing) {
-      // Update existing rating directly without full document validation
-      await Store.updateOne(
-        { _id: storeId, "ratings.userId": userId },
-        { $set: { "ratings.$.value": value } }
-      );
-      console.log('🔁 Updated existing rating');
+    if (existingRatingIndex !== -1) {
+      store.ratings[existingRatingIndex].value = value;
     } else {
-      // Push new rating using update to avoid validation errors on unrelated fields
-      await Store.updateOne(
-        { _id: storeId },
-        { $push: { ratings: { userId, value } } }
-      );
-      console.log('➕ Added new rating');
+      store.ratings.push({ userId, value });
     }
 
-    // Re-fetch to get updated rating list
-    const updatedStore = await Store.findById(storeId);
-    const avg = updatedStore.ratings.reduce((s, r) => s + r.value, 0) / updatedStore.ratings.length;
+    await store.save({ validateBeforeSave: false });
 
-    return res.status(200).json({ avgRating: avg.toFixed(1) });
+    const notif = await Notification.create({
+  recipientId: store._id,
+  recipientModel: 'Store',
+  senderId: userId,
+  senderModel: 'User',
+  type: 'rating',
+  message: `A user rated your store ${value} stars.`,
+  relatedId: store._id
+});
 
+// ✅ Populate sender info
+if (global.io) {
+  const populatedNotif = await Notification.findById(notif._id)
+    .populate('senderId', 'name avatar');
+    
+  global.io.emit(`storeNotification:${store._id}`, populatedNotif);
+}
+
+
+    const avgRating =
+      store.ratings.reduce((sum, r) => sum + r.value, 0) / store.ratings.length;
+
+    res.status(200).json({
+      message: 'Rating submitted successfully',
+      avgRating: avgRating.toFixed(1)
+    });
   } catch (err) {
     console.error('❌ Error in rateStore:', err);
-    return res.status(500).json({ error: 'Failed to save rating', details: err.message });
+    res.status(500).json({ error: 'Failed to save rating', details: err.message });
   }
 };
 
@@ -399,4 +436,45 @@ exports.deleteStore = async (req, res) => {
     res.status(500).json({ error: 'Server error', detail: err.message });
   }
 };
+
+// GET /api/stores/:storeId/notifications/purchases
+exports.getPurchaseNotifications = async (req, res) => {
+  const { storeId } = req.params;
+
+  try {
+    const notifications = await Notification.find({
+      recipientId: storeId,
+      recipientModel: 'Store',
+      type: 'purchase',
+    })
+    .populate('senderId', 'name avatar')
+    .sort({ createdAt: -1 });
+
+    res.status(200).json(notifications);
+  } catch (err) {
+    console.error('❌ Error fetching purchase notifications:', err.message);
+    res.status(500).json({ error: 'Failed to fetch purchase notifications' });
+  }
+};
+
+// GET /api/stores/:storeId/notifications/ratings
+exports.getRatingNotifications = async (req, res) => {
+  const { storeId } = req.params;
+
+  try {
+    const notifications = await Notification.find({
+      recipientId: storeId,
+      recipientModel: 'Store',
+      type: 'rating',
+    })
+    .populate('senderId', 'name avatar')
+    .sort({ createdAt: -1 });
+
+    res.status(200).json(notifications);
+  } catch (err) {
+    console.error('❌ Error fetching rating notifications:', err.message);
+    res.status(500).json({ error: 'Failed to fetch rating notifications' });
+  }
+};
+
 

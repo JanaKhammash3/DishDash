@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/store_notifications_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:frontend/screens/login_screen.dart';
@@ -27,6 +28,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
   final TextEditingController priceController = TextEditingController();
   bool isUploading = false;
   late TabController _tabController;
+  List<Map<String, dynamic>> _purchaseNotifs = [];
+  List<Map<String, dynamic>> _ratingNotifs = [];
+  bool isLoading = false;
 
   final categoryIcons = {
     'Vegetables': Icons.eco,
@@ -45,7 +49,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     fetchStoreInfo();
-    fetchUsers(); // ✅ Add this
+    fetchUsers();
+    fetchNotifications();
   }
 
   Future<void> fetchUsers() async {
@@ -98,6 +103,95 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
     } catch (e) {
       debugPrint('Error fetching store info: $e');
     }
+  }
+
+  List<Map<String, dynamic>> _notifications = [];
+
+  Future<void> fetchNotifications() async {
+    setState(() => isLoading = true);
+    final url = Uri.parse(
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}/notifications',
+    );
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        setState(() {
+          _notifications = data;
+          _purchaseNotifs = data.where((n) => n['type'] == 'purchase').toList();
+          _ratingNotifs = data.where((n) => n['type'] == 'rating').toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching notifications: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _showNotificationsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (_) => DefaultTabController(
+            length: 2,
+            child: Column(
+              children: [
+                const TabBar(
+                  labelColor: green,
+                  unselectedLabelColor: Colors.grey,
+                  tabs: [
+                    Tab(icon: Icon(Icons.shopping_cart), text: 'Purchases'),
+                    Tab(icon: Icon(Icons.star), text: 'Ratings'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildNotificationList(_purchaseNotifs),
+                      _buildNotificationList(_ratingNotifs),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Widget _buildNotificationList(List<Map<String, dynamic>> notifs) {
+    return notifs.isEmpty
+        ? const Center(child: Text('No notifications yet.'))
+        : ListView.builder(
+          itemCount: notifs.length,
+          itemBuilder: (_, index) {
+            final n = notifs[index];
+            final sender = n['senderId'] ?? {};
+            final name = sender['name'] ?? 'Unknown';
+            final avatar = sender['avatar'] ?? '';
+            final imageProvider =
+                avatar.isNotEmpty && avatar.contains(',')
+                    ? MemoryImage(base64Decode(avatar.split(',').last))
+                    : const AssetImage('assets/profile.png');
+
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: imageProvider as ImageProvider,
+              ),
+              title: Text(n['message'] ?? ''),
+              subtitle: Text(name),
+              trailing: Icon(
+                n['type'] == 'purchase' ? Icons.shopping_cart : Icons.star,
+                color: green,
+              ),
+            );
+          },
+        );
   }
 
   _getCategoryIcon(String category) {
@@ -275,13 +369,18 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
                       itemCount: ratings.length,
                       itemBuilder: (_, index) {
                         final r = ratings[index];
-                        final userId = r['userId']?.toString();
-                        final user = userMap[userId] ?? {};
+                        final userObj = r['userId'];
+                        final user =
+                            userObj is Map
+                                ? userObj
+                                : userMap[userObj?.toString()] ?? {};
 
                         final avatarBase64 = user['avatar']?.toString();
                         ImageProvider imageProvider;
 
-                        if (avatarBase64 != null && avatarBase64.isNotEmpty) {
+                        if (avatarBase64 != null &&
+                            avatarBase64.isNotEmpty &&
+                            avatarBase64.contains(',')) {
                           try {
                             imageProvider = MemoryImage(
                               base64Decode(avatarBase64.split(',').last),
@@ -342,8 +441,12 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
 
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (final p in purchases) {
-      final userId = p['userId']?.toString() ?? 'unknown';
-      grouped.putIfAbsent(userId, () => []).add(p as Map<String, dynamic>);
+      final userObj = p['userId'];
+      final userId = userObj is Map ? userObj['_id'] : userObj;
+      grouped.putIfAbsent(userId, () => []).add({
+        ...p,
+        'user': userObj is Map ? userObj : userMap[userId],
+      });
     }
 
     showModalBottomSheet(
@@ -391,20 +494,28 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         CircleAvatar(
                                           backgroundImage: imageProvider,
+                                          radius: 20,
                                         ),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          user['userName']?.toString() ??
-                                              'User',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            user['name']?.toString() ??
+                                                'Anonymous',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ],
                                     ),
+
                                     const SizedBox(height: 12),
                                     ...userPurchases.map((p) {
                                       final itemId = p['item']?.toString();
@@ -700,6 +811,43 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
           ],
         ),
         actions: [
+          // ✅ Notification Icon with Badge
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) =>
+                              StoreNotificationsScreen(storeId: widget.storeId),
+                    ),
+                  );
+                },
+              ),
+
+              if (_notifications.any((n) => !n['isRead']))
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${_notifications.where((n) => !n['isRead']).length}',
+                      style: const TextStyle(fontSize: 10, color: Colors.white),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+
+          // Existing Popup Menu
           PopupMenuButton(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             itemBuilder:
