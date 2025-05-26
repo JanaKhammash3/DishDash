@@ -50,6 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return r.isEmpty ? 0.0 : r.reduce((a, b) => a + b) / r.length;
   }
 
+  bool hasAllergyConflict(List<String> ingredients, List<String> allergies) {
+    final lowerIngredients = ingredients.join(',').toLowerCase();
+    return allergies.any(
+      (allergy) => lowerIngredients.contains(allergy.toLowerCase()),
+    );
+  }
+
   late IO.Socket socket;
 
   final List<Map<String, String>> allIngredients = [
@@ -371,7 +378,77 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _saveRecipe(String recipeId) async {
+  Future<void> _saveRecipeWithCheck({
+    required String recipeId,
+    required List<String> ingredients,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userResponse = await http.get(
+      Uri.parse('http://192.168.68.60:3000/api/profile/$userId'),
+    );
+    if (userResponse.statusCode != 200) return;
+
+    final userData = jsonDecode(userResponse.body);
+    final List<String> allergies = List<String>.from(
+      userData['allergies'] ?? [],
+    );
+
+    if (hasAllergyConflict(ingredients, allergies)) {
+      // ⚠️ Show alert modal
+      showDialog(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text('⚠️ Allergy Alert'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This recipe contains ingredients that match your allergies.',
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Matched Allergens:',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  ...allergies
+                      .where(
+                        (allergy) => ingredients
+                            .join(',')
+                            .toLowerCase()
+                            .contains(allergy.toLowerCase()),
+                      )
+                      .map(
+                        (a) => Text(
+                          '• $a',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                TextButton(
+                  child: const Text('Save Anyway'),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await _saveRecipeConfirmed(recipeId);
+                  },
+                ),
+              ],
+            ),
+      );
+    } else {
+      await _saveRecipeConfirmed(recipeId);
+    }
+  }
+
+  Future<void> _saveRecipeConfirmed(String recipeId) async {
     final url = Uri.parse(
       'http://192.168.68.60:3000/api/users/$userId/saveRecipe',
     );
@@ -1525,7 +1602,10 @@ class _HomeScreenState extends State<HomeScreen> {
           if (isSaved) {
             _unsaveRecipe(recipeId);
           } else {
-            _saveRecipe(recipeId);
+            _saveRecipeWithCheck(
+              recipeId: recipeId,
+              ingredients: List<String>.from(ingredients),
+            );
           }
         },
         isSaved: isSaved,

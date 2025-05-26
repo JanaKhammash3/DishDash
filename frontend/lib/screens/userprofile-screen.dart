@@ -26,6 +26,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   final String baseUrl = 'http://192.168.68.60:3000';
   List<dynamic> messages = [];
   TextEditingController _chatController = TextEditingController();
+  bool hasAllergyConflict(List<String> ingredients, List<String> allergies) {
+    final lowerIngredients = ingredients.join(',').toLowerCase();
+    return allergies.any(
+      (allergy) => lowerIngredients.contains(allergy.toLowerCase()),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -166,6 +173,89 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     setState(() {
       isSaved ? savedRecipeIds.remove(recipeId) : savedRecipeIds.add(recipeId);
     });
+  }
+
+  Future<void> saveRecipeWithCheck({
+    required String recipeId,
+    required List<String> ingredients,
+  }) async {
+    final res = await http.get(Uri.parse('$baseUrl/api/profile/$userId'));
+    if (res.statusCode != 200) return;
+
+    final data = json.decode(res.body);
+    final List<String> allergies = List<String>.from(data['allergies'] ?? []);
+
+    if (hasAllergyConflict(ingredients, allergies)) {
+      showDialog(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text('⚠️ Allergy Alert'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This recipe contains ingredients that match your allergies.',
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Matched Allergens:',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  ...allergies
+                      .where(
+                        (a) => ingredients
+                            .join(',')
+                            .toLowerCase()
+                            .contains(a.toLowerCase()),
+                      )
+                      .map(
+                        (a) => Text(
+                          '• $a',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await _saveRecipeConfirmed(recipeId);
+                  },
+                  child: const Text('Save Anyway'),
+                ),
+              ],
+            ),
+      );
+    } else {
+      await _saveRecipeConfirmed(recipeId);
+    }
+  }
+
+  Future<void> _saveRecipeConfirmed(String recipeId) async {
+    final isSaved = savedRecipeIds.contains(recipeId);
+    final route = isSaved ? '/unsaveRecipe' : '/saveRecipe';
+
+    final res = await http.post(
+      Uri.parse('$baseUrl/api/users/$userId$route'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'recipeId': recipeId}),
+    );
+
+    if (res.statusCode == 200) {
+      setState(() {
+        isSaved
+            ? savedRecipeIds.remove(recipeId)
+            : savedRecipeIds.add(recipeId);
+      });
+    }
   }
 
   void openCommentModal(String recipeId) async {
@@ -888,7 +978,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             ? Colors.black
                             : Colors.grey,
                   ),
-                  onPressed: () => toggleSave(post['_id']),
+                  onPressed: () {
+                    final ingredients = List<String>.from(
+                      post['ingredients'] ?? [],
+                    );
+                    saveRecipeWithCheck(
+                      recipeId: post['_id'],
+                      ingredients: ingredients,
+                    );
+                  },
                 ),
               ],
             ),
