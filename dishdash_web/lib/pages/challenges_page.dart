@@ -36,55 +36,21 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
   }
 
   ImageProvider _getImageProvider(String? image) {
-    if (image == null || image.isEmpty) {
+    if (image == null || image.isEmpty)
       return const AssetImage('assets/placeholder.png');
-    } else if (image.startsWith('http')) {
-      return NetworkImage(image);
-    } else if (image.startsWith('/9j')) {
-      // Base64 JPEG prefix
+    if (image.startsWith('http')) return NetworkImage(image);
+    if (image.startsWith('/9j')) {
       try {
         return MemoryImage(base64Decode(image));
       } catch (_) {
         return const AssetImage('assets/placeholder.png');
       }
-    } else {
-      return const AssetImage('assets/placeholder.png');
     }
-  }
-
-  Future<void> saveChallenge() async {
-    final challengeData = {
-      'title': _titleController.text,
-      'description': _descController.text,
-      'type': _selectedType,
-      'startDate': _startDate?.toIso8601String(),
-      'endDate': _endDate?.toIso8601String(),
-      'reward': _rewardController.text,
-    };
-
-    final url = editingId != null ? '$baseUrl/$editingId' : baseUrl;
-    final method = editingId != null ? http.put : http.post;
-    final response = await method(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(challengeData),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final challenge = jsonDecode(response.body);
-      if (editingId == null) {
-        await sendChallengeNotification(challenge['_id'], challenge['title']);
-      }
-      fetchChallenges();
-      Navigator.pop(context);
-    }
+    return const AssetImage('assets/placeholder.png');
   }
 
   Future<void> _showParticipantsModal(String challengeId) async {
-    final response = await http.get(
-      Uri.parse('http://192.168.68.60:3000/api/challenges/$challengeId'),
-    );
-
+    final response = await http.get(Uri.parse('$baseUrl/$challengeId'));
     if (response.statusCode == 200) {
       final challenge = jsonDecode(response.body);
       final participants = challenge['participants'] ?? [];
@@ -104,15 +70,13 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
                           itemCount: participants.length,
                           itemBuilder: (context, index) {
                             final user = participants[index];
-                            final avatar = user['avatar'];
-                            final name = user['name'] ?? 'Unknown';
-
                             return ListTile(
                               leading: CircleAvatar(
-                                backgroundImage: _getImageProvider(avatar),
+                                backgroundImage: _getImageProvider(
+                                  user['avatar'],
+                                ),
                               ),
-
-                              title: Text(name),
+                              title: Text(user['name'] ?? 'Unknown'),
                             );
                           },
                         ),
@@ -125,9 +89,157 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
               ],
             ),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load participants')),
+    }
+  }
+
+  Future<void> _showSubmissionsModal(
+    String challengeId,
+    String challengeTitle,
+  ) async {
+    final res = await http.get(Uri.parse('$baseUrl/$challengeId/submissions'));
+    if (res.statusCode == 200) {
+      final submissions = jsonDecode(res.body);
+      List<Map<String, dynamic>> winners = [];
+
+      showDialog(
+        context: context,
+        builder:
+            (_) => StatefulBuilder(
+              builder: (context, setModalState) {
+                return AlertDialog(
+                  title: Text('Submissions - $challengeTitle'),
+                  content: SizedBox(
+                    width: 500,
+                    height: 500,
+                    child:
+                        submissions.isEmpty
+                            ? const Center(child: Text('No submissions yet.'))
+                            : ListView.builder(
+                              itemCount: submissions.length,
+                              itemBuilder: (ctx, i) {
+                                final s = submissions[i];
+                                final user = s['user'];
+                                final recipe = s['recipe'];
+                                final score = s['score']?.toString() ?? '';
+                                final notes = s['notes'] ?? '';
+
+                                return Card(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '👤 ${user['name'] ?? 'Unknown'}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (recipe != null)
+                                          Text('🍽️ ${recipe['title']}'),
+                                        if (notes.isNotEmpty)
+                                          Text('📝 Notes: $notes'),
+                                        if (s['image'] != null &&
+                                            s['image'].toString().isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 8,
+                                            ),
+                                            child: Image.memory(
+                                              base64Decode(s['image']),
+                                              height: 120,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        Row(
+                                          children: [
+                                            const Text('Score:'),
+                                            const SizedBox(width: 10),
+                                            SizedBox(
+                                              width: 40,
+                                              child: TextFormField(
+                                                initialValue: score,
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                onFieldSubmitted: (val) async {
+                                                  await http.put(
+                                                    Uri.parse(
+                                                      '$baseUrl/$challengeId/score/${user['_id']}',
+                                                    ),
+                                                    headers: {
+                                                      'Content-Type':
+                                                          'application/json',
+                                                    },
+                                                    body: jsonEncode({
+                                                      'score': int.tryParse(
+                                                        val,
+                                                      ),
+                                                      'notes': notes,
+                                                    }),
+                                                  );
+                                                  fetchChallenges();
+                                                },
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            Checkbox(
+                                              value: winners.any(
+                                                (w) => w['user'] == user['_id'],
+                                              ),
+                                              onChanged: (selected) {
+                                                setModalState(() {
+                                                  if (selected == true) {
+                                                    winners.add({
+                                                      'user': user['_id'],
+                                                      'position':
+                                                          winners.length + 1,
+                                                    });
+                                                  } else {
+                                                    winners.removeWhere(
+                                                      (w) =>
+                                                          w['user'] ==
+                                                          user['_id'],
+                                                    );
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                            const Text('Winner'),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await http.post(
+                          Uri.parse('$baseUrl/$challengeId/winners'),
+                          headers: {'Content-Type': 'application/json'},
+                          body: jsonEncode({'winners': winners}),
+                        );
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Winners saved & notified'),
+                          ),
+                        );
+                      },
+                      child: const Text('Save Winners'),
+                    ),
+                  ],
+                );
+              },
+            ),
       );
     }
   }
@@ -138,7 +250,7 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
   ) async {
     final res = await http.get(
       Uri.parse('http://192.168.68.60:3000/api/users'),
-    ); // ✅ Get all users
+    );
     if (res.statusCode == 200) {
       final users = jsonDecode(res.body);
       for (var user in users) {
@@ -148,7 +260,7 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
           body: jsonEncode({
             'recipientId': user['_id'],
             'recipientModel': 'User',
-            'senderModel': 'Admin', // keep this if you want senderModel context
+            'senderModel': 'Admin',
             'type': 'challenge',
             'message': 'A new challenge "$title" has been posted!',
             'relatedId': challengeId,
@@ -300,6 +412,34 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
     );
   }
 
+  Future<void> saveChallenge() async {
+    final challengeData = {
+      'title': _titleController.text,
+      'description': _descController.text,
+      'type': _selectedType,
+      'startDate': _startDate?.toIso8601String(),
+      'endDate': _endDate?.toIso8601String(),
+      'reward': _rewardController.text,
+    };
+
+    final url = editingId != null ? '$baseUrl/$editingId' : baseUrl;
+    final method = editingId != null ? http.put : http.post;
+    final response = await method(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(challengeData),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final challenge = jsonDecode(response.body);
+      if (editingId == null) {
+        await sendChallengeNotification(challenge['_id'], challenge['title']);
+      }
+      fetchChallenges();
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -364,14 +504,23 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
                                           ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(
-                                        Icons.people,
-                                      ), // 👈 participants icon
+                                      icon: const Icon(Icons.people),
+                                      tooltip: 'Participants',
                                       onPressed:
                                           () => _showParticipantsModal(
                                             challenge['_id'],
                                           ),
-                                      tooltip: 'Participants',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.assignment_turned_in_outlined,
+                                      ),
+                                      tooltip: 'Submissions',
+                                      onPressed:
+                                          () => _showSubmissionsModal(
+                                            challenge['_id'],
+                                            challenge['title'],
+                                          ),
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete),

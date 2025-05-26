@@ -17,6 +17,7 @@ import 'package:frontend/screens/saved_recipes_screen.dart' as saved;
 import 'package:frontend/screens/my_recipes_screen.dart';
 import 'package:frontend/screens/calory_score_screen.dart' as saved;
 import 'package:frontend/screens/following_screen.dart';
+import 'package:frontend/screens/mychallenges.dart' as saved;
 import 'package:frontend/screens/followers_screen.dart';
 import 'package:frontend/screens/update_survey_screen.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -64,7 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> fetchRecipeCount() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/recipes/count/${widget.userId}',
+      'http://192.168.68.60:3000/api/recipes/count/${widget.userId}',
     );
 
     try {
@@ -86,7 +87,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    final url = 'http://192.168.1.4:3000/api/chats/unread-count/$currentUserId';
+    final url =
+        'http://192.168.68.60:3000/api/chats/unread-count/$currentUserId';
     print('📡 Calling: $url');
 
     try {
@@ -684,6 +686,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     MaterialPageRoute(
                       builder:
                           (_) => saved.CaloryScoreScreen(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
+              _buildCard(
+                Icons.flag,
+                'My Challenges',
+                'TView and Submit your progress',
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) =>
+                              saved.MyChallengesScreen(userId: widget.userId),
                     ),
                   );
                 },

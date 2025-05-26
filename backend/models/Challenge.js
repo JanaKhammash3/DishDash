@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const challengeSchema = new mongoose.Schema({
@@ -23,8 +22,15 @@ const challengeSchema = new mongoose.Schema({
   participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   submissions: [{
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    recipe: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' }, // For recipe challenges
+    recipe: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' },
+    notes: { type: String },
+    image: { type: String }, // ✅ Add this line
+    score: { type: Number },
     completedAt: { type: Date }
+  }],
+  winners: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    position: { type: Number }
   }]
 }, { timestamps: true });
 

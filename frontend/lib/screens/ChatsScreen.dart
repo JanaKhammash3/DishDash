@@ -18,7 +18,7 @@ class ChatsScreen extends StatefulWidget {
 }
 
 class _ChatsScreenState extends State<ChatsScreen> {
-  final String baseUrl = 'http://192.168.1.4:3000';
+  final String baseUrl = 'http://192.168.68.60:3000';
   List<dynamic> chatUsers = [];
   late IO.Socket socket;
   String? currentOpenChatUserId;

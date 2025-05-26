@@ -21,6 +21,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   List<String> joinedChallengeIds = [];
   List<String> savedRecipeIds = [];
   String? userId;
+  bool isLoading = true;
 
   final String baseUrl = 'http://192.168.68.60:3000'; // Adjust for your setup
 
@@ -44,6 +45,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
       body: json.encode({'userId': userId}),
     );
     if (response.statusCode == 200) {
+      if (!mounted) return;
       setState(() {
         joinedChallengeIds.add(challengeId);
       });
@@ -104,12 +106,21 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Future<void> fetchChallenges() async {
-    setState(() => posts = []); // Clear any recipe data
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+      posts = [];
+    });
+
     final res = await http.get(Uri.parse('$baseUrl/api/challenges'));
     if (res.statusCode == 200) {
+      if (!mounted) return;
       setState(() {
         posts = json.decode(res.body);
+        isLoading = false;
       });
+    } else {
+      setState(() => isLoading = false);
     }
   }
 
@@ -124,7 +135,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Future<void> fetchPosts() async {
-    setState(() => posts = []);
+    if (!mounted) return;
+    setState(() {
+      posts = [];
+      isLoading = true; // ✅ Add this
+    });
+
     final res = await http.get(Uri.parse('$baseUrl/api/recipes'));
 
     if (res.statusCode == 200) {
@@ -151,21 +167,23 @@ class _CommunityScreenState extends State<CommunityScreen> {
         final commentsRes = await http.get(
           Uri.parse('$baseUrl/api/comments/${post['_id']}'),
         );
-        if (commentsRes.statusCode == 200) {
-          final comments = json.decode(commentsRes.body);
-          post['commentCount'] = comments.length;
-        } else {
-          post['commentCount'] = 0;
-        }
+        post['commentCount'] =
+            commentsRes.statusCode == 200
+                ? json.decode(commentsRes.body).length
+                : 0;
       }
 
       filteredPosts.sort(
         (a, b) => (b['likes']?.length ?? 0).compareTo(a['likes']?.length ?? 0),
       );
 
+      if (!mounted) return;
       setState(() {
         posts = filteredPosts;
+        isLoading = false; // ✅ Add this
       });
+    } else {
+      setState(() => isLoading = false); // ✅ Also handle error case
     }
   }
 
@@ -180,6 +198,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     if (res.statusCode == 200) {
       final result = json.decode(res.body);
+      if (!mounted) return;
       setState(() {
         posts[index]['likes'] = result['likes'];
         posts[index]['liked'] = result['liked'];
@@ -208,6 +227,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
 
     if (res.statusCode == 200) {
+      if (!mounted) return;
       setState(() {
         isSaved
             ? savedRecipeIds.remove(recipeId)
@@ -226,6 +246,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
             MaterialPageRoute(builder: (_) => const StoreItemsScreen()),
           );
         } else {
+          if (!mounted) return;
           setState(() => selectedCategory = value);
           if (value == 'users') {
             fetchPosts();
@@ -321,8 +342,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
         foregroundColor: Colors.white,
       ),
       body:
-          posts.isEmpty
+          isLoading
               ? const Center(child: CircularProgressIndicator())
+              : posts.isEmpty
+              ? const Center(child: Text('No challenges yet.'))
               : Column(
                 children: [
                   Padding(
@@ -646,6 +669,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         (p) => p['_id'] == recipeId,
                       );
                       if (postIndex != -1) {
+                        if (!mounted) return;
                         setState(() {
                           posts[postIndex]['commentCount'] =
                               (posts[postIndex]['commentCount'] ?? 0) + 1;
