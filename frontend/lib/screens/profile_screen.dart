@@ -65,7 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> fetchRecipeCount() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/recipes/count/${widget.userId}',
+      'http://192.168.1.4:3000/api/recipes/count/${widget.userId}',
     );
 
     try {
@@ -87,8 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    final url =
-        'http://192.168.68.60:3000/api/chats/unread-count/$currentUserId';
+    final url = 'http://192.168.1.4:3000/api/chats/unread-count/$currentUserId';
     print('📡 Calling: $url');
 
     try {
@@ -112,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/profile/${widget.userId}',
+      'http://192.168.1.4:3000/api/profile/${widget.userId}',
     );
 
     try {
@@ -144,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void connectSocket() {
-    socket = IO.io('http://192.168.68.60:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
     });
@@ -203,7 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           final response = await http.post(
                             Uri.parse(
-                              'http://192.168.68.60:3000/api/users/${widget.userId}/scrape-pin',
+                              'http://192.168.1.4:3000/api/users/${widget.userId}/scrape-pin',
                             ),
                             headers: {'Content-Type': 'application/json'},
                             body: jsonEncode({'url': url}),
@@ -271,7 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final base64String = base64Encode(compressedBytes);
 
       final url = Uri.parse(
-        'http://192.168.68.60:3000/api/profile/${widget.userId}/avatar',
+        'http://192.168.1.4:3000/api/profile/${widget.userId}/avatar',
       );
 
       final response = await http.put(

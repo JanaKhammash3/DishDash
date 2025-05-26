@@ -18,6 +18,7 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 
 // ✅ Connect to MongoDB
@@ -74,6 +75,7 @@ global.io = io; // ✅ Add this line
 
 const users = {};
 const stores = {}; // maps storeId → socketId
+global.stores = {}; // 🧠 Track store socket IDs
 
 io.on('connection', (socket) => {
   console.log('🟢 Socket connected:', socket.id);
