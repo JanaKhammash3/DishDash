@@ -12,8 +12,10 @@ const storeRoutes = require('./routes/storeRoutes');
 const { translateText }= require( './translate.js');
 const Notification = require('./models/Notification');
 const type = 'purchase'; // or 'rating'
-
-
+const sendMealReminders = require('./scheduledJobs/sendMealReminders');
+sendMealReminders();
+//const testReminder = require('./scheduledJobs/sendMealReminders');
+//testReminder(); // temporary
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));

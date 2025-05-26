@@ -1639,7 +1639,9 @@ class _HomeScreenState extends State<HomeScreen> {
     String? authorName,
     String? authorAvatar,
   }) {
-    final isBase64 = imagePath.startsWith('/9j'); // simple base64 check
+    final isBase64 =
+        imagePath.startsWith('/9j') ||
+        imagePath.startsWith('iVBOR'); // simple base64 check
     final isNetwork = imagePath.startsWith('http');
 
     ImageProvider imageProvider;
