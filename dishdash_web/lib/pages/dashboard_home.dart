@@ -35,6 +35,7 @@ class _DashboardHomeState extends State<DashboardHome> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: cardColor,
         title: Text('DishDash Admin', style: TextStyle(color: textColor)),
         elevation: 1,

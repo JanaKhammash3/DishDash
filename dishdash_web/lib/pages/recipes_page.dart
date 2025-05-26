@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -26,11 +27,26 @@ class _RecipesPageState extends State<RecipesPage> {
     {'label': 'Breakfast', 'icon': Icons.free_breakfast}, // new
     {'label': 'Snack', 'icon': Icons.fastfood},
   ];
-
+  List<dynamic> topRatedRecipes = [];
+  int _currentTopIndex = 0;
+  late Timer _topRecipeTimer;
   @override
   void initState() {
     super.initState();
     fetchRecipes();
+    _topRecipeTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (topRatedRecipes.isNotEmpty) {
+        setState(() {
+          _currentTopIndex = (_currentTopIndex + 1) % topRatedRecipes.length;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _topRecipeTimer.cancel();
+    super.dispose();
   }
 
   void _showRecipeDetailsModal(Map<String, dynamic> recipe) async {
@@ -196,12 +212,24 @@ class _RecipesPageState extends State<RecipesPage> {
 
       setState(() {
         allRecipes = data;
+
         data.sort(
           (a, b) => _averageRating(
             b['ratings'],
           ).compareTo(_averageRating(a['ratings'])),
         );
-        topRatedRecipe = data.isNotEmpty ? data.first : null;
+
+        final highestRating =
+            data.isNotEmpty ? _averageRating(data.first['ratings']) : 0.0;
+
+        topRatedRecipes =
+            data
+                .where(
+                  (r) =>
+                      _averageRating(r['ratings']).toStringAsFixed(1) ==
+                      highestRating.toStringAsFixed(1),
+                )
+                .toList();
       });
     }
   }
@@ -216,7 +244,7 @@ class _RecipesPageState extends State<RecipesPage> {
       return const AssetImage('assets/placeholder.png');
     }
 
-    final base64Regex = RegExp(r'^data:image/[^;]+;base64,|^/9j');
+    final base64Regex = RegExp(r'^data:image/[^;]+;base64,|^/9j|^iVBOR');
     final isBase64 = base64Regex.hasMatch(imageData);
     final isNetwork = imageData.startsWith('http');
 
@@ -278,64 +306,77 @@ class _RecipesPageState extends State<RecipesPage> {
               const SizedBox(height: 24),
 
               // 🥇 Top Rated Recipe
-              if (topRatedRecipe != null)
-                Container(
-                  width: double.infinity,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    image: DecorationImage(
-                      image: getImageProvider(topRatedRecipe['image']),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+              if (topRatedRecipes.isNotEmpty) ...[
+                const Text(
+                  'Top Rated Recipes',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
                   child: Container(
+                    key: ValueKey(_currentTopIndex),
+                    width: double.infinity,
+                    height: 200,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.6),
-                          Colors.transparent,
+                      image: DecorationImage(
+                        image: getImageProvider(
+                          topRatedRecipes[_currentTopIndex]['image'],
+                        ),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.6),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      alignment: Alignment.bottomLeft,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            topRatedRecipes[_currentTopIndex]['title'] ?? '',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _averageRating(
+                                  topRatedRecipes[_currentTopIndex]['ratings'],
+                                ).toStringAsFixed(1),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.bottomLeft,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          topRatedRecipe['title'] ?? '',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Colors.amber,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _averageRating(
-                                topRatedRecipe['ratings'],
-                              ).toStringAsFixed(1),
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
                   ),
                 ),
+                const SizedBox(height: 30),
+              ],
 
               const SizedBox(height: 30),
 
@@ -369,11 +410,11 @@ class _RecipesPageState extends State<RecipesPage> {
                             selectedCategory = isSelected ? '' : cat['label']!;
                           });
                         },
-                        selectedColor: Colors.green,
+                        selectedColor: Colors.green[700],
                         labelStyle: TextStyle(
                           color: isSelected ? Colors.white : Colors.black,
                         ),
-                        backgroundColor: Colors.grey[300],
+                        backgroundColor: const Color(0xFFD0EED0),
                       ),
                     );
                   },

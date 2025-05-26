@@ -446,6 +446,7 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Challenges'),
         actions: [
           Padding(
