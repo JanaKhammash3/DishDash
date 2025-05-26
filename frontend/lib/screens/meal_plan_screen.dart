@@ -352,14 +352,19 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                             );
                           },
                           optionsViewBuilder: (context, onSelected, options) {
+                            final ScrollController scrollController =
+                                ScrollController();
+
                             return Align(
                               alignment: Alignment.topCenter,
                               child: Material(
                                 color: Colors.transparent,
                                 child: Container(
-                                  width:
-                                      MediaQuery.of(context).size.width -
-                                      40, // match modal width
+                                  width: MediaQuery.of(context).size.width - 40,
+                                  constraints: const BoxConstraints(
+                                    maxHeight:
+                                        200, // Set max height so it becomes scrollable
+                                  ),
                                   margin: const EdgeInsets.only(top: 8),
                                   decoration: BoxDecoration(
                                     color: green,
@@ -371,22 +376,28 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    shrinkWrap: true,
-                                    itemCount: options.length,
-                                    itemBuilder: (context, index) {
-                                      final option = options.elementAt(index);
-                                      return ListTile(
-                                        title: Text(
-                                          option,
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                  child: Scrollbar(
+                                    controller: scrollController,
+                                    thumbVisibility: true,
+                                    radius: const Radius.circular(8),
+                                    thickness: 4,
+                                    child: ListView.builder(
+                                      controller: scrollController,
+                                      padding: EdgeInsets.zero,
+                                      itemCount: options.length,
+                                      itemBuilder: (context, index) {
+                                        final option = options.elementAt(index);
+                                        return ListTile(
+                                          title: Text(
+                                            option,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
                                           ),
-                                        ),
-                                        onTap: () => onSelected(option),
-                                      );
-                                    },
+                                          onTap: () => onSelected(option),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
                               ),
