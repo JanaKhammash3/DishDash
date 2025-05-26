@@ -10,16 +10,12 @@ const {
 
 router.post('/', createNotification);
 
-// ✅ Put this before /:userId
+// ✅ Specific routes first
 router.get('/:userId/unread-count', getUnreadCount);
-
-// 📩 Get notifications by model
-router.get('/:id/:model', getNotifications);
-
-// ✅ This must be LAST
-router.get('/:userId', getUserNotifications);
-
-// ✅ Mark as read
+router.get('/:id/:model', getNotifications);   // model-based comes first
 router.patch('/read/:notificationId', markAsRead);
+
+// ✅ General fallback LAST
+router.get('/:userId', getUserNotifications);
 
 module.exports = router;

@@ -16,7 +16,9 @@ const {
   getAllStores,
   updateStoreItem,
   deleteStoreItem,
-  deleteStore
+  deleteStore,
+  getPurchaseNotifications,
+  getRatingNotifications
 } = require('../controllers/storeController');
 
 const Store = require('../models/Store');
@@ -131,5 +133,6 @@ router.get('/stores', getAllStores);
 
 router.delete('/stores/:storeId', deleteStore);
 
-
+router.get('/stores/:storeId/notifications/purchases', getPurchaseNotifications);
+router.get('/stores/:storeId/notifications/ratings', getRatingNotifications);
 module.exports = router;

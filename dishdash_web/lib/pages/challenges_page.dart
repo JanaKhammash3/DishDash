@@ -11,7 +11,7 @@ class AdminChallengesPage extends StatefulWidget {
 }
 
 class _AdminChallengesPageState extends State<AdminChallengesPage> {
-  final String baseUrl = 'http://192.168.68.60:3000/api/challenges';
+  final String baseUrl = 'http://192.168.1.4:3000/api/challenges';
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
@@ -255,7 +255,7 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
       final users = jsonDecode(res.body);
       for (var user in users) {
         await http.post(
-          Uri.parse('http://192.168.68.60:3000/api/notifications'),
+          Uri.parse('http://192.168.1.4:3000/api/notifications'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'recipientId': user['_id'],

@@ -23,7 +23,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   String? userId;
   bool isLoading = true;
 
-  final String baseUrl = 'http://192.168.68.60:3000'; // Adjust for your setup
+  final String baseUrl = 'http://192.168.1.4:3000'; // Adjust for your setup
 
   @override
   void initState() {
