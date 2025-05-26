@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dishdash_web/pages/users_page.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
@@ -11,7 +12,7 @@ class AdminChallengesPage extends StatefulWidget {
 }
 
 class _AdminChallengesPageState extends State<AdminChallengesPage> {
-  final String baseUrl = 'http://192.168.1.4:3000/api/challenges';
+  final String baseUrl = 'http://192.168.68.60:3000/api/challenges';
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
@@ -255,7 +256,7 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
       final users = jsonDecode(res.body);
       for (var user in users) {
         await http.post(
-          Uri.parse('http://192.168.1.4:3000/api/notifications'),
+          Uri.parse('http://192.168.68.60:3000/api/notifications'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'recipientId': user['_id'],
@@ -451,6 +452,13 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
             padding: const EdgeInsets.only(right: 16),
             child: ElevatedButton(
               onPressed: () => _openChallengeDialog(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: darkGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               child: const Text('+ New Challenge'),
             ),
           ),
@@ -497,14 +505,20 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
                                 Row(
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.edit),
+                                      icon: const Icon(
+                                        Icons.edit,
+                                        color: darkGreen,
+                                      ),
                                       onPressed:
                                           () => _openChallengeDialog(
                                             existingChallenge: challenge,
                                           ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.people),
+                                      icon: const Icon(
+                                        Icons.people,
+                                        color: darkGreen,
+                                      ),
                                       tooltip: 'Participants',
                                       onPressed:
                                           () => _showParticipantsModal(
@@ -514,6 +528,7 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
                                     IconButton(
                                       icon: const Icon(
                                         Icons.assignment_turned_in_outlined,
+                                        color: darkGreen,
                                       ),
                                       tooltip: 'Submissions',
                                       onPressed:
@@ -523,7 +538,10 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
                                           ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.delete),
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: darkGreen,
+                                      ),
                                       onPressed:
                                           () =>
                                               deleteChallenge(challenge['_id']),
