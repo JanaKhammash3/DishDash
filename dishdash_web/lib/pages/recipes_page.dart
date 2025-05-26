@@ -52,7 +52,7 @@ class _RecipesPageState extends State<RecipesPage> {
   void _showRecipeDetailsModal(Map<String, dynamic> recipe) async {
     final response = await http.get(
       Uri.parse(
-        'http://192.168.1.4:3000/api/recipes/${recipe['_id']}/full-details',
+        'http://192.168.68.60:3000/api/recipes/${recipe['_id']}/full-details',
       ),
     );
 
@@ -186,7 +186,7 @@ class _RecipesPageState extends State<RecipesPage> {
     if (confirm != true) return;
 
     final response = await http.delete(
-      Uri.parse('http://192.168.1.4:3000/api/recipes/$recipeId'),
+      Uri.parse('http://192.168.68.60:3000/api/recipes/$recipeId'),
     );
 
     if (response.statusCode == 200) {
@@ -205,7 +205,7 @@ class _RecipesPageState extends State<RecipesPage> {
 
   Future<void> fetchRecipes() async {
     final response = await http.get(
-      Uri.parse('http://192.168.1.4:3000/api/recipes'),
+      Uri.parse('http://192.168.68.60:3000/api/recipes'),
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -255,7 +255,7 @@ class _RecipesPageState extends State<RecipesPage> {
     } else if (isNetwork) {
       return NetworkImage(imageData);
     } else {
-      return NetworkImage('http://192.168.1.4:3000/images/$imageData');
+      return NetworkImage('http://192.168.68.60:3000/images/$imageData');
     }
   }
 

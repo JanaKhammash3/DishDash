@@ -14,7 +14,7 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  final String baseUrl = 'http://192.168.1.4:3000';
+  final String baseUrl = 'http://192.168.68.60:3000';
   List<Map<String, dynamic>> users = [];
   List<Map<String, dynamic>> filteredUsers = [];
   Map<String, dynamic>? selectedUser;
@@ -191,12 +191,42 @@ class _UsersPageState extends State<UsersPage> {
                 child: const Text("Cancel", style: TextStyle(color: maroon)),
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final message = _messageController.text.trim();
-                  // ⚠️ Placeholder for notification logic
-                  print('Notification to ${selectedUser?['name']}: $message');
-                  Navigator.pop(context);
+                  if (message.isEmpty) return;
+
+                  final recipientId = selectedUser?['_id'];
+                  if (recipientId == null) return;
+
+                  final notification = {
+                    'recipientId': recipientId,
+                    'recipientModel': 'User',
+                    'senderModel': 'Admin',
+                    'type': 'Alerts',
+                    'message': message,
+                  };
+
+                  final res = await http.post(
+                    Uri.parse('$baseUrl/api/notifications'),
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode(notification),
+                  );
+
+                  Navigator.pop(context); // close the dialog
+
+                  if (res.statusCode == 200 || res.statusCode == 201) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("✅ Notification sent")),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("❌ Failed to send notification"),
+                      ),
+                    );
+                  }
                 },
+
                 style: ElevatedButton.styleFrom(backgroundColor: darkGreen),
                 child: const Text(
                   "Notify",
