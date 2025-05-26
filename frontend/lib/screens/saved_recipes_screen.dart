@@ -185,7 +185,8 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
 
     if (image != null && image.startsWith('http')) {
       imageProvider = NetworkImage(image);
-    } else if (image != null && image.startsWith('/9j')) {
+    } else if (image != null &&
+        (image.startsWith('/9j') || image.startsWith('iVBOR'))) {
       imageProvider = MemoryImage(base64Decode(image));
     } else if (image != null && image.isNotEmpty) {
       imageProvider = NetworkImage('http://192.168.68.60:3000/images/$image');

@@ -254,16 +254,28 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     print('✅ Meal plan saved to SharedPreferences.');
   }
 
-  ImageProvider _getImageProvider(dynamic image) {
-    if (image == null || image == '' || image == 'null') {
+  ImageProvider _getImageProvider(String? image) {
+    if (image == null || image.isEmpty) {
       return const AssetImage('assets/placeholder.png');
     }
-    if (image is String && image.startsWith('/9j')) {
-      return MemoryImage(base64Decode(image));
+
+    // Detect base64 string (common formats: /9j for JPEG, iVBOR for PNG)
+    final isBase64 =
+        RegExp(r'^[A-Za-z0-9+/]+={0,2}$').hasMatch(image) &&
+        image.length > 100; // crude length check to avoid false positives
+
+    if (isBase64) {
+      try {
+        return MemoryImage(base64Decode(image));
+      } catch (_) {
+        return const AssetImage('assets/placeholder.png');
+      }
     }
-    if (image is String && image.startsWith('http')) {
+
+    if (image.startsWith('http')) {
       return NetworkImage(image);
     }
+
     return NetworkImage('http://192.168.68.60:3000/images/$image');
   }
 
