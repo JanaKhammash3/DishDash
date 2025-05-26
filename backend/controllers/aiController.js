@@ -1,8 +1,15 @@
 const { OpenAI } = require('openai');
+require('dotenv').config();
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Store this in your .env file
+  apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Extract JSON block from GPT
+function extractJSONFromText(text) {
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  return match ? match[1].trim() : text.trim();
+}
 
 exports.generateAIRecipe = async (req, res) => {
   const {
@@ -13,48 +20,132 @@ exports.generateAIRecipe = async (req, res) => {
     diet,
     allergies,
     prepTime,
-    calories
+    calories,
+    servings,
   } = req.body;
 
   try {
     const prompt = `
-Create a personalized ${diet} ${mealTime} recipe.
-Use ingredients: ${preferredIngredients.join(', ') || 'any available'}.
-Avoid ingredients: ${avoidIngredients.join(', ') || 'none'}.
-Cuisine style: ${cuisine || 'any'}.
-Allergies to avoid: ${allergies.join(', ') || 'none'}.
-Prep time under ${prepTime || 30} minutes.
-Calories around ${calories || 500}.
+You are a recipe assistant. ONLY respond in raw JSON. DO NOT explain anything.
 
-Return the response in this JSON format:
+Generate a personalized ${diet} ${mealTime} recipe for ${servings || 1} people.
+Use ingredients: ${preferredIngredients.join(', ') || 'any'}.
+Avoid ingredients: ${avoidIngredients.join(', ') || 'none'}.
+Cuisine: ${cuisine || 'any'}.
+Avoid these allergies strictly: ${allergies.join(', ') || 'none'}. Do not include them in any form.
+Prep time: under ${prepTime || 30} minutes.
+Calories: around ${calories || 500}.
+
+Respond ONLY in this exact format (no intro or explanation):
+
 {
   "title": "...",
   "description": "...",
-  "ingredients": ["...", "..."],
-  "instructions": ["Step 1...", "Step 2..."],
-  "calories": number
+  "ingredients": ["..."],
+  "instructions": ["..."],
+  "calories": number,
+  "servings": number
 }
 `;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4', // or 'gpt-3.5-turbo'
+    const chatResponse = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.8,
     });
 
-    const content = completion.choices[0].message.content;
+    const raw = chatResponse.choices[0].message.content;
+    const cleaned = extractJSONFromText(raw);
 
-    // Try parsing the JSON safely
     let recipe;
     try {
-      recipe = JSON.parse(content);
+      recipe = JSON.parse(cleaned);
     } catch (err) {
+      console.error('❌ JSON parse failed:', cleaned);
       return res.status(500).json({ error: 'Invalid response format from AI.' });
     }
 
+    // 🖼️ Generate image using DALL·E 2
+    const imagePrompt = `A high-quality photo of a cooked ${recipe.title}, served on a plate, food photography`;
+    const imageResponse = await openai.images.generate({
+      prompt: imagePrompt,
+      n: 1,
+      size: '512x512',
+      response_format: 'b64_json',
+    });
+
+    recipe.image = imageResponse.data[0].b64_json;
+
     res.json(recipe);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate recipe.' });
+    console.error('❌ Error:', err.message);
+    res.status(500).json({ error: 'Failed to generate recipe or image.' });
+  }
+};
+
+
+
+
+
+exports.imageToRecipe = async (req, res) => {
+  const { image } = req.body;
+
+  if (!image) {
+    return res.status(400).json({ error: 'Image is required as base64' });
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text:
+                "Analyze this food image and generate a recipe including: title, description, ingredients, instructions, calories. Return ONLY JSON with this format:\n\n" +
+                `{
+  "title": "...",
+  "description": "...",
+  "ingredients": ["..."],
+  "instructions": ["..."],
+  "calories": number
+}`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${image}`,
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 1000,
+    });
+    const raw = response.choices[0].message.content;
+    console.log('🧠 Vision AI Raw Response:', raw);
+    
+    let cleaned = raw.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/```json|```/g, '').trim();
+    }
+    
+    let recipe;
+    try {
+      recipe = JSON.parse(cleaned);
+    } catch (e) {
+      console.error('❌ Parse failed:', cleaned);
+      return res.status(500).json({ error: 'Failed to parse recipe. AI response may not be in proper format.', raw });
+    }
+
+    // Attach the original image for frontend preview
+    recipe.image = image;
+
+    res.json(recipe);
+  } catch (err) {
+    console.error("❌ Error generating recipe from image:", err.message);
+    res.status(500).json({ error: 'Failed to generate recipe from image.' });
   }
 };
