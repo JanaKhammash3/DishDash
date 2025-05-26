@@ -26,18 +26,17 @@ class _AiImageToRecipeScreenState extends State<AiImageToRecipeScreen> {
       final bytes = await picked.readAsBytes();
       setState(() {
         imageBytes = bytes;
-        recipe = null; // reset recipe if re-picking
+        recipe = null;
       });
     }
   }
 
   Future<void> processImage() async {
     if (imageBytes == null) return;
-
     setState(() => isLoading = true);
 
     final res = await http.post(
-      Uri.parse('http://192.168.68.60:3000/api/ai/image-to-recipe'),
+      Uri.parse('http://192.168.1.4:3000/api/ai/image-to-recipe'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'image': base64Encode(imageBytes!)}),
     );
@@ -58,7 +57,7 @@ class _AiImageToRecipeScreenState extends State<AiImageToRecipeScreen> {
 
     final response = await http.post(
       Uri.parse(
-        'http://192.168.68.60:3000/api/users/${widget.userId}/customRecipe',
+        'http://192.168.1.4:3000/api/users/${widget.userId}/customRecipe',
       ),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -101,13 +100,20 @@ class _AiImageToRecipeScreenState extends State<AiImageToRecipeScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // 🔼 Upload Image Section
             GestureDetector(
               onTap: pickImage,
               child: Container(
                 height: 180,
+                width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.grey[400]!,
+                    style: BorderStyle.solid,
+                    width: 1.4,
+                  ),
                 ),
                 child:
                     imageBytes != null
@@ -115,66 +121,128 @@ class _AiImageToRecipeScreenState extends State<AiImageToRecipeScreen> {
                           borderRadius: BorderRadius.circular(12),
                           child: Image.memory(imageBytes!, fit: BoxFit.cover),
                         )
-                        : const Center(child: Text("Tap to upload image")),
+                        : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(
+                              Icons.cloud_upload,
+                              size: 38,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              "Tap to upload a food image",
+                              style: TextStyle(color: Colors.black54),
+                            ),
+                          ],
+                        ),
               ),
             ),
+
             const SizedBox(height: 16),
+
             ElevatedButton.icon(
               onPressed: isLoading ? null : processImage,
               icon: const Icon(Icons.auto_awesome, color: Colors.white),
               label: const Text(
-                "Process Image",
+                "Generate Recipe",
                 style: TextStyle(color: Colors.white),
               ),
-              style: ElevatedButton.styleFrom(backgroundColor: green),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+              ),
             ),
+
             const SizedBox(height: 20),
+
             if (isLoading)
-              const CircularProgressIndicator()
+              const Center(child: CircularProgressIndicator(color: green))
             else if (recipe != null)
               Expanded(
                 child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      Text(
-                        recipe!['title'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        Text(
+                          recipe!['title'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(recipe!['description'] ?? ''),
-                      const SizedBox(height: 12),
-                      const Text(
-                        "Ingredients:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      ...List<String>.from(
-                        recipe!['ingredients'] ?? [],
-                      ).map((i) => Text('• $i')),
-                      const SizedBox(height: 12),
-                      const Text(
-                        "Instructions:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      ...List<String>.from(
-                        recipe!['instructions'] ?? [],
-                      ).map((i) => Text('• $i')),
-                      const SizedBox(height: 12),
-                      Text('Calories: ${recipe!['calories'] ?? 0}'),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: saveRecipe,
-                        icon: const Icon(Icons.save, color: Colors.white),
-                        label: const Text(
-                          "Save to My Recipes",
-                          style: TextStyle(color: Colors.white),
+                        const SizedBox(height: 8),
+                        Text(
+                          recipe!['description'] ?? '',
+                          style: const TextStyle(fontSize: 14),
                         ),
-                        style: ElevatedButton.styleFrom(backgroundColor: green),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        const Text(
+                          "🧂 Ingredients",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        ...List<String>.from(
+                          recipe!['ingredients'] ?? [],
+                        ).map((i) => Text('• $i')),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "👨‍🍳 Instructions",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        ...List<String>.from(
+                          recipe!['instructions'] ?? [],
+                        ).map((i) => Text('• $i')),
+                        const SizedBox(height: 16),
+                        Text(
+                          '🔥 Calories: ${recipe!['calories'] ?? 0}',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: saveRecipe,
+                          icon: const Icon(Icons.save, color: Colors.white),
+                          label: const Text(
+                            "Save to My Recipes",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: green,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -42,7 +42,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       return NetworkImage(image);
     }
 
-    return NetworkImage('http://192.168.68.60:3000/images/$image');
+    return NetworkImage('http://192.168.1.4:3000/images/$image');
   }
 
   @override
@@ -53,7 +53,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
   Future<void> fetchUserRecipes() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/myRecipes',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/myRecipes',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -67,7 +67,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'http://192.168.68.60:3000/translate',
+          'http://192.168.1.4:3000/translate',
         ), // ✅ Your backend endpoint
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -227,7 +227,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                             try {
                               final res = await http.post(
                                 Uri.parse(
-                                  'http://192.168.68.60:3000/api/analyze-nutrition',
+                                  'http://192.168.1.4:3000/api/analyze-nutrition',
                                 ),
                                 headers: {'Content-Type': 'application/json'},
                                 body: jsonEncode({
@@ -380,7 +380,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
                     final res = await http.put(
                       Uri.parse(
-                        'http://192.168.68.60:3000/api/recipes/${recipe['_id']}',
+                        'http://192.168.1.4:3000/api/recipes/${recipe['_id']}',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
@@ -551,7 +551,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                             try {
                               final res = await http.post(
                                 Uri.parse(
-                                  'http://192.168.68.60:3000/api/analyze-nutrition',
+                                  'http://192.168.1.4:3000/api/analyze-nutrition',
                                 ),
                                 headers: {'Content-Type': 'application/json'},
                                 body: jsonEncode({
@@ -811,7 +811,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
                     final res = await http.post(
                       Uri.parse(
-                        'http://192.168.68.60:3000/api/users/${widget.userId}/customRecipe',
+                        'http://192.168.1.4:3000/api/users/${widget.userId}/customRecipe',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
@@ -931,66 +931,6 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                         );
                       },
                     ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (_) => AiImageToRecipeScreen(userId: widget.userId),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.brown,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 16,
-                ),
-                elevation: 4,
-              ),
-              icon: const Icon(Icons.image, color: Colors.white),
-              label: const Text(
-                'Image to Recipe',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AiRecipeFormScreen(userId: widget.userId),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 16,
-                ),
-                elevation: 4,
-              ),
-              icon: const Icon(Icons.auto_awesome, color: Colors.white),
-              label: const Text(
-                'Generate with AI',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            ),
           ),
 
           Padding(

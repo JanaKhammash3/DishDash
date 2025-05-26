@@ -40,7 +40,7 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
     setState(() => isLoading = true);
 
     final res = await http.post(
-      Uri.parse('http://192.168.68.60:3000/api/ai/generate-recipe'),
+      Uri.parse('http://192.168.1.4:3000/api/ai/generate-recipe'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'mealTime': mealTime,
@@ -71,7 +71,7 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
 
     final response = await http.post(
       Uri.parse(
-        'http://192.168.68.60:3000/api/users/${widget.userId}/customRecipe',
+        'http://192.168.1.4:3000/api/users/${widget.userId}/customRecipe',
       ),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
@@ -121,17 +121,45 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
     List<String> targetList,
   ) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: TextField(controller: controller)),
-            IconButton(
-              icon: const Icon(Icons.add),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: 'Enter value...',
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+              ),
               onPressed: () {
                 if (controller.text.trim().isNotEmpty) {
                   setState(() {
@@ -140,16 +168,20 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
                   });
                 }
               },
+              child: const Icon(Icons.add, size: 18, color: Colors.white),
             ),
           ],
         ),
+        const SizedBox(height: 10),
         Wrap(
           spacing: 8,
+          runSpacing: 6,
           children:
               targetList
                   .map(
                     (item) => Chip(
                       label: Text(item),
+                      deleteIcon: const Icon(Icons.close),
                       onDeleted: () => setState(() => targetList.remove(item)),
                     ),
                   )
@@ -162,12 +194,25 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
   Widget _stepTitle(String title, IconData icon) {
     return Column(
       children: [
-        Icon(icon, size: 40, color: green),
-        const SizedBox(height: 8),
+        CircleAvatar(
+          radius: 32,
+          backgroundColor: green.withOpacity(0.1),
+          child: Icon(icon, size: 30, color: green),
+        ),
+        const SizedBox(height: 12),
         Text(
           title,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          "Step ${_step + 1} of 9",
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 20),
       ],
@@ -250,6 +295,8 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
               divisions: 22,
               value: prepTime.toDouble(),
               label: "$prepTime min",
+              activeColor: green,
+              inactiveColor: green.withOpacity(0.3),
               onChanged: (v) => setState(() => prepTime = v.round()),
             ),
           ],
@@ -264,6 +311,8 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
               divisions: 28,
               value: calories.toDouble(),
               label: "$calories cal",
+              activeColor: green,
+              inactiveColor: green.withOpacity(0.3),
               onChanged: (v) => setState(() => calories = v.round()),
             ),
           ],
@@ -278,6 +327,8 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
               divisions: 9,
               value: servings.toDouble(),
               label: "$servings people",
+              activeColor: green,
+              inactiveColor: green.withOpacity(0.3),
               onChanged: (v) => setState(() => servings = v.round()),
             ),
           ],
@@ -285,6 +336,89 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
       default:
         return const SizedBox();
     }
+  }
+
+  Widget _buildNavigationControls() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (_step > 0)
+          OutlinedButton.icon(
+            onPressed: _back,
+            icon: const Icon(Icons.arrow_back, color: green),
+            label: const Text('Back', style: TextStyle(color: green)),
+            style: OutlinedButton.styleFrom(side: BorderSide(color: green)),
+          ),
+        ElevatedButton.icon(
+          onPressed:
+              isLoading
+                  ? null
+                  : _step == 8
+                  ? _generateRecipe
+                  : _next,
+          icon: Icon(
+            _step == 8 ? Icons.flash_on : Icons.arrow_forward,
+            color: Colors.white,
+          ),
+          label: Text(
+            _step == 8 ? 'Generate' : 'Next',
+            style: const TextStyle(color: Colors.white),
+          ),
+          style: ElevatedButton.styleFrom(backgroundColor: green),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResultView() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          if (generatedRecipe!["image"] != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.memory(
+                base64Decode(generatedRecipe!["image"]),
+                height: 220,
+                fit: BoxFit.cover,
+              ),
+            ),
+          const SizedBox(height: 12),
+          Text(
+            generatedRecipe!["title"] ?? '',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(generatedRecipe!["description"] ?? ''),
+          const SizedBox(height: 12),
+          const Text(
+            "Ingredients:",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          ...List<String>.from(
+            generatedRecipe!["ingredients"] ?? [],
+          ).map((i) => Text('• $i')),
+          const SizedBox(height: 12),
+          const Text(
+            "Instructions:",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          ...List<String>.from(
+            generatedRecipe!["instructions"] ?? [],
+          ).map((i) => Text('• $i')),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _saveRecipe,
+            icon: const Icon(Icons.save, color: Colors.white),
+            label: const Text(
+              "Save to My Recipes",
+              style: TextStyle(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(backgroundColor: green),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -300,103 +434,55 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child:
-            generatedRecipe == null
-                ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Center(
-                        child: SingleChildScrollView(
-                          child: _buildStepContent(),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (_step > 0)
-                          TextButton(
-                            onPressed: _back,
-                            child: const Text('Back'),
-                          ),
-                        ElevatedButton(
-                          onPressed:
-                              isLoading
-                                  ? null
-                                  : _step == 8
-                                  ? _generateRecipe
-                                  : _next,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: green,
-                          ),
-                          child:
-                              isLoading
-                                  ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                  : Text(
-                                    _step == 8 ? 'Generate' : 'Next',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-                : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      if (generatedRecipe!["image"] != null)
-                        Image.memory(
-                          base64Decode(generatedRecipe!["image"]),
-                          height: 220,
-                          fit: BoxFit.cover,
-                        ),
-                      const SizedBox(height: 12),
-                      Text(
-                        generatedRecipe!["title"] ?? '',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(generatedRecipe!["description"] ?? ''),
-                      const SizedBox(height: 12),
-                      const Text(
-                        "Ingredients:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      ...List<String>.from(
-                        generatedRecipe!["ingredients"] ?? [],
-                      ).map((i) => Text('• $i')),
-                      const SizedBox(height: 12),
-                      const Text(
-                        "Instructions:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      ...List<String>.from(
-                        generatedRecipe!["instructions"] ?? [],
-                      ).map((i) => Text('• $i')),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _saveRecipe,
-                        icon: const Icon(Icons.save, color: Colors.white),
-                        label: const Text(
-                          "Save to My Recipes",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(backgroundColor: green),
-                      ),
-                    ],
-                  ),
+        child: Column(
+          children: [
+            if (generatedRecipe == null) ...[
+              // 🔁 Progress bar
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: LinearProgressIndicator(
+                  value: (_step + 1) / 9,
+                  color: green,
+                  backgroundColor: Colors.grey[300],
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(8),
                 ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Expanded(
+              child:
+                  generatedRecipe == null
+                      ? Center(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          transitionBuilder: (
+                            Widget child,
+                            Animation<double> animation,
+                          ) {
+                            return SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(1.0, 0.0), // from right
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: SingleChildScrollView(
+                            key: ValueKey(_step), // ✅ Unique key per step
+                            child: _buildStepContent(),
+                          ),
+                        ),
+                      )
+                      : _buildResultView(),
+            ),
+            if (generatedRecipe == null)
+              _buildNavigationControls(), // ⬇️ defined below
+          ],
+        ),
       ),
     );
   }
