@@ -25,7 +25,8 @@ const {
   getFollowers,
   deleteUser,
   scrapeAndSaveRecipe,
-  updateCustomRecipe
+  updateCustomRecipe,
+  getFollowingUsers
 } = require('../controllers/userController');
 
 // ✅ Auth & Profile
@@ -73,6 +74,7 @@ router.get('/', async (req, res) => {
   }
 });
 router.delete('/:id', deleteUser);
+router.get('/:id/following', getFollowingUsers);
 
 // ✅ Export the router
 module.exports = router;

@@ -18,7 +18,7 @@ class ChatsScreen extends StatefulWidget {
 }
 
 class _ChatsScreenState extends State<ChatsScreen> {
-  final String baseUrl = 'http://192.168.68.60:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   List<dynamic> chatUsers = [];
   late IO.Socket socket;
   String? currentOpenChatUserId;
@@ -27,6 +27,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
   final ImagePicker picker = ImagePicker();
   Set<String> onlineUserIds = {}; // ✅ Add this line
   final ScrollController _chatScrollController = ScrollController();
+  List<dynamic> followedUsers = [];
+  TextEditingController _searchController = TextEditingController();
+  List<dynamic> filteredChatUsers = [];
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         if (chatUser != null) _openChatModal(chatUser);
       }
     });
+    fetchFollowingUsers(); // 👈 add this
   }
 
   void initSocket() {
@@ -87,6 +91,32 @@ class _ChatsScreenState extends State<ChatsScreen> {
     if (res.statusCode == 200) {
       setState(() {
         chatUsers = json.decode(res.body);
+        filteredChatUsers = chatUsers; // ← initially show all
+      });
+    }
+  }
+
+  void _filterChats(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        filteredChatUsers = chatUsers;
+      } else {
+        filteredChatUsers =
+            chatUsers.where((user) {
+              final name = (user['name'] ?? '').toString().toLowerCase();
+              return name.contains(query.toLowerCase());
+            }).toList();
+      }
+    });
+  }
+
+  Future<void> fetchFollowingUsers() async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/api/users/${widget.userId}/following'),
+    );
+    if (res.statusCode == 200) {
+      setState(() {
+        followedUsers = jsonDecode(res.body);
       });
     }
   }
@@ -268,23 +298,20 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                             decoration: BoxDecoration(
                                               color:
                                                   isMe
-                                                      ? green
+                                                      ? green.withOpacity(0.9)
                                                       : Colors.grey[200],
-                                              borderRadius: BorderRadius.only(
-                                                topLeft: const Radius.circular(
-                                                  16,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.05),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(2, 2),
                                                 ),
-                                                topRight: const Radius.circular(
-                                                  16,
-                                                ),
-                                                bottomLeft: Radius.circular(
-                                                  isMe ? 16 : 0,
-                                                ),
-                                                bottomRight: Radius.circular(
-                                                  isMe ? 0 : 16,
-                                                ),
-                                              ),
+                                              ],
                                             ),
+
                                             child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
@@ -512,114 +539,236 @@ class _ChatsScreenState extends State<ChatsScreen> {
         title: const Text("Chats"),
         backgroundColor: green,
         foregroundColor: Colors.white,
+        elevation: 3,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+        ),
       ),
-      body:
-          chatUsers.isEmpty
-              ? const Center(
+
+      body: Column(
+        children: [
+          // 🔰 FOLLOWING AVATARS SECTION
+          if (followedUsers.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.only(left: 16, top: 12, bottom: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
                 child: Text(
-                  'No chats yet',
-                  style: TextStyle(color: Colors.grey),
+                  "Following",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
                 ),
-              )
-              : ListView.builder(
-                itemCount: chatUsers.length,
+              ),
+            ),
+            SizedBox(
+              height: 88,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: followedUsers.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
-                  final user = chatUsers[index];
-                  return ListTile(
-                    leading: Stack(
+                  final user = followedUsers[index];
+                  return GestureDetector(
+                    onTap: () => _openChatModal(user),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         CircleAvatar(
-                          radius: 24,
                           backgroundImage: _getAvatar(user['avatar']),
+                          radius: 28,
                         ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color:
-                                  onlineUserIds.contains(user['_id'])
-                                      ? Colors.green
-                                      : Colors.grey,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: 60,
+                          child: Text(
+                            user['name'].split(' ')[0],
+                            style: const TextStyle(fontSize: 12),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-
-                    title: Text(
-                      user['name'] ?? 'User',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight:
-                            user['unreadCount'] > 0
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                      ),
-                    ),
-                    subtitle: Text(
-                      user['lastMessage']?.isNotEmpty == true
-                          ? user['lastMessage']
-                          : onlineUserIds.contains(user['_id'])
-                          ? 'Online'
-                          : 'Offline',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight:
-                            user['unreadCount'] > 0
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (user['lastTimestamp'] != null)
-                          Text(
-                            _formatTime(user['lastTimestamp']),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        if ((user['unreadCount'] ?? 0) > 0)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '${user['unreadCount']}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    onTap: () => _openChatModal(user),
                   );
                 },
               ),
+            ),
+          ],
+
+          // 💬 CHAT LIST SECTION
+          Expanded(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _filterChats,
+                    decoration: InputDecoration(
+                      hintText: 'Search chats...',
+                      prefixIcon: Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 💬 Section title under search
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.message, color: green, size: 20),
+                      SizedBox(width: 6),
+                      Text(
+                        "Messages",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child:
+                      filteredChatUsers.isEmpty
+                          ? const Center(
+                            child: Text(
+                              'No chats found',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                          : ListView.builder(
+                            itemCount: filteredChatUsers.length,
+                            itemBuilder: (context, index) {
+                              final user = filteredChatUsers[index];
+                              return ListTile(
+                                leading: Stack(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 24,
+                                      backgroundImage: _getAvatar(
+                                        user['avatar'],
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              onlineUserIds.contains(
+                                                    user['_id'].toString(),
+                                                  )
+                                                  ? Colors.green
+                                                  : Colors.grey,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                title: Text(
+                                  user['name'] ?? 'User',
+                                  style: TextStyle(
+                                    fontWeight:
+                                        user['unreadCount'] > 0
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  user['lastMessage']?.isNotEmpty == true
+                                      ? user['lastMessage']
+                                      : onlineUserIds.contains(
+                                        user['_id'].toString(),
+                                      )
+                                      ? 'Online'
+                                      : 'Offline',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight:
+                                        user['unreadCount'] > 0
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (user['lastTimestamp'] != null)
+                                      Text(
+                                        _formatTime(user['lastTimestamp']),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    if ((user['unreadCount'] ?? 0) > 0)
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 4),
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          '${user['unreadCount']}',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                onTap: () => _openChatModal(user),
+                              );
+                            },
+                          ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
 
-String _formatTime(String timestamp) {
-  try {
-    final dt = DateTime.parse(timestamp).toLocal();
-    return '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-  } catch (_) {
-    return '';
+  String _formatTime(String timestamp) {
+    try {
+      final dt = DateTime.parse(timestamp).toLocal();
+      return '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '';
+    }
   }
 }
