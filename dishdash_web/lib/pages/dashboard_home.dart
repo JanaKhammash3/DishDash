@@ -1,5 +1,10 @@
+import 'dart:convert';
+
+import 'package:dishdash_web/pages/users_page.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:http/http.dart' as http;
 
 class DashboardHome extends StatefulWidget {
   final int totalUsers;
@@ -19,6 +24,78 @@ class DashboardHome extends StatefulWidget {
 
   @override
   State<DashboardHome> createState() => _DashboardHomeState();
+}
+
+void _showAnnouncementModal(BuildContext context) {
+  final TextEditingController _textController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder:
+        (context) => AlertDialog(
+          title: const Text('📢 Send Announcement'),
+          content: TextField(
+            controller: _textController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'Write your message here...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+              ),
+              onPressed: () async {
+                final message = _textController.text.trim();
+                if (message.isEmpty) return;
+
+                final res = await http.get(
+                  Uri.parse('http://192.168.68.60:3000/api/users'),
+                );
+
+                if (res.statusCode == 200) {
+                  final users = jsonDecode(res.body);
+                  for (var user in users) {
+                    await http.post(
+                      Uri.parse('http://192.168.68.60:3000/api/notifications'),
+                      headers: {'Content-Type': 'application/json'},
+                      body: jsonEncode({
+                        'recipientId': user['_id'],
+                        'recipientModel': 'User',
+                        'senderModel': 'Admin',
+                        'type': 'Alerts',
+                        'message': message,
+                      }),
+                    );
+                  }
+
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Announcement sent to all users'),
+                    ),
+                  );
+                } else {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('❌ Failed to fetch users')),
+                  );
+                }
+              },
+              child: const Text(
+                'Announce',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+  );
 }
 
 class _DashboardHomeState extends State<DashboardHome> {
@@ -42,6 +119,11 @@ class _DashboardHomeState extends State<DashboardHome> {
         actions: [
           Row(
             children: [
+              IconButton(
+                icon: Icon(Icons.campaign, color: darkGreen),
+                tooltip: 'Send Announcement',
+                onPressed: () => _showAnnouncementModal(context),
+              ),
               Icon(
                 isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 color: textColor,
@@ -323,7 +405,6 @@ class _DashboardHomeState extends State<DashboardHome> {
           ),
         ],
         titlesData: FlTitlesData(
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
