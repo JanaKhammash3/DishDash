@@ -22,6 +22,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
   List<String> savedRecipeIds = [];
   String? userId;
   bool isLoading = true;
+  bool showFollowingOnly = false;
+  List<String> followingUserIds = [];
+
   bool hasAllergyConflict(List<String> ingredients, List<String> allergies) {
     final lowerIngredients = ingredients.join(',').toLowerCase();
     return allergies.any(
@@ -136,6 +139,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
       final data = json.decode(res.body);
       setState(() {
         savedRecipeIds = List<String>.from(data['recipes'] ?? []);
+        followingUserIds = List<String>.from(
+          (data['following'] ?? []).map((u) => u['_id']),
+        );
       });
     }
   }
@@ -155,14 +161,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
       if (selectedCategory == 'users') {
         filteredPosts =
-            data
-                .where(
-                  (r) =>
-                      r['author'] != null &&
-                      r['type'] != 'store' &&
-                      r['type'] != 'challenge',
-                )
-                .toList();
+            data.where((r) {
+              final authorId = r['author']?['_id'];
+              if (r['author'] == null ||
+                  r['type'] == 'store' ||
+                  r['type'] == 'challenge') {
+                return false;
+              }
+              if (showFollowingOnly) {
+                return followingUserIds.contains(authorId);
+              }
+              return true;
+            }).toList();
       } else if (selectedCategory == 'stores') {
         filteredPosts = data.where((r) => r['type'] == 'store').toList();
       } else {
@@ -422,6 +432,31 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
+  Widget _buildToggleButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? green : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -459,6 +494,49 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ],
                     ),
                   ),
+                  if (selectedCategory == 'users') ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildToggleButton(
+                              label: 'All Users',
+                              isSelected: !showFollowingOnly,
+                              onTap: () {
+                                if (!showFollowingOnly) return;
+                                setState(() {
+                                  showFollowingOnly = false;
+                                  fetchPosts();
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 6),
+                            _buildToggleButton(
+                              label: 'Following',
+                              isSelected: showFollowingOnly,
+                              onTap: () {
+                                if (showFollowingOnly) return;
+                                setState(() {
+                                  showFollowingOnly = true;
+                                  fetchPosts();
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   Expanded(
                     child: ListView.builder(
                       itemCount: posts.length,
