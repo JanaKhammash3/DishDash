@@ -42,7 +42,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       return NetworkImage(image);
     }
 
-    return NetworkImage('http://192.168.68.60:3000/images/$image');
+    return NetworkImage('http://192.168.1.4:3000/images/$image');
   }
 
   @override
@@ -53,7 +53,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
   Future<void> fetchUserRecipes() async {
     final url = Uri.parse(
-      'http://192.168.68.60:3000/api/users/${widget.userId}/myRecipes',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/myRecipes',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -67,7 +67,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'http://192.168.68.60:3000/translate',
+          'http://192.168.1.4:3000/translate',
         ), // ✅ Your backend endpoint
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -227,7 +227,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                             try {
                               final res = await http.post(
                                 Uri.parse(
-                                  'http://192.168.68.60:3000/api/analyze-nutrition',
+                                  'http://192.168.1.4:3000/api/analyze-nutrition',
                                 ),
                                 headers: {'Content-Type': 'application/json'},
                                 body: jsonEncode({
@@ -380,7 +380,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
                     final res = await http.put(
                       Uri.parse(
-                        'http://192.168.68.60:3000/api/recipes/${recipe['_id']}',
+                        'http://192.168.1.4:3000/api/recipes/${recipe['_id']}',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
@@ -551,7 +551,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                             try {
                               final res = await http.post(
                                 Uri.parse(
-                                  'http://192.168.68.60:3000/api/analyze-nutrition',
+                                  'http://192.168.1.4:3000/api/analyze-nutrition',
                                 ),
                                 headers: {'Content-Type': 'application/json'},
                                 body: jsonEncode({
@@ -811,7 +811,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
                     final res = await http.post(
                       Uri.parse(
-                        'http://192.168.68.60:3000/api/users/${widget.userId}/customRecipe',
+                        'http://192.168.1.4:3000/api/users/${widget.userId}/customRecipe',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
@@ -881,9 +881,43 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            subtitle: Text(
-                              '${r['calories']} cal • ${r['difficulty'] ?? 'N/A'}',
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${r['calories']} cal • ${r['difficulty'] ?? 'N/A'} • ${r['prepTime'] ?? 0} min',
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      r['isPublic'] == true
+                                          ? Icons.public
+                                          : Icons.lock,
+                                      size: 16,
+                                      color:
+                                          r['isPublic'] == true
+                                              ? Colors.green
+                                              : Colors.grey,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      r['isPublic'] == true
+                                          ? 'Public'
+                                          : 'Private',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            r['isPublic'] == true
+                                                ? Colors.green
+                                                : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
+
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
