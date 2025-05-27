@@ -54,7 +54,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
   }
 
   Future<void> fetchUsers() async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/users');
+    final url = Uri.parse('http://192.168.68.61:3000/api/users');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -72,7 +72,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
 
   Future<void> fetchStoreInfo() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores/${widget.storeId}',
+      'http://192.168.68.61:3000/api/stores/${widget.storeId}',
     );
     try {
       final response = await http.get(url);
@@ -110,7 +110,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
   Future<void> fetchNotifications() async {
     setState(() => isLoading = true);
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores/${widget.storeId}/notifications',
+      'http://192.168.68.61:3000/api/stores/${widget.storeId}/notifications',
     );
 
     try {
@@ -319,7 +319,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
     final bytes = await pickedFile.readAsBytes();
     final fileName = pickedFile.name;
     final uri = Uri.parse(
-      'http://192.168.1.4:3000/api/stores/${widget.storeId}/image',
+      'http://192.168.68.61:3000/api/stores/${widget.storeId}/image',
     );
     final request = http.MultipartRequest('PATCH', uri);
 

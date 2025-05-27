@@ -32,7 +32,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  final String baseUrl = 'http://192.168.1.4:3000'; // Adjust for your setup
+  final String baseUrl = 'http://192.168.68.61:3000'; // Adjust for your setup
 
   @override
   void initState() {
