@@ -213,6 +213,24 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
           recipe['title'] ?? 'Untitled',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            children: [
+              Text(
+                '${recipe['calories'] ?? 0} cal • ${recipe['difficulty'] ?? 'N/A'} • ',
+                style: const TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+              const Icon(Icons.schedule, size: 14, color: Colors.grey),
+              const SizedBox(width: 4),
+              Text(
+                '${recipe['prepTime'] ?? 0} min',
+                style: const TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+
         trailing: const Icon(
           Icons.arrow_forward_ios,
           size: 16,
