@@ -255,15 +255,90 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
         );
       case 3:
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _stepTitle("Preferred Cuisine", Icons.public),
-            TextField(
-              controller: _cuisineCtrl,
-              decoration: const InputDecoration(labelText: 'Cuisine'),
-              onChanged: (v) => cuisine = v,
+            _stepTitle("Select a Cuisine", Icons.public),
+            const SizedBox(height: 8),
+            Center(
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                runSpacing: 10,
+                children:
+                    [
+                      'Italian',
+                      'Asian',
+                      'Mexican',
+                      'Indian',
+                      'French',
+                      'Mediterranean',
+                      'Middle Eastern',
+                      'American',
+                      'Thai',
+                      'Chinese',
+                    ].map((c) {
+                      final isSelected = cuisine == c;
+                      return GestureDetector(
+                        onTap: () => setState(() => cuisine = c),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected ? green : Colors.grey[200],
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow:
+                                isSelected
+                                    ? [
+                                      BoxShadow(
+                                        color: green.withOpacity(0.3),
+                                        blurRadius: 5,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                    : [],
+                          ),
+                          child: Text(
+                            c,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+              ),
             ),
+            if (cuisine.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle, color: green, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Selected: $cuisine",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.redAccent),
+                        onPressed: () => setState(() => cuisine = ''),
+                        tooltip: 'Clear selection',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         );
+
       case 4:
         return Column(
           children: [
