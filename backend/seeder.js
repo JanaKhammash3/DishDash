@@ -12,7 +12,6 @@ async function seed() {
     console.log('MongoDB connected 🌟');
 
     // Clear previous recipes (optional, if you want to wipe first)
-    await Recipe.deleteMany();
 
     const recipes = [
       {

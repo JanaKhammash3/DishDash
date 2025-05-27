@@ -19,6 +19,7 @@ class MyRecipesScreen extends StatefulWidget {
 class _MyRecipesScreenState extends State<MyRecipesScreen> {
   List<dynamic> userRecipes = [];
   Uint8List? imageBytes;
+  bool isLoading = true;
 
   ImageProvider _getImageProvider(String? image) {
     if (image == null || image.isEmpty) {
@@ -52,12 +53,18 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   }
 
   Future<void> fetchUserRecipes() async {
+    setState(() => isLoading = true);
     final url = Uri.parse(
       'http://192.168.1.4:3000/api/users/${widget.userId}/myRecipes',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
-      setState(() => userRecipes = jsonDecode(res.body));
+      setState(() {
+        userRecipes = jsonDecode(res.body);
+        isLoading = false;
+      });
+    } else {
+      setState(() => isLoading = false);
     }
   }
 
@@ -848,148 +855,165 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
         title: const Text('My Recipes', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child:
-                userRecipes.isEmpty
-                    ? const Center(child: Text('No recipes yet.'))
-                    : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: userRecipes.length,
-                      itemBuilder: (context, index) {
-                        final r = userRecipes[index];
-                        return Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 2,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            leading: CircleAvatar(
-                              radius: 22,
-                              backgroundColor: Colors.grey[200],
-                              backgroundImage: _getImageProvider(r['image']),
-                            ),
-                            title: Text(
-                              r['title'] ?? 'Untitled',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${r['calories']} cal • ${r['difficulty'] ?? 'N/A'} • ${r['prepTime'] ?? 0} min',
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      r['isPublic'] == true
-                                          ? Icons.public
-                                          : Icons.lock,
-                                      size: 16,
-                                      color:
-                                          r['isPublic'] == true
-                                              ? Colors.green
-                                              : Colors.grey,
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  Expanded(
+                    child:
+                        userRecipes.isEmpty
+                            ? const Center(child: Text('No recipes yet.'))
+                            : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: userRecipes.length,
+                              itemBuilder: (context, index) {
+                                final r = userRecipes[index];
+                                return Card(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 2,
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      r['isPublic'] == true
-                                          ? 'Public'
-                                          : 'Private',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            r['isPublic'] == true
-                                                ? Colors.green
-                                                : Colors.grey,
+                                    leading: CircleAvatar(
+                                      radius: 22,
+                                      backgroundColor: Colors.grey[200],
+                                      backgroundImage: _getImageProvider(
+                                        r['image'],
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
-
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.green,
-                                  ),
-                                  onPressed: () => _openEditModal(r),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.arrow_forward_ios,
-                                    size: 16,
-                                  ),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => RecipeScreen(
-                                              title: r['title'] ?? 'Untitled',
-                                              imagePath: r['image'] ?? '',
-                                              rating: 0.0,
-                                              ingredients: List<String>.from(
-                                                (r['ingredients'] ?? []).map(
-                                                  (e) => e.toString(),
-                                                ),
-                                              ),
-                                              description:
-                                                  r['description'] ?? '',
-                                              prepTime: r['prepTime'] ?? 0,
-                                              difficulty:
-                                                  r['difficulty'] ?? 'Easy',
-                                              instructions:
-                                                  r['instructions'] ?? '',
+                                    title: Text(
+                                      r['title'] ?? 'Untitled',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${r['calories']} cal • ${r['difficulty'] ?? 'N/A'} • ${r['prepTime'] ?? 0} min',
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              r['isPublic'] == true
+                                                  ? Icons.public
+                                                  : Icons.lock,
+                                              size: 16,
+                                              color:
+                                                  r['isPublic'] == true
+                                                      ? Colors.green
+                                                      : Colors.grey,
                                             ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-          ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              r['isPublic'] == true
+                                                  ? 'Public'
+                                                  : 'Private',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color:
+                                                    r['isPublic'] == true
+                                                        ? Colors.green
+                                                        : Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: ElevatedButton.icon(
-              onPressed: _openCreateModal,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: green,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 14,
-                ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            color: Colors.green,
+                                          ),
+                                          onPressed: () => _openEditModal(r),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 16,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (_) => RecipeScreen(
+                                                      title:
+                                                          r['title'] ??
+                                                          'Untitled',
+                                                      imagePath:
+                                                          r['image'] ?? '',
+                                                      rating: 0.0,
+                                                      ingredients: List<
+                                                        String
+                                                      >.from(
+                                                        (r['ingredients'] ?? [])
+                                                            .map(
+                                                              (e) =>
+                                                                  e.toString(),
+                                                            ),
+                                                      ),
+                                                      description:
+                                                          r['description'] ??
+                                                          '',
+                                                      prepTime:
+                                                          r['prepTime'] ?? 0,
+                                                      difficulty:
+                                                          r['difficulty'] ??
+                                                          'Easy',
+                                                      instructions:
+                                                          r['instructions'] ??
+                                                          '',
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: ElevatedButton.icon(
+                      onPressed: _openCreateModal,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 14,
+                        ),
+                      ),
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      label: const Text(
+                        'Customize Your Recipe',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                'Customize Your Recipe',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
