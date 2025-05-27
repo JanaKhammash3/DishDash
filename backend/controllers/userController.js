@@ -86,7 +86,8 @@ exports.login = async (req, res) => {
   try {
     // Step 1: Try to find user by email in Users collection
     let account = await User.findOne({ email });
-    let type = 'user';
+let type = account?.role === 'admin' ? 'admin' : 'user';
+
 
     // Step 2: If not found, try Stores collection
     if (!account) {

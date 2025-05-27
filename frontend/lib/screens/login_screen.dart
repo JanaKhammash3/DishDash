@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/screens/admin_dashboard_screen.dart';
 import 'package:frontend/screens/store_dashboard_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -50,12 +51,17 @@ class _LoginScreenState extends State<LoginScreen> {
             context,
             MaterialPageRoute(builder: (_) => HomeScreen(userId: userId)),
           );
-        } else {
+        } else if (type == 'store') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (_) => StoreDashboardScreen(storeId: userId),
             ),
+          );
+        } else if (type == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
           );
         }
       } else {
