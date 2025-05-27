@@ -15,7 +15,6 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   List<dynamic> notifications = [];
   bool isLoading = true;
-  bool showForMeOnly = true;
 
   @override
   void initState() {
@@ -128,45 +127,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 onRefresh: fetchNotifications,
                 child: Column(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 6,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildToggleChip('For Me', showForMeOnly, () {
-                              setState(() => showForMeOnly = true);
-                            }),
-                            const SizedBox(width: 8),
-                            _buildToggleChip('For All', !showForMeOnly, () {
-                              setState(() => showForMeOnly = false);
-                            }),
-                          ],
-                        ),
-                      ),
-                    ),
                     Expanded(
                       child: Builder(
                         builder: (context) {
-                          final visibleNotifications =
-                              notifications.where((n) {
-                                final recipientModel = n['recipientModel'];
-                                if (showForMeOnly) {
-                                  return recipientModel ==
-                                      'User'; // Personal notifications
-                                } else {
-                                  return recipientModel != 'User' &&
-                                      recipientModel != null; // Global ones
-                                }
-                              }).toList();
+                          final visibleNotifications = notifications;
 
                           if (visibleNotifications.isEmpty) {
                             return const Center(
