@@ -14,7 +14,7 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  final String baseUrl = 'http://192.168.1.4:3000';
+  final String baseUrl = 'http://192.168.68.61:3000';
   List<Map<String, dynamic>> users = [];
   List<Map<String, dynamic>> filteredUsers = [];
   Map<String, dynamic>? selectedUser;
@@ -71,6 +71,167 @@ class _UsersPageState extends State<UsersPage> {
         filteredUsers = userList;
       });
     }
+  }
+
+  void _showGlobalNotificationModal(BuildContext context) {
+    final TextEditingController _messageController = TextEditingController();
+    final TextEditingController _searchController = TextEditingController();
+    List<Map<String, dynamic>> filtered = List.from(users);
+    String? selectedUserId;
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            void filter(String query) {
+              final lower = query.toLowerCase();
+              setModalState(() {
+                filtered =
+                    users
+                        .where(
+                          (u) =>
+                              (u['name'] ?? '').toLowerCase().contains(lower) ||
+                              (u['email'] ?? '').toLowerCase().contains(lower),
+                        )
+                        .toList();
+              });
+            }
+
+            return AlertDialog(
+              title: const Text("Send Notification"),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _messageController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: "Enter your message...",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: const [
+                        Icon(Icons.group, color: darkGreen),
+                        SizedBox(width: 8),
+                        Text("Choose a recipient or send to all"),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: "Search user...",
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: filter,
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 150,
+                      child: ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (_, index) {
+                          final user = filtered[index];
+                          final isSelected = selectedUserId == user['_id'];
+                          return ListTile(
+                            title: Text(user['name'] ?? ''),
+                            subtitle: Text(user['email'] ?? ''),
+                            leading: CircleAvatar(
+                              backgroundImage: _getImage(user['avatar']),
+                            ),
+                            trailing:
+                                isSelected
+                                    ? const Icon(
+                                      Icons.check_circle,
+                                      color: darkGreen,
+                                    )
+                                    : null,
+                            selected: isSelected,
+                            selectedTileColor: Colors.green[50],
+                            onTap: () {
+                              setModalState(() {
+                                selectedUserId =
+                                    selectedUserId == user['_id']
+                                        ? null
+                                        : user['_id'];
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel", style: TextStyle(color: maroon)),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final message = _messageController.text.trim();
+                    if (message.isEmpty) return;
+
+                    Navigator.pop(context); // close first
+
+                    if (selectedUserId != null) {
+                      // Send to selected user only
+                      await http.post(
+                        Uri.parse('$baseUrl/api/notifications'),
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({
+                          'recipientId': selectedUserId,
+                          'recipientModel': 'User',
+                          'senderModel': 'Admin',
+                          'type': 'Alerts',
+                          'message': message,
+                        }),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("✅ Notification sent")),
+                      );
+                    } else {
+                      // Send to all users
+                      for (var user in users) {
+                        await http.post(
+                          Uri.parse('$baseUrl/api/notifications'),
+                          headers: {'Content-Type': 'application/json'},
+                          body: jsonEncode({
+                            'recipientId': user['_id'],
+                            'recipientModel': 'User',
+                            'senderModel': 'Admin',
+                            'type': 'Alerts',
+                            'message': message,
+                          }),
+                        );
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("✅ Sent to all users")),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: darkGreen),
+                  child: const Text(
+                    "Send",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void filterUsers(String query) {
@@ -342,25 +503,47 @@ class _UsersPageState extends State<UsersPage> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: TextField(
-                    onChanged: filterUsers,
-                    decoration: InputDecoration(
-                      hintText: 'Search users...',
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 16,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          onChanged: filterUsers,
+                          decoration: InputDecoration(
+                            hintText: 'Search users...',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 16,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide.none,
+                            ),
+                            prefixIcon: const Icon(Icons.search),
+                          ),
+                        ),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
+                      const SizedBox(width: 10),
+                      IconButton(
+                        tooltip: 'Send Notification',
+                        icon: const Icon(Icons.notifications_active_outlined),
+                        onPressed: () => _showGlobalNotificationModal(context),
+                        color: Colors.white,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.orange[700],
+                          padding: const EdgeInsets.all(12),
+                          shape: const CircleBorder(),
+                        ),
                       ),
-                      prefixIcon: const Icon(Icons.search),
-                    ),
+                    ],
                   ),
                 ),
+
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
