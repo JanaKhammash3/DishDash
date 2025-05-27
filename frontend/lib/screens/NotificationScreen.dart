@@ -15,6 +15,7 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   List<dynamic> notifications = [];
   bool isLoading = true;
+  bool showForMeOnly = true;
 
   @override
   void initState() {
@@ -58,118 +59,35 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        backgroundColor: green,
-        foregroundColor: Colors.white,
+  Widget _buildToggleChip(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? green : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                onRefresh: fetchNotifications,
-                child:
-                    notifications.isEmpty
-                        ? const Center(child: Text('No notifications'))
-                        : ListView.builder(
-                          itemCount: notifications.length,
-                          itemBuilder: (context, index) {
-                            final n =
-                                notifications[index]; // 👈 This is the correct variable
-                            final isRead = n['isRead'] ?? false;
-                            final type = n['type'] ?? 'Alert';
-                            final message = n['message'] ?? '';
-                            final timestamp = n['createdAt'] ?? '';
-
-                            return Dismissible(
-                              key: Key(n['_id']),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                color: Colors.red,
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                child: const Icon(
-                                  Icons.delete,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              onDismissed: (_) => deleteNotification(n['_id']),
-                              child: ListTile(
-                                tileColor:
-                                    isRead
-                                        ? Colors.white
-                                        : Colors.orange.shade50,
-                                leading: CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage:
-                                      n['senderId']?['avatar'] != null
-                                          ? MemoryImage(
-                                            base64Decode(
-                                              n['senderId']['avatar'],
-                                            ),
-                                          )
-                                          : const AssetImage(
-                                                'assets/profile.png',
-                                              )
-                                              as ImageProvider,
-                                ),
-                                title: Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text:
-                                            "${n['senderId']?['name'] ?? ' '} ",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      TextSpan(text: message),
-                                    ],
-                                  ),
-                                ),
-                                subtitle: Text(_formatTimestamp(timestamp)),
-                                trailing:
-                                    !isRead
-                                        ? IconButton(
-                                          icon: const Icon(
-                                            Icons.check_circle,
-                                            color: green,
-                                          ),
-                                          onPressed: () async {
-                                            await markAsRead(n['_id']);
-                                            setState(() {
-                                              notifications[index] = {
-                                                ...notifications[index],
-                                                'isRead': true,
-                                              };
-                                            });
-                                          },
-                                        )
-                                        : null,
-                                onTap: () {
-                                  if (type == 'message') {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/chats',
-                                      arguments: {
-                                        'userId': widget.userId,
-                                        'initialChatUserId':
-                                            n['senderId']['_id'],
-                                      },
-                                    );
-                                  }
-                                },
-                              ),
-                            );
-                          },
-                        ),
-              ),
     );
+  }
+
+  String _formatTimestamp(String? isoString) {
+    if (isoString == null || isoString.isEmpty) return '';
+    try {
+      final date = DateTime.parse(isoString);
+      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '';
+    }
   }
 
   IconData _getIconForType(String type) {
@@ -186,17 +104,188 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return Icons.flag;
       case 'Alerts':
         return Icons.notifications_active;
+      case 'purchase':
+        return Icons.shopping_cart;
+      case 'rating':
+        return Icons.star;
       default:
         return Icons.notifications;
     }
   }
 
-  String _formatTimestamp(String isoString) {
-    try {
-      final date = DateTime.parse(isoString);
-      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '';
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        backgroundColor: green,
+        foregroundColor: Colors.white,
+      ),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: fetchNotifications,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 6,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildToggleChip('For Me', showForMeOnly, () {
+                              setState(() => showForMeOnly = true);
+                            }),
+                            const SizedBox(width: 8),
+                            _buildToggleChip('For All', !showForMeOnly, () {
+                              setState(() => showForMeOnly = false);
+                            }),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          final visibleNotifications =
+                              notifications.where((n) {
+                                final recipientModel = n['recipientModel'];
+                                if (showForMeOnly) {
+                                  return recipientModel ==
+                                      'User'; // Personal notifications
+                                } else {
+                                  return recipientModel != 'User' &&
+                                      recipientModel != null; // Global ones
+                                }
+                              }).toList();
+
+                          if (visibleNotifications.isEmpty) {
+                            return const Center(
+                              child: Text('No notifications for this view.'),
+                            );
+                          }
+
+                          return ListView.builder(
+                            itemCount: visibleNotifications.length,
+                            itemBuilder: (context, index) {
+                              final n = visibleNotifications[index];
+                              final isRead = n['isRead'] ?? false;
+                              final type = n['type'] ?? 'Alert';
+                              final message = n['message'] ?? '';
+                              final timestamp = n['createdAt'] ?? '';
+
+                              return Dismissible(
+                                key: Key(n['_id']),
+                                direction: DismissDirection.endToStart,
+                                background: Container(
+                                  color: Colors.red,
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                onDismissed:
+                                    (_) => deleteNotification(n['_id']),
+                                child: ListTile(
+                                  tileColor:
+                                      isRead
+                                          ? Colors.white
+                                          : Colors.orange.shade50,
+                                  leading: Stack(
+                                    alignment: Alignment.bottomRight,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundImage:
+                                            n['senderId']?['avatar'] != null
+                                                ? MemoryImage(
+                                                  base64Decode(
+                                                    n['senderId']['avatar'],
+                                                  ),
+                                                )
+                                                : const AssetImage(
+                                                      'assets/profile.png',
+                                                    )
+                                                    as ImageProvider,
+                                      ),
+                                      CircleAvatar(
+                                        radius: 8,
+                                        backgroundColor: Colors.white,
+                                        child: Icon(
+                                          _getIconForType(type),
+                                          size: 12,
+                                          color: green,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  title: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text:
+                                              "${n['senderId']?['name'] ?? ' '} ",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        TextSpan(text: message),
+                                      ],
+                                    ),
+                                  ),
+                                  subtitle: Text(_formatTimestamp(timestamp)),
+                                  trailing:
+                                      !isRead
+                                          ? IconButton(
+                                            icon: const Icon(
+                                              Icons.check_circle,
+                                              color: green,
+                                            ),
+                                            onPressed: () async {
+                                              await markAsRead(n['_id']);
+                                              setState(() {
+                                                n['isRead'] = true;
+                                              });
+                                            },
+                                          )
+                                          : null,
+                                  onTap: () {
+                                    if (type == 'message') {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/chats',
+                                        arguments: {
+                                          'userId': widget.userId,
+                                          'initialChatUserId':
+                                              n['senderId']['_id'],
+                                        },
+                                      );
+                                    }
+                                  },
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+    );
   }
 }
