@@ -8,8 +8,9 @@ const MealPlan = require('../models/MealPlan');
 const Store = require('../models/Store'); // ✅ Add this
 const mongoose = require('mongoose');
 const  {scrapeSinglePin } = require('../utils/scraper');
-
-
+const crypto = require('crypto');
+const nodemailer = require('nodemailer'); 
+const sendEmail = require('../utils/sendEmail');
 // Setup storage for Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'), // Folder 'uploads'
@@ -719,4 +720,55 @@ exports.getFollowingUsers = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+function hashOTP(otp) {
+  return crypto.createHash('sha256').update(otp).digest('hex');
+}
+
+// Request OTP
+exports.requestOtp = async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.status(200).json({ message: 'If registered, OTP sent.' });
+
+  const otp = generateOTP();
+  const hashedOtp = hashOTP(otp);
+  const expiresAt = new Date(Date.now() + 10 * 60000); // 10 minutes
+
+  user.otpHash = hashedOtp;
+  user.otpExpiresAt = expiresAt;
+  await user.save();
+
+  // Send the OTP (use your mail utility if applicable)
+  await sendEmail(user.email, 'Your OTP Code', `Your OTP: ${otp}`);
+
+  res.status(200).json({ message: 'If registered, OTP sent.' });
+};
+
+// Reset password with OTP
+exports.resetPasswordWithOtp = async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user || !user.otpHash || !user.otpExpiresAt) {
+    return res.status(400).json({ message: 'Invalid or expired OTP.' });
+  }
+
+  const isValid = hashOTP(otp) === user.otpHash;
+  const isExpired = user.otpExpiresAt < new Date();
+
+  if (!isValid || isExpired) {
+    return res.status(400).json({ message: 'Invalid or expired OTP.' });
+  }
+
+  user.password = await bcrypt.hash(newPassword, 10);
+  user.otpHash = undefined;
+  user.otpExpiresAt = undefined;
+
+  await user.save();
+
+  res.status(200).json({ message: 'Password reset successful' });
 };

@@ -26,7 +26,9 @@ const {
   deleteUser,
   scrapeAndSaveRecipe,
   updateCustomRecipe,
-  getFollowingUsers
+  getFollowingUsers,
+  resetPasswordWithOtp,
+  requestOtp
 } = require('../controllers/userController');
 
 // ✅ Auth & Profile
@@ -75,6 +77,8 @@ router.get('/', async (req, res) => {
 });
 router.delete('/:id', deleteUser);
 router.get('/:id/following', getFollowingUsers);
+router.post('/request-otp', requestOtp);
+router.post('/reset-password', resetPasswordWithOtp);
 
 // ✅ Export the router
 module.exports = router;

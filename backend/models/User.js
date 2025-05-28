@@ -29,7 +29,9 @@ const userSchema = new mongoose.Schema({
     weight: { type: Number }, // in kg
     height: { type: Number }, // in cm
     bmiStatus: { type: String, enum: ['underweight', 'normal', 'overweight'], default: 'normal' }
-  }
+  },
+  otpHash: { type: String },
+  otpExpiresAt: { type: Date },
   
 });
 
