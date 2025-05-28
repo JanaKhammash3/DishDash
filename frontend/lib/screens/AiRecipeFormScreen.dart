@@ -482,6 +482,40 @@ class _AiRecipeFormScreenState extends State<AiRecipeFormScreen> {
             generatedRecipe!["instructions"] ?? [],
           ).map((i) => Text('• $i')),
           const SizedBox(height: 16),
+
+          // 🔁 Regenerate Button
+          ElevatedButton.icon(
+            onPressed: isLoading ? null : _generateRecipe,
+            icon:
+                isLoading
+                    ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                    : const Icon(
+                      Icons.sentiment_dissatisfied,
+                      color: Colors.white,
+                    ),
+            label: Text(
+              isLoading ? 'Regenerating...' : 'Didn\'t Like It? Regenerate',
+              style: const TextStyle(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // ✅ Save Button
           ElevatedButton.icon(
             onPressed: _saveRecipe,
             icon: const Icon(Icons.save, color: Colors.white),
