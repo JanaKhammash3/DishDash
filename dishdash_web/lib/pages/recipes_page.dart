@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 class RecipesPage extends StatefulWidget {
   const RecipesPage({super.key});
@@ -16,15 +18,19 @@ class _RecipesPageState extends State<RecipesPage> {
   String searchQuery = '';
   String selectedCategory = '';
   final TextEditingController _searchController = TextEditingController();
-
-  final List<Map<String, dynamic>> categories = [
+  String selectedDiet = '';
+  String selectedMealTime = '';
+  final List<Map<String, dynamic>> dietFilters = [
     {'label': 'Vegan', 'icon': Icons.eco},
     {'label': 'Vegetarian', 'icon': Icons.spa},
     {'label': 'Keto', 'icon': Icons.local_fire_department},
-    {'label': 'Low-Carb', 'icon': Icons.scale}, // new
+    {'label': 'Low-Carb', 'icon': Icons.scale},
+  ];
+
+  final List<Map<String, dynamic>> mealTimeFilters = [
+    {'label': 'Breakfast', 'icon': Icons.free_breakfast},
     {'label': 'Lunch', 'icon': Icons.lunch_dining},
     {'label': 'Dinner', 'icon': Icons.dinner_dining},
-    {'label': 'Breakfast', 'icon': Icons.free_breakfast}, // new
     {'label': 'Snack', 'icon': Icons.fastfood},
   ];
   List<dynamic> topRatedRecipes = [];
@@ -47,6 +53,17 @@ class _RecipesPageState extends State<RecipesPage> {
   void dispose() {
     _topRecipeTimer.cancel();
     super.dispose();
+  }
+
+  void _openAdminCreateModal() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AdminRecipeCreateModal(
+          onRecipeCreated: fetchRecipes, // Refresh grid after adding
+        );
+      },
+    );
   }
 
   void _showRecipeDetailsModal(Map<String, dynamic> recipe) async {
@@ -263,13 +280,17 @@ class _RecipesPageState extends State<RecipesPage> {
   Widget build(BuildContext context) {
     final filteredRecipes =
         allRecipes.where((recipe) {
+          final matchesDiet =
+              selectedDiet.isEmpty ||
+              recipe['diet']?.toLowerCase() == selectedDiet.toLowerCase();
+          final matchesMeal =
+              selectedMealTime.isEmpty ||
+              recipe['mealTime']?.toLowerCase() ==
+                  selectedMealTime.toLowerCase();
           final title = recipe['title']?.toLowerCase() ?? '';
-          final diet = recipe['diet']?.toLowerCase() ?? '';
-          final mealTime = recipe['mealTime']?.toLowerCase() ?? '';
           return title.contains(searchQuery.toLowerCase()) &&
-              (selectedCategory.isEmpty ||
-                  diet == selectedCategory.toLowerCase() ||
-                  mealTime == selectedCategory.toLowerCase());
+              matchesDiet &&
+              matchesMeal;
         }).toList();
 
     return Scaffold(
@@ -288,21 +309,49 @@ class _RecipesPageState extends State<RecipesPage> {
               const SizedBox(height: 8),
               Text("What recipe are you looking for?"),
               const SizedBox(height: 16),
-              TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => searchQuery = value),
-                decoration: InputDecoration(
-                  hintText: 'Search recipes...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => searchQuery = value),
+                      decoration: InputDecoration(
+                        hintText: 'Search recipes...',
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _openAdminCreateModal,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF304D30), // Dark green
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    label: const Text(
+                      'Create Recipe',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
+
               const SizedBox(height: 24),
 
               // 🥇 Top Rated Recipe
@@ -378,49 +427,93 @@ class _RecipesPageState extends State<RecipesPage> {
                 const SizedBox(height: 30),
               ],
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 10),
 
               // 🎨 Category Filters
-              const Text(
-                'Categories',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 80,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: categories.length,
-                  itemBuilder: (_, index) {
-                    final cat = categories[index];
-                    final isSelected = selectedCategory == cat['label'];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: ChoiceChip(
-                        label: Row(
-                          children: [
-                            Icon(cat['icon'], size: 18),
-                            const SizedBox(width: 4),
-                            Text(cat['label']),
-                          ],
-                        ),
-                        selected: isSelected,
-                        onSelected: (_) {
-                          setState(() {
-                            selectedCategory = isSelected ? '' : cat['label']!;
-                          });
-                        },
-                        selectedColor: Colors.green[700],
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black,
-                        ),
-                        backgroundColor: const Color(0xFFD0EED0),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // 🍃 By Diet
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'By Diet',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children:
+                                dietFilters.map((filter) {
+                                  final isSelected =
+                                      selectedDiet == filter['label'];
+                                  return FilterButton(
+                                    label: filter['label'],
+                                    icon: filter['icon'],
+                                    selected: isSelected,
+                                    onTap: () {
+                                      setState(() {
+                                        selectedDiet =
+                                            isSelected ? '' : filter['label'];
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                          ),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+
+                    const SizedBox(width: 24), // spacing between columns
+                    // 🕒 Meal Time
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'By Meal Time',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children:
+                                mealTimeFilters.map((filter) {
+                                  final isSelected =
+                                      selectedMealTime == filter['label'];
+                                  return FilterButton(
+                                    label: filter['label'],
+                                    icon: filter['icon'],
+                                    selected: isSelected,
+                                    onTap: () {
+                                      setState(() {
+                                        selectedMealTime =
+                                            isSelected ? '' : filter['label'];
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
+              const SizedBox(height: 15),
               // 📦 Recipe Grid
               Wrap(
                 spacing: 20,
@@ -429,86 +522,112 @@ class _RecipesPageState extends State<RecipesPage> {
                     filteredRecipes.map((recipe) {
                       return Container(
                         width: MediaQuery.of(context).size.width / 2.3,
-                        padding: const EdgeInsets.all(12),
+                        height: 220,
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black12, blurRadius: 6),
-                          ],
+                          borderRadius: BorderRadius.circular(16),
+                          image: DecorationImage(
+                            image: getImageProvider(recipe['image']),
+                            fit: BoxFit.cover,
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Stack(
                           children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image(
-                                image: getImageProvider(recipe['image']),
-                                height: 120,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              recipe['title'] ?? '',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'by ${recipe['author']?['name'] ?? 'System'}',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 10,
-                              ),
-                            ),
-
-                            Row(
-                              children: [
-                                Icon(Icons.star, color: Colors.amber, size: 16),
-                                SizedBox(width: 4),
-                                Text(
-                                  _averageRating(
-                                    recipe['ratings'],
-                                  ).toStringAsFixed(1),
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${recipe['calories']} kcal • ${recipe['difficulty'] ?? 'Easy'}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.info_outline,
-                                    color: Colors.blue,
+                            // Faded black gradient at the bottom
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.vertical(
+                                    bottom: Radius.circular(16),
                                   ),
-                                  onPressed:
-                                      () => _showRecipeDetailsModal(recipe),
-                                  tooltip: 'View Details',
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.topCenter,
+                                    colors: [
+                                      Colors.black.withOpacity(0.7),
+                                      Colors.transparent,
+                                    ],
                                   ),
-                                  onPressed: () => _deleteRecipe(recipe['_id']),
-                                  tooltip: 'Delete Recipe',
                                 ),
-                              ],
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      recipe['title'] ?? '',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'by ${recipe['author']?['name'] ?? 'System'}',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          color: Colors.amber,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _averageRating(
+                                            recipe['ratings'],
+                                          ).toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          '${recipe['calories']} kcal • ${recipe['difficulty'] ?? 'Easy'}',
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.info_outline,
+                                            color: Colors.white,
+                                          ),
+                                          tooltip: 'View Details',
+                                          onPressed:
+                                              () => _showRecipeDetailsModal(
+                                                recipe,
+                                              ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.red,
+                                          ),
+                                          tooltip: 'Delete Recipe',
+                                          onPressed:
+                                              () =>
+                                                  _deleteRecipe(recipe['_id']),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -519,6 +638,325 @@ class _RecipesPageState extends State<RecipesPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class FilterButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const FilterButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : const Color(0xFF304D30),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF304D30), width: 2),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: selected ? const Color(0xFF304D30) : Colors.white,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? const Color(0xFF304D30) : Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AdminRecipeCreateModal extends StatefulWidget {
+  final VoidCallback onRecipeCreated;
+  const AdminRecipeCreateModal({super.key, required this.onRecipeCreated});
+
+  @override
+  State<AdminRecipeCreateModal> createState() => _AdminRecipeCreateModalState();
+}
+
+class _AdminRecipeCreateModalState extends State<AdminRecipeCreateModal> {
+  Uint8List? imageBytes;
+  String title = '',
+      ingredients = '',
+      calories = '',
+      description = '',
+      diet = 'None';
+  String mealTime = 'Breakfast',
+      prepTime = '',
+      instructions = '',
+      difficulty = 'Easy';
+  List<String> tags = [];
+  String tagInput = '';
+
+  Future<void> _analyzeCalories() async {
+    final ingrList =
+        ingredients
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+
+    if (ingrList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter ingredients first')),
+      );
+      return;
+    }
+
+    setState(() => calories = 'Analyzing...');
+
+    try {
+      final res = await http.post(
+        Uri.parse('http://192.168.68.61:3000/api/analyze-nutrition'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'title': title, 'ingredients': ingrList}),
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() => calories = data['calories'].toString());
+      } else {
+        setState(() => calories = '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to analyze calories')),
+        );
+      }
+    } catch (e) {
+      setState(() => calories = '');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Error analyzing calories')));
+    }
+  }
+
+  Future<void> _submitRecipe() async {
+    if (title.isEmpty || calories.isEmpty) return;
+
+    final body = {
+      'title': title,
+      'description': description,
+      'instructions': instructions,
+      'ingredients': ingredients.split(',').map((e) => e.trim()).toList(),
+      'calories': int.tryParse(calories) ?? 0,
+      'prepTime': int.tryParse(prepTime) ?? 0,
+      'diet': diet,
+      'mealTime': mealTime,
+      'difficulty': difficulty,
+      'tags': tags,
+      'isPublic': true,
+      'image': imageBytes != null ? base64Encode(imageBytes!) : '',
+    };
+
+    final res = await http.post(
+      Uri.parse('http://192.168.68.61:3000/api/recipes/adminCreate'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    if (res.statusCode == 201) {
+      Navigator.pop(context);
+      widget.onRecipeCreated();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Recipe created successfully!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Failed to create recipe.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Create a Recipe (Admin)'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () async {
+                final picked = await ImagePicker().pickImage(
+                  source: ImageSource.gallery,
+                );
+                if (picked != null) {
+                  final bytes = await picked.readAsBytes();
+                  setState(() => imageBytes = bytes);
+                }
+              },
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child:
+                    imageBytes != null
+                        ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.memory(imageBytes!, fit: BoxFit.cover),
+                        )
+                        : const Center(child: Text('Tap to upload image')),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Title'),
+              onChanged: (val) => title = val,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Ingredients'),
+              onChanged: (val) => ingredients = val,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    decoration: const InputDecoration(labelText: 'Calories'),
+                    keyboardType: TextInputType.number,
+                    controller: TextEditingController(text: calories),
+                    onChanged: (val) => calories = val,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF304D30),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                  onPressed: _analyzeCalories,
+                  child: const Text(
+                    'Analyze',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Description'),
+              maxLines: 2,
+              onChanged: (val) => description = val,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Instructions'),
+              maxLines: 2,
+              onChanged: (val) => instructions = val,
+            ),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Prep Time (min)'),
+              keyboardType: TextInputType.number,
+              onChanged: (val) => prepTime = val,
+            ),
+            DropdownButtonFormField(
+              value: diet,
+              decoration: const InputDecoration(labelText: 'Diet'),
+              items:
+                  ['None', 'Vegan', 'Keto', 'Low-Carb', 'Vegetarian']
+                      .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                      .toList(),
+              onChanged: (val) => setState(() => diet = val!),
+            ),
+            DropdownButtonFormField(
+              value: mealTime,
+              decoration: const InputDecoration(labelText: 'Meal Time'),
+              items:
+                  ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert']
+                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                      .toList(),
+              onChanged: (val) => setState(() => mealTime = val!),
+            ),
+            DropdownButtonFormField(
+              value: difficulty,
+              decoration: const InputDecoration(labelText: 'Difficulty'),
+              items:
+                  ['Easy', 'Medium', 'Hard']
+                      .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                      .toList(),
+              onChanged: (val) => setState(() => difficulty = val!),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              decoration: InputDecoration(
+                labelText: 'Add Tag',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    if (tagInput.isNotEmpty && !tags.contains(tagInput)) {
+                      setState(() {
+                        tags.add(tagInput.trim());
+                        tagInput = '';
+                      });
+                    }
+                  },
+                ),
+              ),
+              onChanged: (val) => tagInput = val,
+              onSubmitted: (_) {
+                if (tagInput.isNotEmpty && !tags.contains(tagInput)) {
+                  setState(() {
+                    tags.add(tagInput.trim());
+                    tagInput = '';
+                  });
+                }
+              },
+            ),
+            Wrap(
+              spacing: 6,
+              children:
+                  tags
+                      .map(
+                        (tag) => Chip(
+                          label: Text(tag),
+                          onDeleted: () => setState(() => tags.remove(tag)),
+                        ),
+                      )
+                      .toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF304D30),
+          ),
+          onPressed: _submitRecipe,
+          child: const Text('Create', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }

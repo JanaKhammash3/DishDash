@@ -330,5 +330,62 @@ exports.getRecipeCountByUser = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+exports.adminCreateRecipe = async (req, res) => {
+  try {
+    const {
+      title,
+      titleAr,
+      description,
+      descriptionAr,
+      ingredients,
+      ingredientsAr,
+      instructions,
+      instructionsAr,
+      image,
+      calories,
+      diet,
+      mealTime,
+      prepTime,
+      difficulty,
+      tags,
+    } = req.body;
+
+    const safeIngredients = Array.isArray(ingredients)
+      ? ingredients
+      : typeof ingredients === 'string'
+        ? ingredients.split(',').map(i => i.trim())
+        : [];
+
+    const safeTags = Array.isArray(tags)
+      ? tags
+      : typeof tags === 'string' && tags.trim() !== ''
+        ? [tags.trim()]
+        : [];
+
+    const newRecipe = await Recipe.create({
+      title,
+      titleAr,
+      description,
+      descriptionAr,
+      ingredients: safeIngredients,
+      ingredientsAr,
+      instructions,
+      instructionsAr,
+      image,
+      calories,
+      diet,
+      mealTime,
+      prepTime,
+      difficulty,
+      tags: safeTags,
+      isPublic: true,  // ✅ Always public
+    });
+
+    res.status(201).json(newRecipe);
+  } catch (err) {
+    console.error('❌ Admin recipe error:', err);
+    res.status(500).json({ message: 'Error creating admin recipe', error: err.message });
+  }
+};
 
 

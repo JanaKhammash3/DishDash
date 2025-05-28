@@ -15,7 +15,8 @@ const {
   getAllRecipesAdmin,
   getFullRecipeDetails,
   deleteReciperoot,
-  getRecipeCountByUser
+  getRecipeCountByUser,
+  adminCreateRecipe
 } = require('../controllers/recipeController');
 
 // ✅ Specific routes first
@@ -35,6 +36,6 @@ router.get('/admin/all', getAllRecipesAdmin);
 router.get('/:id/full-details', getFullRecipeDetails);
 router.delete('/:id', deleteReciperoot);
 router.get('/count/:userId', getRecipeCountByUser);
-
+router.post('/adminCreate', adminCreateRecipe);
 
 module.exports = router;
