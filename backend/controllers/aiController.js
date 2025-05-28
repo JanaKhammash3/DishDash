@@ -30,7 +30,7 @@ You are a recipe assistant. ONLY respond in raw JSON. DO NOT explain anything.
 
 Generate a personalized ${diet} ${mealTime} recipe for ${servings || 1} people.
 Use ingredients: ${preferredIngredients.join(', ') || 'any'}.
-Avoid ingredients: ${avoidIngredients.join(', ') || 'none'}.
+Avoid these ingredients strictly: ${avoidIngredients.join(', ') || 'none'}. do not include them in the recipe.
 Cuisine: ${cuisine || 'any'}.
 Avoid these allergies strictly: ${allergies.join(', ') || 'none'}. Do not include them in any form.
 Prep time: under ${prepTime || 30} minutes.
