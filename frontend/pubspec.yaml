@@ -49,5 +49,6 @@ flutter:
   assets:
     - assets/
     - assets/Pinterest.png
+    - assets/cover.png
     - assets/ingredients/
     - assets/placeholder.png
