@@ -41,6 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<String> savedRecipeIds = {};
   String? userName;
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _ingredientSearchController =
+      TextEditingController();
+  List<dynamic> searchedRecipes = [];
+
   int visibleRecipeCount = 4;
   String searchQuery = '';
   bool showSurveyRecommendations = true;
@@ -118,10 +122,20 @@ class _HomeScreenState extends State<HomeScreen> {
     initUserSocket();
   }
 
+  List<Map<String, String>> get _filteredIngredients {
+    final query = _ingredientSearchController.text.trim().toLowerCase();
+    if (query.isEmpty) return allIngredients;
+    return allIngredients
+        .where(
+          (ingredient) => ingredient['name']!.toLowerCase().contains(query),
+        )
+        .toList();
+  }
+
   Future<void> fetchUnreadCount() async {
     final res = await http.get(
       Uri.parse(
-        'http://192.168.68.61:3000/api/notifications/${widget.userId}/unread-count',
+        'http://192.168.1.4:3000/api/notifications/${widget.userId}/unread-count',
       ),
     );
     if (res.statusCode == 200) {
@@ -135,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final userId = prefs.getString('userId');
     if (userId == null) return;
 
-    socket = IO.io('http://192.168.68.61:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false, // 👈 disable auto
     });
@@ -290,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
     final uri = Uri.http(
-      '192.168.68.61:3000',
+      '192.168.1.4:3000',
       '/api/recipes/filter',
       queryParams,
     );
@@ -320,7 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.61:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -353,8 +367,29 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> searchRecipesByIngredients(String query) async {
+    if (query.trim().isEmpty) return;
+
+    final uri = Uri.parse(
+      'http://192.168.68.59:3000/api/recipes/ingredients/${Uri.encodeComponent(query)}',
+    );
+
+    try {
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        setState(() {
+          searchedRecipes = jsonDecode(response.body);
+        });
+      } else {
+        print('Failed to fetch recipes');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.1.4:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -367,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/recipes');
+    final url = Uri.parse('http://192.168.1.4:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -384,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final userResponse = await http.get(
-      Uri.parse('http://192.168.68.61:3000/api/profile/$userId'),
+      Uri.parse('http://192.168.1.4:3000/api/profile/$userId'),
     );
     if (userResponse.statusCode != 200) return;
 
@@ -450,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipeConfirmed(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/$userId/saveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -464,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -477,7 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes({String? category}) async {
-    String baseUrl = 'http://192.168.68.61:3000/api/recipes/filter';
+    String baseUrl = 'http://192.168.1.4:3000/api/recipes/filter';
     Uri url;
 
     if (category != null && category.isNotEmpty) {
@@ -535,7 +570,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.61:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -707,18 +742,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 22,
-                                    backgroundImage: AssetImage(imagePath),
-                                    backgroundColor: Colors.white,
+                                    backgroundColor: Colors.grey[200],
+                                    backgroundImage:
+                                        imagePath.contains('placeholder')
+                                            ? null
+                                            : AssetImage(imagePath),
+                                    child:
+                                        imagePath.contains('placeholder')
+                                            ? Text(
+                                              name[0].toUpperCase(),
+                                              style: const TextStyle(
+                                                color: Colors.black,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            )
+                                            : null,
                                   ),
+
                                   const SizedBox(height: 4),
                                   SizedBox(
-                                    width: 70,
+                                    width: 80,
                                     child: Text(
                                       name,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 13),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.fade,
+                                      softWrap: false,
                                     ),
                                   ),
                                 ],
@@ -754,29 +808,70 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: () {
                         setState(() {
                           selectedIngredients.clear();
+                          _ingredientSearchController
+                              .clear(); // ✅ clear ingredient search
                           _applyFilters();
                         });
                       },
+
                       child: const Text(
                         'Clear all',
                         style: TextStyle(
-                          color: green, // ✅ Set the text color
+                          color: green,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
                 ],
               ),
+
+            // 🔍 Ingredient search bar
+            TextField(
+              controller: _ingredientSearchController,
+              onSubmitted: (value) {
+                final cleaned = value.trim().toLowerCase();
+                if (cleaned.isEmpty || selectedIngredients.contains(cleaned))
+                  return;
+
+                setState(() {
+                  selectedIngredients.add(cleaned);
+                });
+
+                _applyFilters(); // Reuse your unified filter logic
+              },
+
+              decoration: InputDecoration(
+                hintText: 'Search ingredients...',
+                prefixIcon: Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            const Text(
+              'Popular',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
 
             Wrap(
               spacing: 10,
               runSpacing: 16,
               alignment: WrapAlignment.center,
               children:
-                  allIngredients.map((ingredient) {
+                  _filteredIngredients.map((ingredient) {
                     final name = ingredient['name']!;
                     final imagePath = ingredient['image']!;
                     final isSelected = selectedIngredients.contains(name);
@@ -784,14 +879,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     return GestureDetector(
                       onTap: () {
                         setState(() {
-                          if (isSelected) {
+                          if (selectedIngredients.contains(name)) {
                             selectedIngredients.remove(name);
                           } else {
                             selectedIngredients.add(name);
                           }
+                          _ingredientSearchController
+                              .clear(); // clear search to show all again
                           _applyFilters();
                         });
                       },
+
                       child: Column(
                         children: [
                           CircleAvatar(
@@ -832,6 +930,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+
       body: SafeArea(
         child: Builder(
           builder: (context) {
@@ -1201,24 +1300,62 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: () {
                       setState(() {
                         selectedIngredients.clear();
-                        _applyFilters();
+                        _ingredientSearchController
+                            .clear(); // ✅ reset the search bar
+                        _applyFilters(); // ✅ triggers UI to reload with full popular ingredients
                       });
                     },
-                    child: const Text('Clear all'),
+                    child: const Text(
+                      'Clear all',
+                      style: TextStyle(
+                        color: green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
               ],
             ),
 
+          // 🔍 Ingredient search bar
+          TextField(
+            controller: _ingredientSearchController,
+            onSubmitted: (value) {
+              final cleaned = value.trim().toLowerCase();
+              if (cleaned.isEmpty || selectedIngredients.contains(cleaned))
+                return;
+
+              setState(() {
+                selectedIngredients.add(cleaned);
+              });
+
+              _applyFilters();
+            },
+            decoration: InputDecoration(
+              hintText: 'Search ingredients...',
+              prefixIcon: Icon(Icons.search),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
           const Text('Popular', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
+
           Wrap(
             spacing: 16,
             runSpacing: 16,
             alignment: WrapAlignment.center,
             children:
-                allIngredients.map((ingredient) {
+                _filteredIngredients.map((ingredient) {
                   final name = ingredient['name']!;
                   final imagePath = ingredient['image']!;
                   final isSelected = selectedIngredients.contains(name);
@@ -1363,7 +1500,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final rawPath = recipe['image'] ?? '';
               final imagePath =
                   rawPath.startsWith('/images/')
-                      ? 'http://192.168.68.61:3000$rawPath'
+                      ? 'http://192.168.1.4:3000$rawPath'
                       : rawPath;
 
               final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];

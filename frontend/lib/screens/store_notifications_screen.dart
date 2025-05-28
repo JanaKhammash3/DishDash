@@ -26,7 +26,7 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
   }
 
   void setupSocket() {
-    socket = IO.io('http://192.168.68.61:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -47,10 +47,10 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
 
     try {
       final purchaseUrl = Uri.parse(
-        'http://192.168.68.61:3000/api/stores/${widget.storeId}/notifications/purchases',
+        'http://192.168.1.4:3000/api/stores/${widget.storeId}/notifications/purchases',
       );
       final ratingUrl = Uri.parse(
-        'http://192.168.68.61:3000/api/stores/${widget.storeId}/notifications/ratings',
+        'http://192.168.1.4:3000/api/stores/${widget.storeId}/notifications/ratings',
       );
 
       final responses = await Future.wait([
