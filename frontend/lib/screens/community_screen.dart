@@ -123,9 +123,29 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
     final res = await http.get(Uri.parse('$baseUrl/api/challenges'));
     if (res.statusCode == 200) {
-      if (!mounted) return;
+      final allChallenges = List<Map<String, dynamic>>.from(
+        json.decode(res.body),
+      );
+
+      // Filter out challenges where the user has already submitted
+      final filtered =
+          allChallenges.where((challenge) {
+            final participants = List<String>.from(
+              challenge['participants'] ?? [],
+            );
+            final submissions = List<Map<String, dynamic>>.from(
+              challenge['submissions'] ?? [],
+            );
+            final hasSubmitted = submissions.any((s) => s['user'] == userId);
+            final hasJoined = participants.contains(userId);
+            if (hasJoined && !joinedChallengeIds.contains(challenge['_id'])) {
+              joinedChallengeIds.add(challenge['_id']);
+            }
+            return true;
+          }).toList();
+
       setState(() {
-        posts = json.decode(res.body);
+        posts = filtered;
         isLoading = false;
       });
     } else {
@@ -370,7 +390,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Widget _buildChallengeJoinCard(Map post, int index) {
-    final isJoined = joinedChallengeIds.contains(post['_id']);
+    final submissions = List<Map<String, dynamic>>.from(
+      post['submissions'] ?? [],
+    );
+    final isSubmitted = submissions.any((s) => s['user'] == userId);
+    final isJoined = isSubmitted || joinedChallengeIds.contains(post['_id']);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
