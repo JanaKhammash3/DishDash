@@ -2,55 +2,63 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../colors.dart';
-import 'OtpResetScreen.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+class OtpResetScreen extends StatefulWidget {
+  final String email;
+
+  const OtpResetScreen({super.key, required this.email});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  State<OtpResetScreen> createState() => _OtpResetScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final TextEditingController _emailController = TextEditingController();
+class _OtpResetScreenState extends State<OtpResetScreen> {
+  final TextEditingController _otpController = TextEditingController();
+  final TextEditingController _newPassController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _sendOtp() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      _showDialog('Error', 'Please enter a valid email.');
+  Future<void> _resetPassword() async {
+    final otp = _otpController.text.trim();
+    final newPassword = _newPassController.text.trim();
+
+    if (otp.length != 6 || newPassword.length < 6) {
+      _showDialog('Error', 'Enter a valid 6-digit OTP and strong password.');
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final response = await http.post(
-        Uri.parse('http://192.168.68.61:3000/api/users/request-otp'),
+      final res = await http.post(
+        Uri.parse('http://192.168.68.61:3000/api/users/reset-password'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
+        body: jsonEncode({
+          'email': widget.email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
       );
 
       setState(() => _isLoading = false);
 
-      if (response.statusCode == 200) {
+      if (res.statusCode == 200) {
         _showDialog(
           'Success',
-          'An OTP has been sent to your email.',
+          'Password reset successful.',
           onOk: () {
-            Navigator.push(
+            Navigator.popUntil(
               context,
-              MaterialPageRoute(builder: (_) => OtpResetScreen(email: email)),
-            );
+              (route) => route.isFirst,
+            ); // Go back to login
           },
         );
       } else {
-        final data = jsonDecode(response.body);
-        _showDialog('Error', data['message'] ?? 'Something went wrong.');
+        final msg = jsonDecode(res.body)['message'] ?? 'Reset failed.';
+        _showDialog('Error', msg);
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      _showDialog('Error', 'Failed to send request. Please try again.');
+      _showDialog('Error', 'Something went wrong. Try again.');
     }
   }
 
@@ -85,7 +93,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         children: [
           Container(
             width: double.infinity,
-            height: MediaQuery.of(context).size.height * 0.3,
+            height: MediaQuery.of(context).size.height * 0.28,
             padding: const EdgeInsets.only(top: 70, left: 24),
             decoration: const BoxDecoration(
               color: green,
@@ -93,10 +101,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             alignment: Alignment.topLeft,
             child: const Text(
-              'FORGOT\nPASSWORD',
+              'ENTER\nOTP & NEW\nPASSWORD',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 28,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 height: 1.3,
               ),
@@ -112,30 +120,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 child: Column(
                   children: [
                     const Icon(
-                      Icons.lock_outline,
-                      size: 70,
-                      color: Colors.black,
+                      Icons.verified_user,
+                      size: 60,
+                      color: Colors.black87,
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'Trouble Logging in?',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    Text(
+                      'Email: ${widget.email}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      "Enter your email and we'll send you\na link to reset your password.",
-                      style: TextStyle(fontSize: 14, color: Colors.black54),
-                      textAlign: TextAlign.center,
-                    ),
                     const SizedBox(height: 32),
+
                     const Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'EMAIL',
+                        'OTP CODE',
                         style: TextStyle(
                           fontSize: 12,
                           letterSpacing: 1,
@@ -146,9 +148,40 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     const SizedBox(height: 6),
                     TextField(
-                      controller: _emailController,
+                      controller: _otpController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
                       decoration: InputDecoration(
-                        hintText: 'hello@reallygreatsite.com',
+                        hintText: 'Enter 6-digit code',
+                        filled: true,
+                        fillColor: lightGrey,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        counterText: '',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'NEW PASSWORD',
+                        style: TextStyle(
+                          fontSize: 12,
+                          letterSpacing: 1,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _newPassController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        hintText: 'Enter new password',
                         filled: true,
                         fillColor: lightGrey,
                         border: OutlineInputBorder(
@@ -156,14 +189,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           borderSide: BorderSide.none,
                         ),
                       ),
-                      keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 30),
+
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _sendOtp,
+                        onPressed: _isLoading ? null : _resetPassword,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: green,
                           shape: RoundedRectangleBorder(
@@ -177,7 +210,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   strokeWidth: 2,
                                 )
                                 : const Text(
-                                  'Reset Password',
+                                  'Submit',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.white,
@@ -189,7 +222,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: const Text(
-                        'Return to Login Page',
+                        'Back to Email Entry',
                         style: TextStyle(
                           color: Colors.black87,
                           decoration: TextDecoration.underline,
