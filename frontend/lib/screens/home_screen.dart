@@ -432,50 +432,155 @@ class _HomeScreenState extends State<HomeScreen> {
       // ⚠️ Show alert modal
       showDialog(
         context: context,
+        barrierColor: Colors.black54, // Optional: dark blur background
         builder:
-            (_) => AlertDialog(
-              title: const Text('⚠️ Allergy Alert'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'This recipe contains ingredients that match your allergies.',
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Matched Allergens:',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  ...allergies
-                      .where(
-                        (allergy) => ingredients
-                            .join(',')
-                            .toLowerCase()
-                            .contains(allergy.toLowerCase()),
-                      )
-                      .map(
-                        (a) => Text(
-                          '• $a',
-                          style: const TextStyle(color: Colors.red),
+            (_) => Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                  20,
+                ), // Round the whole thing
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20), // Match dialog corner
                         ),
                       ),
-                ],
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Allergy Warning!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'This recipe contains ingredients that match your allergies:',
+                            style: TextStyle(fontSize: 15),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children:
+                                allergies
+                                    .where(
+                                      (allergy) => ingredients
+                                          .join(',')
+                                          .toLowerCase()
+                                          .contains(allergy.toLowerCase()),
+                                    )
+                                    .map(
+                                      (a) => Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade100,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black12,
+                                              blurRadius: 4,
+                                              offset: Offset(1, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        child: Text(
+                                          a,
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Buttons
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.grey[800],
+                              side: BorderSide(color: Colors.grey.shade400),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              await _saveRecipeConfirmed(recipeId);
+                            },
+                            icon: const Icon(Icons.check),
+                            label: const Text('Save Anyway'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              actions: [
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                TextButton(
-                  child: const Text('Save Anyway'),
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await _saveRecipeConfirmed(recipeId);
-                  },
-                ),
-              ],
             ),
       );
     } else {
