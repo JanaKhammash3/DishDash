@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/screens/AiRecipeFormScreen.dart';
 import 'package:frontend/screens/ai_screen.dart';
+import 'package:frontend/screens/courses_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/colors.dart';
@@ -1726,6 +1727,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+            bottomNavItem(Icons.video_library, 'Courses', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CoursesScreen(userId: widget.userId),
+                ),
+              );
+            }),
+
             bottomNavItem(LucideIcons.calendar, 'Meal Plan', () async {
               final result = await Navigator.push(
                 context,
