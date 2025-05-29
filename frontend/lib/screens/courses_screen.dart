@@ -613,7 +613,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      icon: Icon(Icons.play_circle_outline),
+                      icon: Icon(
+                        Icons.play_circle_outline,
+                        color: Colors.white, // ✅ White icon
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: green,
                         shape: RoundedRectangleBorder(
@@ -642,9 +645,22 @@ class _CoursesScreenState extends State<CoursesScreen> {
       appBar: AppBar(
         backgroundColor: green,
         elevation: 0,
-        title: Text("🎓 Masterclasses", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "🍳 Cook Lessons", // ✅ More professional label
+          style: TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded, // ✅ NY2-style back arrow
+            color: Colors.white,
+          ),
+          onPressed: () {
+            Navigator.pop(context); // ✅ Goes back to previous screen
+          },
+        ),
       ),
+
       backgroundColor: Colors.grey[100],
       body:
           courses.isEmpty

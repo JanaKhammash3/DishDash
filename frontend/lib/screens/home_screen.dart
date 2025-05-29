@@ -725,7 +725,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             TextButton(
               onPressed: () => setState(() => showSurveyRecommendations = true),
               style: TextButton.styleFrom(
@@ -1076,18 +1076,37 @@ class _HomeScreenState extends State<HomeScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Welcome back!',
-                              style: TextStyle(fontSize: 16),
+                            const Text(
+                              'DishDash',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: green, // your defined brand green
+                                letterSpacing: 1.1,
+                              ),
                             ),
-                            Text(
-                              userName ?? 'FOODIE FRIEND',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                            const SizedBox(height: 4),
+                            RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                                children: [
+                                  const TextSpan(text: 'Welcome back, '),
+                                  TextSpan(
+                                    text: userName ?? 'FOODIE FRIEND',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
+
                         const Spacer(),
                         Stack(
                           children: [
@@ -1140,11 +1159,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildSearchBar(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 15),
                     const Text(
                       'Browse by Category',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1154,11 +1173,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Text(
                       'Recommendations',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
                     RecommendationsWidget(
                       userId: widget.userId,
                       onUpdate: ({
@@ -1171,7 +1189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         });
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     _buildRecommendationsSection(),
                     const SizedBox(height: 20),
                     const Text(
@@ -1542,7 +1560,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 5),
         Builder(
           builder:
               (context) => IconButton(
@@ -1596,7 +1614,7 @@ class _HomeScreenState extends State<HomeScreen> {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.75,
+          childAspectRatio: 1.2,
           children: List.generate(
             filtered.length > visibleRecipeCount
                 ? visibleRecipeCount
@@ -1727,7 +1745,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            bottomNavItem(Icons.video_library, 'Courses', () {
+            bottomNavItem(LucideIcons.film, 'Lessons', () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -1909,7 +1927,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Container(
           width: 250,
-          height: 300,
+          height: 200,
           margin: const EdgeInsets.only(right: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
