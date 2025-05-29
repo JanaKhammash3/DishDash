@@ -39,8 +39,9 @@ const notificationSchema = new mongoose.Schema({
     required: true,
   },
   relatedId: {
-    type: mongoose.Schema.Types.ObjectId,
-  },
+  type: mongoose.Schema.Types.Mixed, // 👈 allows either ObjectId or String
+},
+
   isRead: {
     type: Boolean,
     default: false,

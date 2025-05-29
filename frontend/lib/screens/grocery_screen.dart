@@ -69,6 +69,31 @@ class _GroceryScreenState extends State<GroceryScreen> {
         .join(' ');
   }
 
+  Future<void> sendNotification({
+    required String recipientId,
+    required String recipientModel,
+    required String senderId,
+    required String senderModel,
+    required String type,
+    required String message,
+    String? relatedId,
+  }) async {
+    final url = Uri.parse('http://192.168.1.4:3000/api/notifications');
+    await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'recipientId': recipientId,
+        'recipientModel': recipientModel,
+        'senderId': senderId,
+        'senderModel': senderModel,
+        'type': type,
+        'message': message,
+        'relatedId': relatedId,
+      }),
+    );
+  }
+
   Future<void> _loadIngredients() async {
     final url = Uri.parse(
       'http://192.168.1.4:3000/api/mealplans/user/${widget.userId}/grocery-list',
@@ -374,9 +399,18 @@ class _GroceryScreenState extends State<GroceryScreen> {
                       _sortGroceryItems();
                     });
                     await _saveAvailableIngredients();
-
-                    // ✅ Add this line
                     await recordPurchase(store['_id'], itemName);
+
+                    // ✅ Send notification to the store
+                    await sendNotification(
+                      recipientId: store['_id'],
+                      recipientModel: 'Store',
+                      senderId: widget.userId,
+                      senderModel: 'User',
+                      type: 'purchase',
+                      message: 'purchased $itemName from your store!',
+                      relatedId: itemName,
+                    );
 
                     print(
                       '🛒 $itemName marked as available from ${store['name']}',

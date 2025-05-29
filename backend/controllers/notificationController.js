@@ -1,7 +1,11 @@
 const Notification = require('../models/Notification');
 
+const mongoose = require('mongoose');
+
 const createNotification = async (req, res) => {
   try {
+    console.log('📨 Incoming notification body:', req.body);
+
     const {
       recipientId,
       recipientModel,
@@ -12,42 +16,55 @@ const createNotification = async (req, res) => {
       relatedId,
     } = req.body;
 
-    const newNotification = new Notification({
-      recipientId,
+    const notificationData = {
+      recipientId: new mongoose.Types.ObjectId(recipientId),
       recipientModel,
-      senderId,
+      senderId: new mongoose.Types.ObjectId(senderId),
       senderModel,
       type,
       message,
-      relatedId,
-    });
+    };
 
+    // Handle relatedId (ObjectId or string)
+    if (relatedId) {
+      try {
+        notificationData.relatedId = new mongoose.Types.ObjectId(relatedId);
+      } catch {
+        // fallback to string
+        notificationData.relatedId = relatedId;
+      }
+    }
+
+    const newNotification = new Notification(notificationData);
     await newNotification.save();
 
     res.status(201).json({ message: 'Notification sent', notification: newNotification });
   } catch (err) {
+    console.error('❌ Notification Error:', err.message);
     res.status(500).json({ error: 'Failed to send notification', details: err.message });
   }
 };
 
-const mongoose = require('mongoose');
 
 const getNotifications = async (req, res) => {
-  const { id, model } = req.params;
   try {
+    const { id, model } = req.params;
+    console.log(`📩 Fetching notifications for id: ${id}, model: ${model}`);
+
     const notifications = await Notification.find({
       recipientId: new mongoose.Types.ObjectId(id),
       recipientModel: model,
-    })
-    .populate('senderId', 'name avatar') // ✅ Ensure this
-    .sort({ createdAt: -1 });
+    }).populate('senderId', 'name avatar').sort({ createdAt: -1 });
 
+    console.log(`✅ Found ${notifications.length} notifications`);
     res.status(200).json(notifications);
   } catch (err) {
-    console.error('❌ Error fetching notifications:', err.message);
-    res.status(500).json({ error: 'Failed to fetch notifications' });
+    console.error('❌ Error fetching notifications:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
+
+
 
 const markAsRead = async (req, res) => {
   try {

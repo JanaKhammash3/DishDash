@@ -171,28 +171,6 @@ exports.recordPurchase = async (req, res) => {
 
     // ✅ Step 2: Retrieve the newly added purchase (last one)
     const latestPurchase = store.purchases[store.purchases.length - 1];
-
-    // ✅ Step 3: Create notification from that purchase
-    const notif = await Notification.create({
-  recipientId: store._id,
-  recipientModel: 'Store',
-  senderId: latestPurchase.userId,
-  senderModel: 'User',
-  type: 'purchase',
-  message: `A user purchased ${latestPurchase.ingredient} from your store.`,
-  relatedId: store._id,
-});
-
-// ✅ Populate sender info
-if (global.io) {
-  const populatedNotif = await Notification.findById(notif._id)
-    .populate('senderId', 'name avatar');
-    
-  global.io.emit(`storeNotification:${store._id}`, populatedNotif);
-}
-
-
-
     return res.status(200).json({
       message: '✅ Purchase recorded and notification sent',
       purchase: latestPurchase,
@@ -284,24 +262,6 @@ exports.rateStore = async (req, res) => {
     }
 
     await store.save({ validateBeforeSave: false });
-
-    const notif = await Notification.create({
-  recipientId: store._id,
-  recipientModel: 'Store',
-  senderId: userId,
-  senderModel: 'User',
-  type: 'rating',
-  message: `A user rated your store ${value} stars.`,
-  relatedId: store._id
-});
-
-// ✅ Populate sender info
-if (global.io) {
-  const populatedNotif = await Notification.findById(notif._id)
-    .populate('senderId', 'name avatar');
-    
-  global.io.emit(`storeNotification:${store._id}`, populatedNotif);
-}
 
 
     const avgRating =
@@ -437,44 +397,5 @@ exports.deleteStore = async (req, res) => {
   }
 };
 
-// GET /api/stores/:storeId/notifications/purchases
-exports.getPurchaseNotifications = async (req, res) => {
-  const { storeId } = req.params;
-
-  try {
-    const notifications = await Notification.find({
-      recipientId: storeId,
-      recipientModel: 'Store',
-      type: 'purchase',
-    })
-    .populate('senderId', 'name avatar')
-    .sort({ createdAt: -1 });
-
-    res.status(200).json(notifications);
-  } catch (err) {
-    console.error('❌ Error fetching purchase notifications:', err.message);
-    res.status(500).json({ error: 'Failed to fetch purchase notifications' });
-  }
-};
-
-// GET /api/stores/:storeId/notifications/ratings
-exports.getRatingNotifications = async (req, res) => {
-  const { storeId } = req.params;
-
-  try {
-    const notifications = await Notification.find({
-      recipientId: storeId,
-      recipientModel: 'Store',
-      type: 'rating',
-    })
-    .populate('senderId', 'name avatar')
-    .sort({ createdAt: -1 });
-
-    res.status(200).json(notifications);
-  } catch (err) {
-    console.error('❌ Error fetching rating notifications:', err.message);
-    res.status(500).json({ error: 'Failed to fetch rating notifications' });
-  }
-};
 
 

@@ -31,6 +31,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
   List<Map<String, dynamic>> _purchaseNotifs = [];
   List<Map<String, dynamic>> _ratingNotifs = [];
   bool isLoading = false;
+  int unreadCount = 0;
 
   final categoryIcons = {
     'Vegetables': Icons.eco,
@@ -50,6 +51,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
     _tabController = TabController(length: 2, vsync: this);
     fetchStoreInfo();
     fetchUsers();
+    fetchUnreadCount();
     fetchNotifications();
   }
 
@@ -65,6 +67,18 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
       }
     } catch (e) {
       debugPrint('Error fetching users: $e');
+    }
+  }
+
+  Future<void> fetchUnreadCount() async {
+    final res = await http.get(
+      Uri.parse(
+        'http://192.168.1.4:3000/api/notifications/${widget.storeId}/Store/unread-count',
+      ),
+    );
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      setState(() => unreadCount = data['count'] ?? 0);
     }
   }
 
@@ -816,8 +830,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
             children: [
               IconButton(
                 icon: const Icon(Icons.notifications, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder:
@@ -825,6 +839,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
                               StoreNotificationsScreen(storeId: widget.storeId),
                     ),
                   );
+                  await fetchUnreadCount(); // ✅ Now valid
                 },
               ),
 

@@ -102,46 +102,6 @@ io.on('connection', (socket) => {
     }
   });
 
- socket.on('join_store', (storeId) => {
-  stores[storeId] = socket.id;
-  console.log(`🏪 Store ${storeId} connected with socket ID ${socket.id}`);
-});
-
-socket.on('store_notification', async (data) => {
-  const { storeId, senderId, type, ingredient, value } = data;
-
-  const message = `A user ${
-    type === 'purchase'
-      ? `purchased ${ingredient}`
-      : `rated your store ${value} stars`
-  }`;
-
-  // ✅ Save to DB
-  const notif = await Notification.create({
-    recipientId: storeId,
-    recipientModel: 'Store',
-    senderId,
-    senderModel: 'User',
-    type,
-    message,
-    relatedId: storeId,
-  });
-
-  // ✅ Populate sender info before emitting
-  const populatedNotif = await Notification.findById(notif._id)
-    .populate('senderId', 'name avatar');
-
-  // ✅ Emit to the correct store socket (if joined)
-  const storeSocketId = stores[storeId];
-  if (storeSocketId) {
-    io.to(storeSocketId).emit('store_notification', populatedNotif);
-  }
-
-  console.log(`📨 Real-time notification sent to store ${storeId}`);
-});
-
-
-
  socket.on('send_message', async (data) => {
   const { senderId, receiverId, message = '', image = '' } = data;
 

@@ -213,6 +213,41 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     }
   }
 
+  Future<void> sendNotification({
+    required String recipientId,
+    required String recipientModel,
+    required String senderId,
+    required String senderModel,
+    required String type,
+    required String message,
+    String? relatedId,
+  }) async {
+    final url = Uri.parse('http://192.168.1.4:3000/api/notifications');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'recipientId': recipientId,
+          'recipientModel': recipientModel,
+          'senderId': senderId,
+          'senderModel': senderModel,
+          'type': type,
+          'message': message,
+          'relatedId': relatedId,
+        }),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint('❌ Failed to send notification: ${response.body}');
+      } else {
+        debugPrint('✅ Notification sent');
+      }
+    } catch (e) {
+      debugPrint('❌ Notification error: $e');
+    }
+  }
+
   String _formatDuration(Duration duration) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
@@ -396,9 +431,18 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                     final result = jsonDecode(response.body);
                     setState(() {
                       _currentRating = rating;
-                      widget.store['avgRating'] =
-                          result['avgRating']; // 👈 update store object
+                      widget.store['avgRating'] = result['avgRating'];
                     });
+
+                    await sendNotification(
+                      recipientId: widget.store['_id'],
+                      recipientModel: 'Store',
+                      senderId: userId,
+                      senderModel: 'User',
+                      type: 'rating',
+                      message:
+                          'rated your store ${widget.store['name']} ${rating.toStringAsFixed(1)} stars.',
+                    );
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Thanks for your rating!')),

@@ -8,14 +8,17 @@ const {
   getUserNotifications,
 } = require('../controllers/notificationController');
 
+// ✅ POST route
 router.post('/', createNotification);
 
-// ✅ Specific routes first
-router.get('/:userId/unread-count', getUnreadCount);
-router.get('/:id/:model', getNotifications);   // model-based comes first
-router.patch('/read/:notificationId', markAsRead);
+// ✅ Most specific routes FIRST
+router.get('/:id/:model', getNotifications);          
+router.get('/:userId/unread-count', getUnreadCount);  
+router.patch('/read/:notificationId', markAsRead);    
 
 // ✅ General fallback LAST
-router.get('/:userId', getUserNotifications);
+router.get('/:userId', getUserNotifications);         
+
+
 
 module.exports = router;

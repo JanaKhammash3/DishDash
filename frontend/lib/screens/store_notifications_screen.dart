@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:frontend/colors.dart';
 import 'package:http/http.dart' as http;
-import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class StoreNotificationsScreen extends StatefulWidget {
   final String storeId;
@@ -15,63 +14,34 @@ class StoreNotificationsScreen extends StatefulWidget {
 
 class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
   List<Map<String, dynamic>> _notifications = [];
-  late IO.Socket socket;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     fetchNotifications();
-    setupSocket();
-  }
-
-  void setupSocket() {
-    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': false,
-    });
-
-    socket.connect();
-    socket.emit('join_store', widget.storeId);
-
-    socket.on('store_notification', (data) {
-      print('📨 Received real-time store notification:\n$data');
-      setState(() {
-        _notifications.insert(0, Map<String, dynamic>.from(data));
-      });
-    });
   }
 
   Future<void> fetchNotifications() async {
     setState(() => isLoading = true);
 
     try {
-      final purchaseUrl = Uri.parse(
-        'http://192.168.1.4:3000/api/stores/${widget.storeId}/notifications/purchases',
+      final url = Uri.parse(
+        'http://192.168.1.4:3000/api/notifications/${widget.storeId}/Store',
       );
-      final ratingUrl = Uri.parse(
-        'http://192.168.1.4:3000/api/stores/${widget.storeId}/notifications/ratings',
-      );
+      final res = await http.get(url);
 
-      final responses = await Future.wait([
-        http.get(purchaseUrl),
-        http.get(ratingUrl),
-      ]);
-
-      final allNotifications = [
-        ...jsonDecode(responses[0].body),
-        ...jsonDecode(responses[1].body),
-      ];
-
-      allNotifications.sort(
-        (a, b) => DateTime.parse(
-          b['createdAt'],
-        ).compareTo(DateTime.parse(a['createdAt'])),
-      );
-
-      setState(() {
-        _notifications = List<Map<String, dynamic>>.from(allNotifications);
-      });
+      if (res.statusCode == 200) {
+        final allNotifications = jsonDecode(res.body);
+        allNotifications.sort(
+          (a, b) => DateTime.parse(
+            b['createdAt'],
+          ).compareTo(DateTime.parse(a['createdAt'])),
+        );
+        setState(() {
+          _notifications = List<Map<String, dynamic>>.from(allNotifications);
+        });
+      }
     } catch (e) {
       debugPrint('❌ Error fetching notifications: $e');
     } finally {
@@ -79,31 +49,58 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    socket.disconnect();
-    super.dispose();
+  Future<void> markAsRead(String notificationId, int index) async {
+    final res = await http.patch(
+      Uri.parse(
+        'http://192.168.1.4:3000/api/notifications/read/$notificationId',
+      ),
+    );
+    if (res.statusCode == 200) {
+      setState(() {
+        _notifications[index]['isRead'] = true;
+      });
+    }
   }
 
-  String _formatTime(String? iso) {
-    try {
-      if (iso == null || iso.isEmpty) return '';
-      final date = DateTime.parse(iso);
-      return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '';
+  Future<void> deleteNotification(String notificationId) async {
+    final res = await http.delete(
+      Uri.parse('http://192.168.1.4:3000/api/notifications/$notificationId'),
+    );
+    if (res.statusCode == 200) {
+      setState(() {
+        _notifications.removeWhere((n) => n['_id'] == notificationId);
+      });
     }
   }
 
   ImageProvider _getAvatarImage(String? base64Avatar) {
-    if (base64Avatar != null &&
-        base64Avatar.isNotEmpty &&
-        base64Avatar.contains(',')) {
+    if (base64Avatar != null && base64Avatar.contains(',')) {
       try {
         return MemoryImage(base64Decode(base64Avatar.split(',').last));
       } catch (_) {}
     }
     return const AssetImage('assets/profile.png');
+  }
+
+  IconData _getIconForType(String type) {
+    switch (type) {
+      case 'purchase':
+        return Icons.shopping_cart;
+      case 'rating':
+        return Icons.star;
+      default:
+        return Icons.notifications;
+    }
+  }
+
+  String _formatTimestamp(String? iso) {
+    if (iso == null || iso.isEmpty) return '';
+    try {
+      final date = DateTime.parse(iso);
+      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '';
+    }
   }
 
   @override
@@ -117,46 +114,124 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _notifications.isEmpty
-              ? const Center(child: Text('No notifications yet.'))
               : RefreshIndicator(
                 onRefresh: fetchNotifications,
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(top: 12),
-                  itemCount: _notifications.length,
-                  itemBuilder: (_, index) {
-                    final n = _notifications[index];
-                    final sender = n['senderId'];
-                    String? avatar = '';
-                    String name = 'Someone';
+                child: Column(
+                  children: [
+                    Expanded(
+                      child:
+                          _notifications.isEmpty
+                              ? const Center(
+                                child: Text('No notifications yet.'),
+                              )
+                              : ListView.builder(
+                                itemCount: _notifications.length,
+                                itemBuilder: (context, index) {
+                                  final n = _notifications[index];
+                                  final isRead = n['isRead'] ?? false;
+                                  final type = n['type'] ?? 'notification';
+                                  final message = n['message'] ?? '';
+                                  final timestamp = n['createdAt'] ?? '';
+                                  final sender = n['senderId'];
+                                  final name = sender?['name'] ?? 'Someone';
+                                  final avatar = sender?['avatar'];
 
-                    if (sender != null && sender is Map<String, dynamic>) {
-                      avatar = sender['avatar']?.toString();
-                      name = sender['name']?.toString() ?? 'Someone';
-                    }
-
-                    final imageProvider = _getAvatarImage(avatar);
-
-                    final type = n['type'];
-                    IconData icon;
-                    switch (type) {
-                      case 'purchase':
-                        icon = Icons.shopping_cart;
-                        break;
-                      case 'rating':
-                        icon = Icons.star;
-                        break;
-                      default:
-                        icon = Icons.notifications;
-                    }
-
-                    return ListTile(
-                      leading: CircleAvatar(backgroundImage: imageProvider),
-                      title: Text(n['message'] ?? 'No message'),
-                      subtitle: Text('$name • ${_formatTime(n['createdAt'])}'),
-                      trailing: Icon(icon, color: green),
-                    );
-                  },
+                                  return Dismissible(
+                                    key: Key(n['_id']),
+                                    direction: DismissDirection.endToStart,
+                                    background: Container(
+                                      color: Colors.red,
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                      ),
+                                      child: const Icon(
+                                        Icons.delete,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    onDismissed:
+                                        (_) => deleteNotification(n['_id']),
+                                    child: ListTile(
+                                      tileColor:
+                                          isRead
+                                              ? Colors.white
+                                              : Colors.orange.shade50,
+                                      leading: Stack(
+                                        alignment: Alignment.bottomRight,
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 20,
+                                            backgroundImage:
+                                                avatar != null &&
+                                                        avatar.contains(',')
+                                                    ? MemoryImage(
+                                                      base64Decode(
+                                                        avatar.split(',').last,
+                                                      ),
+                                                    )
+                                                    : const AssetImage(
+                                                          'assets/profile.png',
+                                                        )
+                                                        as ImageProvider,
+                                          ),
+                                          CircleAvatar(
+                                            radius: 8,
+                                            backgroundColor: Colors.white,
+                                            child: Icon(
+                                              _getIconForType(type),
+                                              size: 12,
+                                              color: green,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      title: Text.rich(
+                                        TextSpan(
+                                          children: [
+                                            TextSpan(
+                                              text: "$name ",
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            TextSpan(text: message),
+                                          ],
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        _formatTimestamp(timestamp),
+                                        style: TextStyle(
+                                          color:
+                                              isRead
+                                                  ? Colors.grey
+                                                  : Colors.black54,
+                                        ),
+                                      ),
+                                      trailing:
+                                          !isRead
+                                              ? IconButton(
+                                                icon: const Icon(
+                                                  Icons.check_circle,
+                                                  color: green,
+                                                ),
+                                                onPressed: () async {
+                                                  await markAsRead(
+                                                    n['_id'],
+                                                    index,
+                                                  );
+                                                  setState(() {
+                                                    n['isRead'] = true;
+                                                  });
+                                                },
+                                              )
+                                              : null,
+                                    ),
+                                  );
+                                },
+                              ),
+                    ),
+                  ],
                 ),
               ),
     );
