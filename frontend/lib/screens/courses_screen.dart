@@ -139,6 +139,104 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
+  Future<void> pickAndUploadAndSplitVideo() async {
+    setState(() => isUploading = true);
+
+    final videoUrl = await uploadVideo();
+
+    setState(() => isUploading = false);
+
+    if (videoUrl != null && videoUrl.isNotEmpty) {
+      final titleController = TextEditingController();
+      final descriptionController = TextEditingController();
+      final chefController = TextEditingController();
+      final avatarController = TextEditingController();
+      final imageController = TextEditingController();
+      final durationController = TextEditingController(); // seconds
+
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              scrollable: true,
+              title: Text('Auto-Split Course Details'),
+              content: Column(
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(labelText: 'Course Title'),
+                  ),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(labelText: 'Description'),
+                  ),
+                  TextField(
+                    controller: chefController,
+                    decoration: InputDecoration(labelText: 'Chef Name'),
+                  ),
+                  TextField(
+                    controller: avatarController,
+                    decoration: InputDecoration(labelText: 'Chef Avatar'),
+                  ),
+                  TextField(
+                    controller: imageController,
+                    decoration: InputDecoration(labelText: 'Cover Image URL'),
+                  ),
+                  TextField(
+                    controller: durationController,
+                    decoration: InputDecoration(
+                      labelText: 'Full Video Duration (sec)',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final uri = Uri.parse(
+                      '$baseUrl/api/courses/create-from-single-video',
+                    );
+                    final response = await http.post(
+                      uri,
+                      headers: {'Content-Type': 'application/json'},
+                      body: jsonEncode({
+                        "title": titleController.text.trim(),
+                        "description": descriptionController.text.trim(),
+                        "chefName": chefController.text.trim(),
+                        "chefAvatar": avatarController.text.trim(),
+                        "image": imageController.text.trim(),
+                        "videoUrl": videoUrl,
+                        "fullDuration":
+                            int.tryParse(durationController.text.trim()) ?? 600,
+                      }),
+                    );
+
+                    Navigator.pop(context);
+                    await fetchCourses();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          response.statusCode == 201
+                              ? "✅ Course created!"
+                              : "❌ Failed to create course",
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text('Create Auto Lessons'),
+                ),
+              ],
+            ),
+      );
+    }
+  }
+
   Future<String?> pickAndUploadImage() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
@@ -297,16 +395,36 @@ class _CoursesScreenState extends State<CoursesScreen> {
       builder:
           (context) => DraggableScrollableSheet(
             expand: false,
+            initialChildSize: 0.9,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
             builder:
-                (context, scrollController) => Padding(
-                  padding: const EdgeInsets.all(16.0),
+                (context, scrollController) => Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         course['title'],
                         style: TextStyle(
-                          fontSize: 22,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.green.shade900,
                         ),
@@ -318,7 +436,18 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           color: Colors.grey.shade700,
                         ),
                       ),
-                      Divider(color: Colors.grey.shade400),
+                      const SizedBox(height: 12),
+                      Divider(thickness: 1, color: Colors.grey.shade300),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Lessons",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       Expanded(
                         child: ListView.builder(
                           controller: scrollController,
@@ -326,24 +455,38 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           itemBuilder: (_, index) {
                             final ep = course['episodes'][index];
                             return Card(
+                              elevation: 2,
+                              shadowColor: Colors.green.shade100,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               color: Colors.green.shade50,
-                              margin: EdgeInsets.symmetric(vertical: 8),
+                              margin: const EdgeInsets.symmetric(vertical: 6),
                               child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
                                 leading: Icon(
-                                  Icons.video_library,
-                                  color: Colors.green,
+                                  Icons.play_circle_fill,
+                                  color: Colors.green.shade700,
+                                  size: 32,
                                 ),
                                 title: Text(
                                   ep['title'],
                                   style: TextStyle(
                                     color: Colors.green.shade900,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 subtitle: Text("${ep['duration']} min"),
-                                trailing: TextButton(
-                                  style: TextButton.styleFrom(
+                                trailing: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green.shade600,
                                     foregroundColor: Colors.white,
-                                    backgroundColor: Colors.green,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                    ),
                                   ),
                                   onPressed: () {
                                     Navigator.push(
@@ -352,18 +495,20 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                         builder:
                                             (_) => VideoPlayerScreen(
                                               videoUrl: ep['videoUrl'],
+                                              startTime: ep['startTime'],
+                                              endTime: ep['endTime'],
                                             ),
                                       ),
                                     );
                                   },
-                                  child: Text("Watch Now"),
+                                  child: const Text("Watch"),
                                 ),
                               ),
                             );
                           },
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         "Rate this course:",
                         style: TextStyle(
@@ -372,19 +517,33 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           color: Colors.green.shade900,
                         ),
                       ),
-                      RatingBar.builder(
-                        initialRating: 0,
-                        minRating: 1,
-                        direction: Axis.horizontal,
-                        allowHalfRating: false,
-                        itemCount: 5,
-                        itemSize: 30,
-                        itemBuilder:
-                            (context, _) =>
-                                Icon(Icons.star, color: Colors.amber),
-                        onRatingUpdate:
-                            (rating) => submitRating(course['_id'], rating),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: RatingBar.builder(
+                            initialRating: 0,
+                            minRating: 1,
+                            direction: Axis.horizontal,
+                            allowHalfRating: false,
+                            itemCount: 5,
+                            itemSize: 30,
+                            itemBuilder:
+                                (context, _) =>
+                                    const Icon(Icons.star, color: Colors.amber),
+                            onRatingUpdate:
+                                (rating) => submitRating(course['_id'], rating),
+                          ),
+                        ),
                       ),
+                      const SizedBox(height: 10),
                     ],
                   ),
                 ),
@@ -393,12 +552,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Widget buildCourseCard(course) {
-    return InkWell(
+    return GestureDetector(
       onTap: () => showCourseDetail(course),
       child: Card(
-        margin: EdgeInsets.all(12),
+        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: Colors.white,
+        elevation: 3,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -412,7 +571,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -421,42 +580,47 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 4),
-                  Text(
-                    "By ${course['chefName']}",
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "${course['episodes'].length} Lessons",
-                        style: TextStyle(color: Colors.grey[700]),
-                      ),
-                      Text(
-                        "${getTotalDuration(course['episodes'])} Min",
-                        style: TextStyle(color: Colors.grey[700]),
+                        "👨‍🍳 ${course['chefName']}",
+                        style: TextStyle(color: Colors.grey[600]),
                       ),
                       Row(
                         children: [
                           Icon(Icons.star, color: Colors.orange, size: 16),
+                          SizedBox(width: 4),
                           Text(
                             calculateAverageRating(
                               course['ratings'],
                             ).toStringAsFixed(1),
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
                     ],
                   ),
                   SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("🎬 ${course['episodes'].length} Lessons"),
+                      Text("⏱️ ${getTotalDuration(course['episodes'])} min"),
+                    ],
+                  ),
+                  SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
+                      icon: Icon(Icons.play_circle_outline),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                      child: Text(
+                      label: Text(
                         "View Lessons",
                         style: TextStyle(color: Colors.white),
                       ),
@@ -475,17 +639,43 @@ class _CoursesScreenState extends State<CoursesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Masterclasses"), backgroundColor: green),
-      backgroundColor: Colors.grey.shade50,
-      body: ListView(children: courses.map(buildCourseCard).toList()),
-      floatingActionButton: FloatingActionButton(
-        onPressed: isUploading ? null : pickAndUploadVideo,
+      appBar: AppBar(
         backgroundColor: green,
-        child:
-            isUploading
-                ? CircularProgressIndicator(color: Colors.white)
-                : Icon(Icons.upload_file),
-        tooltip: 'Upload Course Episode',
+        elevation: 0,
+        title: Text("🎓 Masterclasses", style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+      ),
+      backgroundColor: Colors.grey[100],
+      body:
+          courses.isEmpty
+              ? Center(child: CircularProgressIndicator(color: green))
+              : ListView.builder(
+                itemCount: courses.length,
+                padding: EdgeInsets.symmetric(vertical: 12),
+                itemBuilder: (_, index) => buildCourseCard(courses[index]),
+              ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'single',
+            onPressed: isUploading ? null : pickAndUploadVideo,
+            backgroundColor: green,
+            icon: Icon(Icons.video_call, color: Colors.white),
+            label: Text("Single Lesson", style: TextStyle(color: Colors.white)),
+          ),
+          SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'split',
+            onPressed: isUploading ? null : pickAndUploadAndSplitVideo,
+            backgroundColor: Colors.orange,
+            icon: Icon(Icons.auto_fix_high, color: Colors.white),
+            label: Text(
+              "Auto-Split Lessons",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }

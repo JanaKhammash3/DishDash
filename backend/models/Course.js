@@ -3,14 +3,17 @@ const mongoose = require('mongoose');
 
 const episodeSchema = new mongoose.Schema({
   title: String,
-  videoUrl: String,
-  duration: Number, // in minutes
+  videoUrl: String,       // Full Cloudinary video URL
+  startTime: Number,      // in seconds
+  endTime: Number,        // in seconds
+  duration: Number,       // in minutes
   sourceType: {
     type: String,
     enum: ['cloudinary', 'youtube', 'vimeo', 'external'],
     default: 'cloudinary'
   }
 });
+
 
 
 const courseSchema = new mongoose.Schema({

@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/colors.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:ui' as ui;
+import 'dart:ui_web' as ui;
 import 'dart:html' as html;
 
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
+  final int startTime; // in seconds
+  final int endTime; // in seconds
 
-  const VideoPlayerScreen({super.key, required this.videoUrl});
+  const VideoPlayerScreen({
+    super.key,
+    required this.videoUrl,
+    required this.startTime,
+    required this.endTime,
+  });
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -29,12 +36,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Future<void> _initializePlayer() async {
     try {
       if (kIsWeb) {
-        print('❌ Video playback not supported on web by default.');
-        setState(() => _hasError = true);
+        print('🌐 Web mode: using HTML5 video element');
+        setState(() => _hasError = false);
         return;
       }
 
-      // ✅ Optimize Cloudinary URL if applicable
       final optimizedUrl =
           widget.videoUrl.contains('/upload/')
               ? widget.videoUrl.replaceFirst(
@@ -45,6 +51,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
       _videoPlayerController = VideoPlayerController.network(optimizedUrl);
       await _videoPlayerController.initialize();
+      await _videoPlayerController.seekTo(Duration(seconds: widget.startTime));
+
+      _videoPlayerController.addListener(() {
+        final pos = _videoPlayerController.value.position;
+        if (pos.inSeconds >= widget.endTime) {
+          _videoPlayerController.pause();
+        }
+      });
 
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
@@ -54,6 +68,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             _videoPlayerController.value.aspectRatio > 0
                 ? _videoPlayerController.value.aspectRatio
                 : 16 / 9,
+        showControls: true,
+        allowMuting: true,
+        allowPlaybackSpeedChanging: true,
       );
 
       setState(() => _hasError = false);
@@ -65,18 +82,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
-    _videoPlayerController.dispose();
-    _chewieController?.dispose();
+    if (!kIsWeb) {
+      _videoPlayerController.dispose();
+      _chewieController?.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
-      // 🛠 Register factory safely
-      final viewId = 'videoElement-${DateTime.now().millisecondsSinceEpoch}';
-
-      // ✅ Only access `platformViewRegistry` if web
+      final viewId = 'video-${DateTime.now().millisecondsSinceEpoch}';
       // ignore: undefined_prefixed_name
       ui.platformViewRegistry.registerViewFactory(viewId, (int _) {
         final video =
@@ -86,22 +102,40 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               ..controls = true
               ..style.border = 'none'
               ..style.width = '100%'
-              ..style.height = '100%';
+              ..style.height = '100%'
+              ..setAttribute('playsinline', 'true');
+
+        video.onCanPlay.first.then((_) {
+          video.currentTime = widget.startTime.toDouble();
+        });
+
+        video.onTimeUpdate.listen((event) {
+          if (video.currentTime >= widget.endTime) {
+            video.pause();
+          }
+        });
+
         return video;
       });
 
       return Scaffold(
-        appBar: AppBar(title: const Text("Watch Episode")),
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          title: const Text("🎥 Watch Episode"),
+          backgroundColor: green,
+          foregroundColor: Colors.white,
+        ),
         body: HtmlElementView(viewType: viewId),
       );
     }
 
-    // The existing native Android/iOS code...
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("Watch Episode"),
-        backgroundColor: Colors.teal,
+        title: const Text("🎥 Watch Episode"),
+        backgroundColor: Colors.green.shade800,
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Center(
         child:
@@ -109,23 +143,25 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 ? Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.error_outline,
                       color: Colors.redAccent,
                       size: 50,
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
+                    SizedBox(height: 12),
+                    Text(
                       '❌ Failed to load video',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: _initializePlayer,
+                    SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      icon: Icon(Icons.refresh),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
                       ),
-                      child: const Text('Retry'),
+                      onPressed: _initializePlayer,
+                      label: Text("Retry"),
                     ),
                   ],
                 )
@@ -134,8 +170,21 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         .videoPlayerController
                         .value
                         .isInitialized)
-                ? Chewie(controller: _chewieController!)
-                : const CircularProgressIndicator(color: Colors.teal),
+                ? AspectRatio(
+                  aspectRatio: _videoPlayerController.value.aspectRatio,
+                  child: Chewie(controller: _chewieController!),
+                )
+                : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    CircularProgressIndicator(color: Colors.green),
+                    SizedBox(height: 12),
+                    Text(
+                      "Loading video...",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
       ),
     );
   }

@@ -3,32 +3,58 @@ const { cloudinary } = require('../config/Cloudinary'); // OR: require('cloudina
 const fs = require('fs');
 
 // Create a new course
-exports.createCourse = async (req, res) => {
+exports.createFromSingleVideo = async (req, res) => {
   try {
     const {
       title,
+      description,
       chefName,
       chefAvatar,
-      description,
       image,
-      episodes
+      videoUrl,
+      fullDuration,
     } = req.body;
 
-    const newCourse = await Course.create({
-      title,
-      chefName,
-      chefAvatar,
-      description,
-      image,
-      episodes,
-      ratings: []
+    const lessonDuration = 120; // 2 minutes (in seconds)
+    const episodeCount = Math.ceil(fullDuration / lessonDuration);
+
+    const baseUrlParts = videoUrl.split('/upload/');
+    if (baseUrlParts.length !== 2) {
+      return res.status(400).json({ message: 'Invalid Cloudinary URL format' });
+    }
+
+    const [beforeUpload, afterUpload] = baseUrlParts;
+
+    const episodes = Array.from({ length: episodeCount }, (_, i) => {
+      const start = i * lessonDuration;
+      const end = Math.min((i + 1) * lessonDuration, fullDuration);
+
+      // Inject Cloudinary trimming transformation
+      const trimmedUrl = `${beforeUpload}/upload/so_${start},eo_${end}/${afterUpload}`;
+
+      return {
+        title: `Lesson ${i + 1}`,
+        videoUrl: trimmedUrl,
+        duration: (end - start) / 60,
+      };
     });
 
-    res.status(201).json(newCourse);
+    const course = await Course.create({
+      title,
+      description,
+      chefName,
+      chefAvatar,
+      image,
+      episodes,
+    });
+
+    res.status(201).json(course);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to create course', error: err.message });
+    console.error('❌ Error creating course from video:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // Get all courses
 exports.getAllCourses = async (req, res) => {
@@ -110,5 +136,69 @@ exports.uploadVideo = async (req, res) => {
       message: 'Upload failed',
       error: err.message || 'Unknown error',
     });
+  }
+};
+
+function generateLessons(videoUrl, fullDuration, lessonLength = 120) {
+  const lessons = [];
+  let start = 0;
+  let index = 1;
+
+  while (start < fullDuration) {
+    const end = Math.min(start + lessonLength, fullDuration);
+    const trimmedUrl = videoUrl.replace('/upload/', `/upload/so_${start},eo_${end}/`);
+    lessons.push({
+      title: `Lesson ${index}`,
+      videoUrl: trimmedUrl,
+      duration: (end - start) / 60
+    });
+    start = end;
+    index++;
+  }
+
+  return lessons;
+}
+
+
+exports.createFromSingleVideo = async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      chefName,
+      chefAvatar,
+      image,
+      videoUrl,
+      fullDuration,
+    } = req.body;
+
+    const lessonDuration = 120; // 2 minutes
+    const episodeCount = Math.ceil(fullDuration / lessonDuration);
+
+    const episodes = Array.from({ length: episodeCount }, (_, i) => {
+      const start = i * lessonDuration;
+      const end = Math.min((i + 1) * lessonDuration, fullDuration);
+      return {
+        title: `Lesson ${i + 1}`,
+        videoUrl,
+        startTime: start,
+        endTime: end,
+        duration: (end - start) / 60,
+      };
+    });
+
+    const course = await Course.create({
+      title,
+      description,
+      chefName,
+      chefAvatar,
+      image,
+      episodes,
+    });
+
+    res.status(201).json(course);
+  } catch (err) {
+    console.error('❌ Error creating course from video:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
