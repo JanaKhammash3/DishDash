@@ -54,7 +54,7 @@ router.get('/followers/:userId', getFollowers);
 
 // ✅ Grocery & Ingredients
 router.get('/:userId/grocery-list', getGroceryList);
-router.post('/:userId/grocery-list', saveGroceryList);
+router.put('/:userId/grocery-list', saveGroceryList);
 router.get('/:userId/available-ingredients', getAvailableIngredients);
 router.put('/:userId/available-ingredients', updateAvailableIngredients);
 

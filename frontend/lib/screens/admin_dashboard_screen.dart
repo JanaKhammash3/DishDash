@@ -33,13 +33,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     try {
       final userRes = await http.get(
-        Uri.parse('http://192.168.1.4:3000/api/users'),
+        Uri.parse('http://192.168.68.61:3000/api/users'),
       );
       final storeRes = await http.get(
-        Uri.parse('http://192.168.1.4:3000/api/stores'),
+        Uri.parse('http://192.168.68.61:3000/api/stores'),
       );
       final recipeRes = await http.get(
-        Uri.parse('http://192.168.1.4:3000/api/recipes'),
+        Uri.parse('http://192.168.68.61:3000/api/recipes'),
       );
 
       if (userRes.statusCode == 200 &&
@@ -96,13 +96,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   if (message.isEmpty) return;
 
                   final res = await http.get(
-                    Uri.parse('http://192.168.1.4:3000/api/users'),
+                    Uri.parse('http://192.168.68.61:3000/api/users'),
                   );
                   if (res.statusCode == 200) {
                     final users = jsonDecode(res.body);
                     for (var user in users) {
                       await http.post(
-                        Uri.parse('http://192.168.1.4:3000/api/notifications'),
+                        Uri.parse(
+                          'http://192.168.68.61:3000/api/notifications',
+                        ),
                         headers: {'Content-Type': 'application/json'},
                         body: jsonEncode({
                           'recipientId': user['_id'],

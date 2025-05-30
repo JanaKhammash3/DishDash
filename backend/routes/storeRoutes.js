@@ -16,7 +16,9 @@ const {
   getAllStores,
   updateStoreItem,
   deleteStoreItem,
-  deleteStore
+  deleteStore,
+  getBasicStoreInfoById
+ 
 } = require('../controllers/storeController');
 
 const Store = require('../models/Store');
@@ -128,6 +130,7 @@ router.get('/api/stores/search', async (req, res) => {
 
 // ✅ Simple GET /stores route for search by name/email
 router.get('/stores', getAllStores);
+router.get('/basic/:id', getBasicStoreInfoById);
 
 router.delete('/stores/:storeId', deleteStore);
 

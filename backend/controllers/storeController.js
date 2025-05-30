@@ -174,7 +174,7 @@ exports.recordPurchase = async (req, res) => {
     return res.status(200).json({
       message: '✅ Purchase recorded and notification sent',
       purchase: latestPurchase,
-      notification: notif,
+      
     });
   } catch (err) {
     console.error('❌ Error recording purchase:', err);
@@ -396,6 +396,19 @@ exports.deleteStore = async (req, res) => {
     res.status(500).json({ error: 'Server error', detail: err.message });
   }
 };
+exports.getBasicStoreInfoById = async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.id).select('name image');
 
+    if (!store) {
+      return res.status(404).json({ message: 'Store not found' });
+    }
+
+    res.status(200).json(store);
+  } catch (err) {
+    console.error('❌ Error fetching store by ID:', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 

@@ -20,12 +20,13 @@ class _GroceryScreenState extends State<GroceryScreen> {
   bool _showSidebar = false;
   final Set<String> availableIngredients = {};
   List<Map<String, dynamic>> groceryItems = [];
-
+  List<Map<String, dynamic>> cartItems = [];
   @override
   void initState() {
     super.initState();
     _loadIngredients();
     _loadAvailableIngredients();
+    _loadCartFromPrefs();
   }
 
   String normalizeIngredientName(String raw) {
@@ -69,6 +70,383 @@ class _GroceryScreenState extends State<GroceryScreen> {
         .join(' ');
   }
 
+  Future<void> _saveCartToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(cartItems);
+    await prefs.setString(
+      'cartItems_${widget.userId}',
+      encoded,
+    ); // ✅ key includes userId
+  }
+
+  Future<void> _loadCartFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = prefs.getString(
+      'cartItems_${widget.userId}',
+    ); // ✅ match key
+    if (encoded != null) {
+      setState(() {
+        cartItems = List<Map<String, dynamic>>.from(jsonDecode(encoded));
+      });
+    }
+  }
+
+  void _showCartModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder:
+          (context) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Cart',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Divider(),
+                ...cartItems.map(
+                  (item) => ListTile(
+                    title: Text(item['name']),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        setState(() {
+                          cartItems.remove(item);
+                          _saveCartToPrefs();
+                        });
+                        Navigator.pop(context);
+                        _showCartModal();
+                      },
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed:
+                      cartItems.isEmpty ? null : _placeOrderFirstThenPayment,
+                  child: const Text('Order'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: green,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Future<void> _placeOrderFirstThenPayment() async {
+    if (cartItems.isEmpty) return;
+
+    final storeId = await _promptStoreSelection();
+    if (storeId == null) return;
+
+    // Save all relevant info after selecting store
+    for (var item in cartItems) {
+      final name = item['name'];
+
+      setState(() {
+        availableIngredients.add(name);
+      });
+
+      await _saveAvailableIngredients();
+      await recordPurchase(storeId, name);
+      await sendNotification(
+        recipientId: storeId,
+        recipientModel: 'Store',
+        senderId: widget.userId,
+        senderModel: 'User',
+        type: 'purchase',
+        message: 'purchased $name from your store!',
+        relatedId: name,
+      );
+    }
+
+    Navigator.pop(context);
+    // THEN go to payment
+    _proceedToFakePayment(); // 👈 call payment AFTER processing
+  }
+
+  void _proceedToFakePayment() {
+    showDialog(
+      context: context,
+      builder: (_) {
+        String selectedMethod = 'Pickup';
+
+        return AlertDialog(
+          title: const Text('Choose Order Type'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Pickup'),
+                value: 'Pickup',
+                groupValue: selectedMethod,
+                onChanged: (value) {
+                  selectedMethod = value!;
+                  Navigator.pop(context);
+                  _showCardInputDialog(selectedMethod);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Delivery'),
+                value: 'Delivery',
+                groupValue: selectedMethod,
+                onChanged: (value) {
+                  selectedMethod = value!;
+                  Navigator.pop(context);
+                  _showCardInputDialog(selectedMethod);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCardInputDialog(String method) {
+    final TextEditingController cardController = TextEditingController();
+    final TextEditingController cvvController = TextEditingController();
+    final TextEditingController expiryController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Enter Card Info'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: cardController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Card Number'),
+                ),
+                TextField(
+                  controller: cvvController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'CVV'),
+                ),
+                TextField(
+                  controller: expiryController,
+                  keyboardType: TextInputType.datetime,
+                  decoration: const InputDecoration(labelText: 'Expiry Date'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context); // close dialog
+
+                  setState(() {
+                    cartItems.clear(); // ✅ clear cart
+                  });
+
+                  await _saveCartToPrefs(); // ✅ persist clear
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Order placed successfully!')),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: green),
+                child: const Text('Confirm Payment'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Future<String?> _promptStoreSelection() async {
+    final response = await http.get(
+      Uri.parse('http://192.168.68.61:3000/api/stores-with-items'),
+    );
+
+    if (response.statusCode != 200) {
+      print('❌ Failed to fetch stores');
+      return null;
+    }
+
+    final List stores = jsonDecode(response.body);
+    final List<String> itemNames =
+        cartItems.map((i) => i['name'].toString().toLowerCase()).toList();
+
+    final List<Map<String, dynamic>> storeOptions = [];
+
+    for (var store in stores) {
+      final storeItems = store['items'] ?? [];
+      final storeItemNames =
+          storeItems.map((i) => i['name'].toString().toLowerCase()).toList();
+
+      final hasAllItems = itemNames.every(
+        (name) => storeItemNames.contains(name),
+      );
+
+      if (hasAllItems) {
+        double totalPrice = 0.0;
+
+        for (var itemName in itemNames) {
+          final matchedItem = storeItems.firstWhere(
+            (i) => i['name'].toString().toLowerCase() == itemName,
+            orElse: () => null,
+          );
+
+          final price =
+              double.tryParse(matchedItem?['price']?.toString() ?? '0') ?? 0.0;
+          totalPrice += price;
+        }
+
+        storeOptions.add({
+          '_id': store['_id'],
+          'name': store['name'],
+          'image': store['image'],
+          'totalPrice': totalPrice,
+        });
+      }
+    }
+
+    if (storeOptions.isEmpty) {
+      await showDialog(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text('No Stores Found'),
+              content: const Text(
+                'No stores currently offer all items in your cart.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+      );
+      return null;
+    }
+
+    // ✅ Sort by total price ascending
+    storeOptions.sort((a, b) => a['totalPrice'].compareTo(b['totalPrice']));
+
+    String? selectedStoreId;
+
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const Text(
+              'Select a store for your order',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const Divider(),
+            ...storeOptions.map((store) {
+              return ListTile(
+                leading:
+                    store['image'] != null
+                        ? Image.network(store['image'], width: 40, height: 40)
+                        : const Icon(Icons.store, color: green),
+                title: Text(store['name']),
+                subtitle: Text(
+                  'Total: \$${store['totalPrice'].toStringAsFixed(2)}',
+                ),
+                onTap: () {
+                  selectedStoreId = store['_id'];
+                  Navigator.pop(context);
+                },
+              );
+            }).toList(),
+          ],
+        );
+      },
+    );
+
+    return selectedStoreId;
+  }
+
+  Future<void> _placeOrder(String method) async {
+    if (cartItems.isEmpty) return;
+
+    final storeId = await _promptStoreSelection(); // you can enhance this later
+    if (storeId == null) return;
+
+    final url = Uri.parse('http://192.168.68.61:3000/api/orders/create');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'userId': widget.userId,
+        'storeId': storeId,
+        'deliveryMethod': method,
+        'items':
+            cartItems
+                .map(
+                  (i) => {
+                    'name': i['name'],
+                    'price': i['price'],
+                    'quantity': 1, // optional
+                  },
+                )
+                .toList(),
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      for (var item in cartItems) {
+        final name = item['name'];
+
+        // ✅ Add to available ingredients
+        setState(() {
+          availableIngredients.add(name);
+        });
+
+        // ✅ Save available ingredients
+        await _saveAvailableIngredients();
+
+        // ✅ Record the purchase
+        await recordPurchase(storeId, name);
+
+        // ✅ Remove from grocery list
+
+        // ✅ Send notification to store
+        await sendNotification(
+          recipientId: storeId,
+          recipientModel: 'Store',
+          senderId: widget.userId,
+          senderModel: 'User',
+          type: 'purchase',
+          message: 'purchased $name from your store!',
+          relatedId: name,
+        );
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Order placed!')));
+
+      setState(() {
+        cartItems.clear();
+      });
+      await _saveCartToPrefs();
+    }
+  }
+
   Future<void> sendNotification({
     required String recipientId,
     required String recipientModel,
@@ -78,7 +456,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     required String message,
     String? relatedId,
   }) async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/notifications');
+    final url = Uri.parse('http://192.168.68.61:3000/api/notifications');
     await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -96,7 +474,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/mealplans/user/${widget.userId}/grocery-list',
+      'http://192.168.68.61:3000/api/mealplans/user/${widget.userId}/grocery-list',
     );
 
     final response = await http.get(url);
@@ -173,7 +551,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadAvailableIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/available-ingredients',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -186,12 +564,12 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _saveIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/grocery-list',
     );
     final ingredients =
         groceryItems.map((item) => item['name'] as String).toList();
 
-    final response = await http.post(
+    final response = await http.put(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'ingredients': ingredients}),
@@ -213,7 +591,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     print('📤 Attempting to save available ingredients: $ingredientsList');
 
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/available-ingredients',
     );
 
     try {
@@ -238,7 +616,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> recordPurchase(String storeId, String ingredient) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores/$storeId/purchase',
+      'http://192.168.68.61:3000/api/stores/$storeId/purchase',
     );
 
     final response = await http.post(
@@ -258,8 +636,8 @@ class _GroceryScreenState extends State<GroceryScreen> {
     setState(() {
       groceryItems.removeWhere((item) => item['name'] == name);
       availableIngredients.remove(name);
+      _saveIngredients();
     });
-    _saveIngredients();
   }
 
   void _clearAllIngredients() async {
@@ -339,7 +717,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   void _showStoreSelection(String itemName) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
+      'http://192.168.68.61:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
     );
     final response = await http.get(url);
 
@@ -823,6 +1201,36 @@ class _GroceryScreenState extends State<GroceryScreen> {
                                         (_) => toggleAvailability(item['name']),
                                   ),
                                   IconButton(
+                                    icon: const Icon(
+                                      Icons.add_shopping_cart,
+                                      color: green,
+                                    ),
+                                    onPressed: () {
+                                      final existing = cartItems.any(
+                                        (i) => i['name'] == item['name'],
+                                      );
+                                      if (!existing) {
+                                        setState(() {
+                                          cartItems.add({
+                                            'name': item['name'],
+                                            'price': item['price'],
+                                            'storeId':
+                                                null, // let user choose later
+                                          });
+                                          _saveCartToPrefs();
+                                        });
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Added to cart'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+
+                                  IconButton(
                                     icon: const Icon(Icons.store, color: green),
                                     onPressed: () {
                                       Navigator.push(
@@ -854,6 +1262,41 @@ class _GroceryScreenState extends State<GroceryScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: green,
+        onPressed: _showCartModal,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(Icons.shopping_cart, color: Colors.white),
+            if (cartItems.isNotEmpty)
+              Positioned(
+                right: 0,
+                top: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    '${cartItems.length}',
+                    style: const TextStyle(
+                      color: green,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -878,7 +1321,7 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
 
   Future<void> fetchStorePrices() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
+      'http://192.168.68.61:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
     );
 
     try {

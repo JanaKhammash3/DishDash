@@ -11,6 +11,7 @@ const User = require('./models/User');
 const storeRoutes = require('./routes/storeRoutes');
 const { translateText }= require( './translate.js');
 const Notification = require('./models/Notification');
+const orderRoutes = require('./routes/orderRoutes');
 const type = 'purchase'; // or 'rating'
 const sendMealReminders = require('./scheduledJobs/sendMealReminders');
 sendMealReminders();
@@ -42,6 +43,7 @@ app.use('/api/stores', require('./routes/storeRoutes'));
 app.use('/uploads', express.static('uploads'));
 app.use('/images', express.static(path.join(__dirname, './public/images')));
 app.use('/api/chats', chatRoutes);
+app.use('/api/orders', orderRoutes);
 app.use(storeRoutes);
 app.use('/api', require('./routes/storeRoutes'));
 const nutritionRoutes = require('./routes/nutritionRoutes');
