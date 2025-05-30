@@ -8,33 +8,41 @@ exports.createFromSingleVideo = async (req, res) => {
     const {
       title,
       description,
-      chefName,
-      chefAvatar,
-      image,
       videoUrl,
       fullDuration,
+      chefName,
     } = req.body;
 
-    const lessonDuration = 120; // 2 minutes (in seconds)
+    const lessonDuration = 120;
     const episodeCount = Math.ceil(fullDuration / lessonDuration);
 
-    const baseUrlParts = videoUrl.split('/upload/');
-    if (baseUrlParts.length !== 2) {
-      return res.status(400).json({ message: 'Invalid Cloudinary URL format' });
+    // ⬇️ Upload images to Cloudinary
+    const chefAvatarFile = req.files?.chefAvatar?.[0];
+    const imageFile = req.files?.image?.[0];
+
+    if (!chefAvatarFile || !imageFile) {
+      return res.status(400).json({ message: 'Chef avatar and image are required' });
     }
 
-    const [beforeUpload, afterUpload] = baseUrlParts;
+    const chefAvatarUpload = await cloudinary.uploader.upload(chefAvatarFile.path, {
+      folder: 'courses/avatars',
+    });
+    const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
+      folder: 'courses/images',
+    });
+
+    // Delete local files
+    fs.unlinkSync(chefAvatarFile.path);
+    fs.unlinkSync(imageFile.path);
 
     const episodes = Array.from({ length: episodeCount }, (_, i) => {
       const start = i * lessonDuration;
       const end = Math.min((i + 1) * lessonDuration, fullDuration);
-
-      // Inject Cloudinary trimming transformation
-      const trimmedUrl = `${beforeUpload}/upload/so_${start},eo_${end}/${afterUpload}`;
-
       return {
         title: `Lesson ${i + 1}`,
-        videoUrl: trimmedUrl,
+        videoUrl,
+        startTime: start,
+        endTime: end,
         duration: (end - start) / 60,
       };
     });
@@ -43,15 +51,15 @@ exports.createFromSingleVideo = async (req, res) => {
       title,
       description,
       chefName,
-      chefAvatar,
-      image,
+      chefAvatar: chefAvatarUpload.secure_url,
+      image: imageUpload.secure_url,
       episodes,
     });
 
     res.status(201).json(course);
   } catch (err) {
     console.error('❌ Error creating course from video:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
 
@@ -166,39 +174,52 @@ exports.createFromSingleVideo = async (req, res) => {
       title,
       description,
       chefName,
-      chefAvatar,
-      image,
-      videoUrl,
-      fullDuration,
+      fullDuration = 600,
     } = req.body;
 
-    const lessonDuration = 120; // 2 minutes
-    const episodeCount = Math.ceil(fullDuration / lessonDuration);
+    const videoUrl = req.body.videoUrl; // already uploaded
+    const coverImage = req.files?.image?.[0];     // cover image file
+    const chefAvatar = req.files?.chefAvatar?.[0]; // chef avatar file
 
-    const episodes = Array.from({ length: episodeCount }, (_, i) => {
-      const start = i * lessonDuration;
-      const end = Math.min((i + 1) * lessonDuration, fullDuration);
-      return {
-        title: `Lesson ${i + 1}`,
-        videoUrl,
-        startTime: start,
-        endTime: end,
-        duration: (end - start) / 60,
-      };
-    });
+    // Upload cover image to Cloudinary if present
+    let coverImageUrl = '';
+    if (coverImage) {
+      const result = await cloudinary.uploader.upload(coverImage.path, {
+        folder: 'courses',
+      });
+      coverImageUrl = result.secure_url;
+    }
 
-    const course = await Course.create({
+    // Upload chef avatar if needed (similar logic, optional)
+    let chefAvatarUrl = '';
+    if (chefAvatar) {
+      const result = await cloudinary.uploader.upload(chefAvatar.path, {
+        folder: 'courses/avatars',
+      });
+      chefAvatarUrl = result.secure_url;
+    }
+
+    const newCourse = new Course({
       title,
       description,
       chefName,
-      chefAvatar,
-      image,
-      episodes,
+      image: coverImageUrl,       // ✅ Inject cover image here
+      chefAvatar: chefAvatarUrl,  // ✅ Inject chef avatar here
+      episodes: [{
+        title: 'Lesson 1',
+        videoUrl,
+        duration: Number(fullDuration) / 60,
+        startTime: 0,
+        endTime: Number(fullDuration),
+        sourceType: 'cloudinary',
+      }],
     });
 
-    res.status(201).json(course);
+    await newCourse.save();
+    res.status(201).json(newCourse);
+
   } catch (err) {
-    console.error('❌ Error creating course from video:', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Error creating course:', err);
+    res.status(500).json({ message: 'Failed to create course', error: err.message });
   }
 };

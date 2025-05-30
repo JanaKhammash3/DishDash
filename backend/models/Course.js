@@ -14,8 +14,6 @@ const episodeSchema = new mongoose.Schema({
   }
 });
 
-
-
 const courseSchema = new mongoose.Schema({
   title: String,
   chefName: String,

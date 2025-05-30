@@ -1745,7 +1745,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            bottomNavItem(LucideIcons.film, 'Lessons', () {
+            bottomNavItem(Icons.video_library, 'Courses', () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
