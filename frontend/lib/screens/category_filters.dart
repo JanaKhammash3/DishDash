@@ -29,7 +29,7 @@ class CategoryFilters extends StatelessWidget {
     ];
 
     return SizedBox(
-      height: 80,
+      height: 64, // 👈 Smaller height
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
@@ -42,12 +42,14 @@ class CategoryFilters extends StatelessWidget {
           return GestureDetector(
             onTap: () => onCategorySelected(category['label']! as String),
             child: Container(
-              width: 90,
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              width: 72, // 👈 Smaller width
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
                 color: bgColor,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(
+                  10,
+                ), // Slightly smaller radius
                 border: Border.all(color: green),
               ),
               child: Column(
@@ -56,15 +58,15 @@ class CategoryFilters extends StatelessWidget {
                   Icon(
                     category['icon'] as IconData,
                     color: textColor,
-                    size: 20,
+                    size: 18, // 👈 Smaller icon
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     category['label'] as String,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: textColor,
-                      fontSize: 12,
+                      fontSize: 11, // 👈 Smaller font
                       fontWeight: FontWeight.w500,
                     ),
                   ),
