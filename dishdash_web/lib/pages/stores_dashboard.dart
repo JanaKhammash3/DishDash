@@ -15,7 +15,7 @@ class _StoresDashboardState extends State<StoresDashboard>
     with TickerProviderStateMixin {
   late TabController _tabController;
   Map<String, dynamic>? storeData;
-
+  List<dynamic> orders = [];
   final Map<String, List<Map<String, dynamic>>> itemsByCategory = {
     'Vegetables': [],
     'Fruits': [],
@@ -45,6 +45,21 @@ class _StoresDashboardState extends State<StoresDashboard>
     _loadStoreId();
   }
 
+  Future<void> _fetchOrdersForStore() async {
+    if (storeId == null) return;
+    final res = await http.get(
+      Uri.parse('http://192.168.68.61:3000/api/orders/store/$storeId'),
+    );
+
+    if (res.statusCode == 200) {
+      setState(() {
+        orders = jsonDecode(res.body);
+      });
+    } else {
+      print('❌ Failed to fetch orders for store');
+    }
+  }
+
   Future<void> _loadStoreId() async {
     final prefs = await SharedPreferences.getInstance();
     final id = prefs.getString('storeId');
@@ -55,6 +70,8 @@ class _StoresDashboardState extends State<StoresDashboard>
       });
       await _fetchStoreInfo(id);
       await _fetchItemsByStore(id); // 🟢 Load items
+      await _fetchOrdersForStore();
+      setState(() {});
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -78,12 +95,12 @@ class _StoresDashboardState extends State<StoresDashboard>
     }
 
     // fallback if it's a filename from MongoDB like 'avatar123.png'
-    return NetworkImage('http://192.168.1.4:3000/images/$avatar');
+    return NetworkImage('http://192.168.68.61:3000/images/$avatar');
   }
 
   Future<void> _fetchItemsByStore(String id) async {
     try {
-      const baseUrl = 'http://192.168.1.4:3000';
+      const baseUrl = 'http://192.168.68.61:3000';
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id/items'));
 
       if (res.statusCode == 200) {
@@ -128,7 +145,7 @@ class _StoresDashboardState extends State<StoresDashboard>
 
   Future<void> _fetchStoreInfo(String id) async {
     try {
-      const baseUrl = 'http://192.168.1.4:3000'; // your backend IP
+      const baseUrl = 'http://192.168.68.61:3000'; // your backend IP
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id'));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -344,7 +361,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                           'category': category,
                         };
 
-                        const baseUrl = 'http://192.168.1.4:3000';
+                        const baseUrl = 'http://192.168.68.61:3000';
 
                         try {
                           http.Response response;
@@ -590,7 +607,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                                 );
                               } else if (value == 'Delete') {
                                 final String itemId = item['_id'];
-                                const baseUrl = 'http://192.168.1.4:3000';
+                                const baseUrl = 'http://192.168.68.61:3000';
 
                                 try {
                                   final res = await http.delete(
@@ -646,6 +663,121 @@ class _StoresDashboardState extends State<StoresDashboard>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildOrderSection() {
+    if (orders.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('No orders yet.'),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: orders.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemBuilder: (context, index) {
+        final order = orders[index];
+        final items = order['items'] as List;
+        final userId = order['userId'];
+        final validStatuses = ['Placed', 'Preparing', 'Ready', 'Completed'];
+        final status =
+            validStatuses.contains(order['status'])
+                ? order['status']
+                : 'Placed';
+        final user = order['userId']; // may be full object
+        final userName =
+            user is Map && user['name'] != null ? user['name'] : 'Unknown';
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Order #${order['_id']}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text('User: $userName'),
+                // optionally fetch user name
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children:
+                      items
+                          .map((item) {
+                            return Text(
+                              '- ${item['name']} (\$${item['price']})',
+                            );
+                          })
+                          .toList()
+                          .cast<Widget>(),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Text('Status:'),
+                    const SizedBox(width: 10),
+                    DropdownButton<String>(
+                      value: status,
+                      items:
+                          ['Placed', 'Preparing', 'Ready', 'Completed']
+                              .map(
+                                (s) =>
+                                    DropdownMenuItem(value: s, child: Text(s)),
+                              )
+                              .toList(),
+                      onChanged: (newStatus) async {
+                        if (newStatus != null) {
+                          // Instant UI update
+                          setState(() {
+                            orders[index]['status'] = newStatus;
+                          });
+
+                          // Update backend
+                          await http.put(
+                            Uri.parse(
+                              'http://192.168.68.61:3000/api/orders/${order['_id']}/status',
+                            ),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({'status': newStatus}),
+                          );
+
+                          // Send notification
+                          await http.post(
+                            Uri.parse(
+                              'http://192.168.68.61:3000/api/notifications',
+                            ),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({
+                              'recipientId':
+                                  userId is Map ? userId['_id'] : userId,
+                              'recipientModel': 'User',
+                              'senderId': storeId,
+                              'senderModel': 'Store',
+                              'type': 'Alerts',
+                              'message':
+                                  'Your order from ${storeData?['name']} is now "$newStatus"',
+                              'relatedId': order['_id'],
+                            }),
+                          );
+
+                          // Re-fetch updated data from backend
+                          await _fetchOrdersForStore();
+                          setState(() {}); // force rebuild
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1002,6 +1134,53 @@ class _StoresDashboardState extends State<StoresDashboard>
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+
+                // Category Tab Content
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF304D30),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                      icon: const Icon(Icons.receipt_long),
+                      label: const Text('View Orders'),
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
+                          ),
+                          builder:
+                              (_) => DraggableScrollableSheet(
+                                expand: false,
+                                initialChildSize: 0.8,
+                                builder:
+                                    (_, controller) => SingleChildScrollView(
+                                      controller: controller,
+                                      child: _buildOrderSection(),
+                                    ),
+                              ),
+                        );
+                      },
                     ),
                   ),
                 ),

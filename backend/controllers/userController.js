@@ -390,12 +390,20 @@ exports.getGroceryList = async (req, res) => {
 // POST grocery list
 exports.saveGroceryList = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId);
-    if (!user) return res.status(404).send('User not found');
-    user.currentGroceryList = req.body.ingredients;
-    await user.save();
+    const { userId } = req.params;
+    const { ingredients } = req.body;
+
+    if (!Array.isArray(ingredients)) {
+      return res.status(400).json({ message: 'Invalid ingredients format' });
+    }
+
+    await User.findByIdAndUpdate(userId, {
+      currentGroceryList: ingredients,
+    });
+
     res.status(200).json({ message: 'Grocery list updated' });
   } catch (err) {
+    console.error('❌ Error in saveGroceryList:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
