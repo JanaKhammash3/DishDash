@@ -44,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final url = Uri.parse('http://192.168.68.61:3000/api/users/register');
+    final url = Uri.parse('http://192.168.1.4:3000/api/users/register');
     try {
       final response = await http.post(
         url,

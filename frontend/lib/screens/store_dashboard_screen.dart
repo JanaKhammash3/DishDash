@@ -56,7 +56,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
   }
 
   Future<void> fetchUsers() async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/users');
+    final url = Uri.parse('http://192.168.1.4:3000/api/users');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -71,14 +71,29 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
   }
 
   Future<void> fetchUnreadCount() async {
-    final res = await http.get(
-      Uri.parse(
-        'http://192.168.68.61:3000/api/notifications/${widget.storeId}/Store/unread-count',
-      ),
-    );
-    if (res.statusCode == 200) {
-      final data = jsonDecode(res.body);
-      setState(() => unreadCount = data['count'] ?? 0);
+    try {
+      final res = await http.get(
+        Uri.parse(
+          'http://192.168.1.4:3000/api/notifications/${widget.storeId}/unread-count',
+        ),
+      );
+
+      debugPrint('📡 Response status: ${res.statusCode}');
+      debugPrint('📡 Response body: ${res.body}');
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final parsedCount = int.tryParse(data['count'].toString()) ?? 0;
+        debugPrint('✅ Parsed unreadCount: $parsedCount');
+
+        setState(() {
+          unreadCount = parsedCount;
+        });
+      } else {
+        debugPrint('⚠️ Failed to fetch unread count');
+      }
+    } catch (e) {
+      debugPrint('❌ Error in fetchUnreadCount: $e');
     }
   }
 
@@ -86,7 +101,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
 
   Future<void> fetchStoreInfo() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/stores/${widget.storeId}',
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}',
     );
     try {
       final response = await http.get(url);
@@ -124,7 +139,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
   Future<void> fetchNotifications() async {
     setState(() => isLoading = true);
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/stores/${widget.storeId}/notifications',
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}/notifications',
     );
 
     try {
@@ -333,7 +348,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
     final bytes = await pickedFile.readAsBytes();
     final fileName = pickedFile.name;
     final uri = Uri.parse(
-      'http://192.168.68.61:3000/api/stores/${widget.storeId}/image',
+      'http://192.168.1.4:3000/api/stores/${widget.storeId}/image',
     );
     final request = http.MultipartRequest('PATCH', uri);
 
@@ -830,20 +845,21 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
             children: [
               IconButton(
                 icon: const Icon(Icons.notifications, color: Colors.white),
-                onPressed: () async {
-                  await Navigator.push(
+                onPressed: () {
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder:
                           (_) =>
                               StoreNotificationsScreen(storeId: widget.storeId),
                     ),
-                  );
-                  await fetchUnreadCount(); // ✅ Now valid
+                  ).then((_) {
+                    fetchUnreadCount(); // ✅ Ensures it's called AFTER screen pops
+                  });
                 },
               ),
 
-              if (_notifications.any((n) => !n['isRead']))
+              if (unreadCount > 0)
                 Positioned(
                   right: 8,
                   top: 8,
@@ -854,7 +870,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen>
                       shape: BoxShape.circle,
                     ),
                     child: Text(
-                      '${_notifications.where((n) => !n['isRead']).length}',
+                      '$unreadCount',
                       style: const TextStyle(fontSize: 10, color: Colors.white),
                     ),
                   ),

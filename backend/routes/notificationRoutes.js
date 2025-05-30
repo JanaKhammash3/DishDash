@@ -12,8 +12,8 @@ const {
 router.post('/', createNotification);
 
 // ✅ Most specific routes FIRST
-router.get('/:id/:model', getNotifications);          
 router.get('/:userId/unread-count', getUnreadCount);  
+router.get('/:id/:model', getNotifications);          
 router.patch('/read/:notificationId', markAsRead);    
 
 // ✅ General fallback LAST
