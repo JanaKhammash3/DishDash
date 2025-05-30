@@ -180,23 +180,45 @@ class _CoursesScreenState extends State<CoursesScreen> {
         builder:
             (context) => AlertDialog(
               scrollable: true,
-              title: Text('Auto-Split Course Details'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                '📽️ Auto-Split Course Details',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade800,
+                ),
+              ),
               content: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: titleController,
-                    decoration: InputDecoration(labelText: 'Course Title'),
+                    decoration: InputDecoration(
+                      labelText: 'Course Title',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
+                  SizedBox(height: 12),
                   TextField(
                     controller: descriptionController,
-                    decoration: InputDecoration(labelText: 'Description'),
+                    decoration: InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
                   ),
+                  SizedBox(height: 12),
                   TextField(
                     controller: chefController,
-                    decoration: InputDecoration(labelText: 'Chef Name'),
+                    decoration: InputDecoration(
+                      labelText: 'Chef Name',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
-
-                  TextButton(
+                  SizedBox(height: 12),
+                  ElevatedButton.icon(
                     onPressed: () async {
                       if (kIsWeb) {
                         final input =
@@ -217,10 +239,15 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         }
                       }
                     },
-                    child: Text("Upload Chef Avatar"),
+                    icon: Icon(Icons.person),
+                    label: Text("Upload Chef Avatar"),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.green,
+                    ),
                   ),
-
-                  TextButton(
+                  SizedBox(height: 10),
+                  ElevatedButton.icon(
                     onPressed: () async {
                       if (kIsWeb) {
                         final input =
@@ -242,13 +269,19 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         }
                       }
                     },
-                    child: Text("Upload Cover Image"),
+                    icon: Icon(Icons.image),
+                    label: Text("Upload Cover Image"),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.green,
+                    ),
                   ),
-
+                  SizedBox(height: 12),
                   TextField(
                     controller: durationController,
                     decoration: InputDecoration(
                       labelText: 'Full Video Duration (sec)',
+                      border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -257,7 +290,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.grey[700]),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () async {
@@ -280,7 +316,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           int.tryParse(durationController.text.trim()) ?? 600,
                       avatarFileWeb: kIsWeb ? avatarWebFile : null,
                       coverFileWeb: kIsWeb ? coverWebFile : null,
-
                       chefAvatarMobile: kIsWeb ? null : avatarFile,
                       coverImageMobile: kIsWeb ? null : coverFile,
                     );
@@ -288,6 +323,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     Navigator.pop(context);
                     await fetchCourses();
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
                   child: Text('Create Course'),
                 ),
               ],
@@ -871,11 +911,19 @@ class _CoursesScreenState extends State<CoursesScreen> {
           FloatingActionButton.extended(
             heroTag: 'split',
             onPressed: isUploading ? null : pickAndUploadAndSplitVideo,
-            backgroundColor: green,
-            icon: Icon(Icons.video_call, color: Colors.white),
+            backgroundColor: Colors.white, // Make the button white
+            elevation: 4,
+            icon: Icon(Icons.video_call, color: green), // Green icon
             label: Text(
               "Import Lessons",
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: green, // Green text
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: green),
             ),
           ),
         ],

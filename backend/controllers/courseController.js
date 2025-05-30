@@ -2,7 +2,7 @@ const Course = require('../models/Course');
 const { cloudinary } = require('../config/Cloudinary'); // OR: require('cloudinary').v2
 const fs = require('fs');
 
-// Create a new course
+
 exports.createFromSingleVideo = async (req, res) => {
   try {
     const {
@@ -16,37 +16,54 @@ exports.createFromSingleVideo = async (req, res) => {
     const lessonDuration = 120;
     const episodeCount = Math.ceil(fullDuration / lessonDuration);
 
-    // ⬇️ Upload images to Cloudinary
     const chefAvatarFile = req.files?.chefAvatar?.[0];
     const imageFile = req.files?.image?.[0];
 
     if (!chefAvatarFile || !imageFile) {
-      return res.status(400).json({ message: 'Chef avatar and image are required' });
+      return res.status(400).json({ message: 'Chef avatar and cover image are required.' });
     }
 
-    const chefAvatarUpload = await cloudinary.uploader.upload(chefAvatarFile.path, {
+    // ✅ Capture local paths before uploading
+    const chefAvatarPath = chefAvatarFile.path;
+    const imagePath = imageFile.path;
+
+    // ✅ Upload to Cloudinary
+    const chefAvatarUpload = await cloudinary.uploader.upload(chefAvatarPath, {
       folder: 'courses/avatars',
     });
-    const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
+    const imageUpload = await cloudinary.uploader.upload(imagePath, {
       folder: 'courses/images',
     });
 
-    // Delete local files
-    fs.unlinkSync(chefAvatarFile.path);
-    fs.unlinkSync(imageFile.path);
+    // ✅ Delete only local temp files
+    try {
+      if (fs.existsSync(chefAvatarPath)) fs.unlinkSync(chefAvatarPath);
+      if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+    } catch (cleanupErr) {
+      console.warn('⚠️ Warning while deleting local files:', cleanupErr.message);
+    }
 
+    // ✅ Generate split video lesson URLs using Cloudinary's `so_` and `eo_`
     const episodes = Array.from({ length: episodeCount }, (_, i) => {
       const start = i * lessonDuration;
       const end = Math.min((i + 1) * lessonDuration, fullDuration);
+
+      const trimmedUrl = videoUrl.replace(
+        '/upload/',
+        `/upload/so_${start},eo_${end}/`
+      );
+
       return {
         title: `Lesson ${i + 1}`,
-        videoUrl,
+        videoUrl: trimmedUrl,
         startTime: start,
         endTime: end,
         duration: (end - start) / 60,
+        sourceType: 'cloudinary',
       };
     });
 
+    // ✅ Create course
     const course = await Course.create({
       title,
       description,
@@ -59,7 +76,10 @@ exports.createFromSingleVideo = async (req, res) => {
     res.status(201).json(course);
   } catch (err) {
     console.error('❌ Error creating course from video:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({
+      message: 'Failed to create course',
+      error: err.message,
+    });
   }
 };
 
@@ -168,58 +188,3 @@ function generateLessons(videoUrl, fullDuration, lessonLength = 120) {
 }
 
 
-exports.createFromSingleVideo = async (req, res) => {
-  try {
-    const {
-      title,
-      description,
-      chefName,
-      fullDuration = 600,
-    } = req.body;
-
-    const videoUrl = req.body.videoUrl; // already uploaded
-    const coverImage = req.files?.image?.[0];     // cover image file
-    const chefAvatar = req.files?.chefAvatar?.[0]; // chef avatar file
-
-    // Upload cover image to Cloudinary if present
-    let coverImageUrl = '';
-    if (coverImage) {
-      const result = await cloudinary.uploader.upload(coverImage.path, {
-        folder: 'courses',
-      });
-      coverImageUrl = result.secure_url;
-    }
-
-    // Upload chef avatar if needed (similar logic, optional)
-    let chefAvatarUrl = '';
-    if (chefAvatar) {
-      const result = await cloudinary.uploader.upload(chefAvatar.path, {
-        folder: 'courses/avatars',
-      });
-      chefAvatarUrl = result.secure_url;
-    }
-
-    const newCourse = new Course({
-      title,
-      description,
-      chefName,
-      image: coverImageUrl,       // ✅ Inject cover image here
-      chefAvatar: chefAvatarUrl,  // ✅ Inject chef avatar here
-      episodes: [{
-        title: 'Lesson 1',
-        videoUrl,
-        duration: Number(fullDuration) / 60,
-        startTime: 0,
-        endTime: Number(fullDuration),
-        sourceType: 'cloudinary',
-      }],
-    });
-
-    await newCourse.save();
-    res.status(201).json(newCourse);
-
-  } catch (err) {
-    console.error('❌ Error creating course:', err);
-    res.status(500).json({ message: 'Failed to create course', error: err.message });
-  }
-};
