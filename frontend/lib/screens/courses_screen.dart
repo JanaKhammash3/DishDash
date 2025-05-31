@@ -598,12 +598,44 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Future<void> submitRating(String courseId, double rating) async {
-    await http.post(
-      Uri.parse('$baseUrl/api/courses/$courseId/rate'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'rating': rating}),
-    );
-    fetchCourses();
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/api/courses/$courseId/rate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'rating': rating}),
+      );
+
+      if (res.statusCode == 200) {
+        if (mounted) {
+          setState(() {
+            final index = courses.indexWhere((c) => c['_id'] == courseId);
+            if (index != -1) {
+              // Ensure ratings array exists
+              courses[index]['ratings'] ??= [];
+              courses[index]['ratings'].add(rating);
+            }
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Thanks for rating the course!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception("Failed to submit rating");
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error submitting rating: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void showCourseDetail(Map<String, dynamic> course) {
@@ -863,6 +895,22 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       onPressed: () => showCourseDetail(course),
                     ),
                   ),
+                  if (course['ratings'] != null &&
+                      course['ratings'].isNotEmpty) ...[
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 20),
+                        SizedBox(width: 4),
+                        Text(
+                          calculateAverageRating(
+                            course['ratings'],
+                          ).toStringAsFixed(1),
+                          style: TextStyle(color: Colors.grey[800]),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -895,7 +943,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
           },
         ),
       ),
-
       backgroundColor: Colors.grey[100],
       body:
           courses.isEmpty
@@ -905,29 +952,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 padding: EdgeInsets.symmetric(vertical: 12),
                 itemBuilder: (_, index) => buildCourseCard(courses[index]),
               ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: 'split',
-            onPressed: isUploading ? null : pickAndUploadAndSplitVideo,
-            backgroundColor: Colors.white, // Make the button white
-            elevation: 4,
-            icon: Icon(Icons.video_call, color: green), // Green icon
-            label: Text(
-              "Import Lessons",
-              style: TextStyle(
-                color: green, // Green text
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: green),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
