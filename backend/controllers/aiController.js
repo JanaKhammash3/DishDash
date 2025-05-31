@@ -25,10 +25,11 @@ exports.generateAIRecipe = async (req, res) => {
   } = req.body;
 
   try {
+    const formattedDiet = diet && diet.toLowerCase() !== 'none' ? `${diet} ` : '';
     const prompt = `
 You are a recipe assistant. ONLY respond in raw JSON. DO NOT explain anything.
 
-Generate a personalized ${diet} ${mealTime} recipe for ${servings || 1} people.
+Generate a personalized ${formattedDiet}${mealTime} recipe for ${servings || 1} people.
 Use ingredients: ${preferredIngredients.join(', ') || 'any'}.
 Avoid these ingredients strictly: ${avoidIngredients.join(', ') || 'none'}. do not include them in the recipe.
 Cuisine: ${cuisine || 'any'}.
