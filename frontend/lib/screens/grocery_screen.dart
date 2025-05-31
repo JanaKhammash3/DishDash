@@ -157,15 +157,6 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
       await _saveAvailableIngredients();
       await recordPurchase(storeId, name);
-      await sendNotification(
-        recipientId: storeId,
-        recipientModel: 'Store',
-        senderId: widget.userId,
-        senderModel: 'User',
-        type: 'purchase',
-        message: 'purchased $name from your store!',
-        relatedId: name,
-      );
     }
 
     Navigator.pop(context);
@@ -424,6 +415,27 @@ class _GroceryScreenState extends State<GroceryScreen> {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
+      final userResponse = await http.get(
+        Uri.parse(
+          'http://192.168.68.61:3000/api/users/profile/${widget.userId}',
+        ),
+      );
+
+      String userName = 'Someone';
+      if (userResponse.statusCode == 200) {
+        final user = jsonDecode(userResponse.body);
+        userName = user['name'] ?? 'Someone';
+      }
+      await sendNotification(
+        recipientId: storeId,
+        recipientModel: 'Store',
+        senderId: widget.userId,
+        senderModel: 'User',
+        type: 'purchase',
+        message:
+            '$userName placed an order worth \$${total.toStringAsFixed(2)}!',
+        relatedId: storeId,
+      );
       print('✅ Order placed!');
     } else {
       print('❌ Order placement failed: ${response.body}');
