@@ -81,15 +81,16 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
     if (avatar.startsWith('http')) {
       return NetworkImage(avatar);
     }
-
-    if (avatar.contains(',')) {
-      try {
-        final base64Str = avatar.split(',').last;
-        final bytes = base64Decode(base64Str);
-        return MemoryImage(bytes);
-      } catch (e) {
-        debugPrint('❌ Failed to decode avatar: $e');
+    try {
+      String base64Str = avatar;
+      if (!avatar.startsWith('data:image')) {
+        base64Str = 'data:image/jpeg;base64,$avatar';
       }
+
+      final bytes = base64Decode(base64Str.split(',').last);
+      return MemoryImage(bytes);
+    } catch (e) {
+      debugPrint('❌ Failed to decode avatar: $e');
     }
 
     return const AssetImage('assets/profile.png');

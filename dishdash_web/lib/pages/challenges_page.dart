@@ -262,6 +262,7 @@ class _AdminChallengesPageState extends State<AdminChallengesPage> {
             'recipientId': user['_id'],
             'recipientModel': 'User',
             'senderModel': 'Admin',
+            'senderId': '6823bb9b57548e1f37f72cc3',
             'type': 'challenge',
             'message': 'A new challenge "$title" has been posted!',
             'relatedId': challengeId,

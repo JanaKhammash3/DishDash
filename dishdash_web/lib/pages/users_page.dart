@@ -193,6 +193,7 @@ class _UsersPageState extends State<UsersPage> {
                           'recipientId': selectedUserId,
                           'recipientModel': 'User',
                           'senderModel': 'Admin',
+                          'senderId': '6823bb9b57548e1f37f72cc3',
                           'type': 'Alerts',
                           'message': message,
                         }),
@@ -210,6 +211,7 @@ class _UsersPageState extends State<UsersPage> {
                             'recipientId': user['_id'],
                             'recipientModel': 'User',
                             'senderModel': 'Admin',
+                            'senderId': '6823bb9b57548e1f37f72cc3',
                             'type': 'Alerts',
                             'message': message,
                           }),
@@ -363,6 +365,7 @@ class _UsersPageState extends State<UsersPage> {
                     'recipientId': recipientId,
                     'recipientModel': 'User',
                     'senderModel': 'Admin',
+                    'senderId': '6823bb9b57548e1f37f72cc3',
                     'type': 'Alerts',
                     'message': message,
                   };

@@ -3,34 +3,29 @@ const mongoose = require('mongoose');
 const notificationSchema = new mongoose.Schema({
   recipientId: {
     type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', // ✅ Always reference 'User' model
     required: true,
-    refPath: 'recipientModel',
   },
   recipientModel: {
     type: String,
-    enum: ['User', 'Store', 'Admin'],
+    enum: ['User', 'Store', 'Admin'], // ✅ for filtering, not refPath
     required: true,
   },
   senderId: {
     type: mongoose.Schema.Types.ObjectId,
-    refPath: 'senderModel',
+    ref: 'User', // ✅ Always reference 'User' model
+    required: true,
   },
   senderModel: {
     type: String,
-    enum: ['User', 'Store', 'Admin'],
+    enum: ['User', 'Store', 'Admin'], // ✅ for filtering/styling
+    required: true,
   },
   type: {
     type: String,
     enum: [
-      'like',
-      'comment',
-      'follow',
-      'message',
-      'challenge',
-      'Alerts',
-      'Other',
-      'purchase',  // ✅ Added
-      'rating'     // ✅ Added
+      'like', 'comment', 'follow', 'message',
+      'challenge', 'Alerts', 'Other', 'purchase', 'rating'
     ],
     required: true,
   },
@@ -39,9 +34,8 @@ const notificationSchema = new mongoose.Schema({
     required: true,
   },
   relatedId: {
-  type: mongoose.Schema.Types.Mixed, // 👈 allows either ObjectId or String
-},
-
+    type: mongoose.Schema.Types.Mixed, // can be ObjectId or string
+  },
   isRead: {
     type: Boolean,
     default: false,

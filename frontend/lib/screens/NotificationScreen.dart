@@ -22,6 +22,41 @@ class _NotificationScreenState extends State<NotificationScreen> {
     fetchNotifications();
   }
 
+  ImageProvider _resolveAvatar(dynamic avatar) {
+    try {
+      if (avatar == null) {
+        return const AssetImage('assets/profile.png');
+      }
+
+      if (avatar is! String) {
+        debugPrint(
+          '🔴 avatar is not a string: $avatar (${avatar.runtimeType})',
+        );
+        return const AssetImage('assets/profile.png');
+      }
+
+      if (avatar.isEmpty) {
+        debugPrint('⚪ avatar is an empty string');
+        return const AssetImage('assets/profile.png');
+      }
+
+      if (avatar.startsWith('http')) {
+        return NetworkImage(avatar);
+      }
+
+      final base64Str =
+          avatar.startsWith('data:image')
+              ? avatar
+              : 'data:image/jpeg;base64,$avatar';
+
+      final bytes = base64Decode(base64Str.split(',').last);
+      return MemoryImage(bytes);
+    } catch (e) {
+      debugPrint('❌ Failed to decode avatar: $e');
+      return const AssetImage('assets/profile.png');
+    }
+  }
+
   Future<void> fetchNotifications() async {
     setState(() => isLoading = true);
     final res = await http.get(
@@ -146,7 +181,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               final type = n['type'] ?? 'Alert';
                               final message = n['message'] ?? '';
                               final timestamp = n['createdAt'] ?? '';
-
+                              final sender = n['senderId'];
+                              final avatar =
+                                  sender is Map ? sender['avatar'] : null;
                               return Dismissible(
                                 key: Key(n['_id']),
                                 direction: DismissDirection.endToStart,
@@ -173,17 +210,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                     children: [
                                       CircleAvatar(
                                         radius: 20,
-                                        backgroundImage:
-                                            n['senderId']?['avatar'] != null
-                                                ? MemoryImage(
-                                                  base64Decode(
-                                                    n['senderId']['avatar'],
-                                                  ),
-                                                )
-                                                : const AssetImage(
-                                                      'assets/profile.png',
-                                                    )
-                                                    as ImageProvider,
+
+                                        backgroundImage: _resolveAvatar(avatar),
                                       ),
                                       CircleAvatar(
                                         radius: 8,

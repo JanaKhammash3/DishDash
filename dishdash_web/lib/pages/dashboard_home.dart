@@ -58,6 +58,7 @@ void _showAnnouncementModal(BuildContext context) {
                 backgroundColor: Colors.deepOrange,
               ),
               onPressed: () async {
+                const adminId = '6823bb9b57548e1f37f72cc3';
                 final message = _textController.text.trim();
                 if (message.isEmpty) return;
 
@@ -74,6 +75,7 @@ void _showAnnouncementModal(BuildContext context) {
                       body: jsonEncode({
                         'recipientId': user['_id'],
                         'recipientModel': 'User',
+                        'senderId': adminId,
                         'senderModel': 'Admin',
                         'type': 'Alerts',
                         'message': message,
