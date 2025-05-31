@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StoresDashboard extends StatefulWidget {
   const StoresDashboard({super.key});
@@ -14,6 +15,7 @@ class StoresDashboard extends StatefulWidget {
 class _StoresDashboardState extends State<StoresDashboard>
     with TickerProviderStateMixin {
   late TabController _tabController;
+  int _selectedIndex = 0; // 0 = first category, -1 = orders
   Map<String, dynamic>? storeData;
   List<dynamic> orders = [];
   final Map<String, List<Map<String, dynamic>>> itemsByCategory = {
@@ -48,7 +50,7 @@ class _StoresDashboardState extends State<StoresDashboard>
   Future<void> _fetchOrdersForStore() async {
     if (storeId == null) return;
     final res = await http.get(
-      Uri.parse('http://192.168.1.4:3000/api/orders/store/$storeId'),
+      Uri.parse('http://192.168.68.61:3000/api/orders/store/$storeId'),
     );
 
     if (res.statusCode == 200) {
@@ -95,12 +97,12 @@ class _StoresDashboardState extends State<StoresDashboard>
     }
 
     // fallback if it's a filename from MongoDB like 'avatar123.png'
-    return NetworkImage('http://192.168.1.4:3000/images/$avatar');
+    return NetworkImage('http://192.168.68.61:3000/images/$avatar');
   }
 
   Future<void> _fetchItemsByStore(String id) async {
     try {
-      const baseUrl = 'http://192.168.1.4:3000';
+      const baseUrl = 'http://192.168.68.61:3000';
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id/items'));
 
       if (res.statusCode == 200) {
@@ -145,7 +147,7 @@ class _StoresDashboardState extends State<StoresDashboard>
 
   Future<void> _fetchStoreInfo(String id) async {
     try {
-      const baseUrl = 'http://192.168.1.4:3000'; // your backend IP
+      const baseUrl = 'http://192.168.68.61:3000'; // your backend IP
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id'));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -361,7 +363,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                           'category': category,
                         };
 
-                        const baseUrl = 'http://192.168.1.4:3000';
+                        const baseUrl = 'http://192.168.68.61:3000';
 
                         try {
                           http.Response response;
@@ -607,7 +609,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                                 );
                               } else if (value == 'Delete') {
                                 final String itemId = item['_id'];
-                                const baseUrl = 'http://192.168.1.4:3000';
+                                const baseUrl = 'http://192.168.68.61:3000';
 
                                 try {
                                   final res = await http.delete(
@@ -691,32 +693,104 @@ class _StoresDashboardState extends State<StoresDashboard>
         final userName =
             user is Map && user['name'] != null ? user['name'] : 'Unknown';
         return Card(
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          color: Colors.grey[100],
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Order #${order['_id']}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                Text('User: $userName'),
-                // optionally fetch user name
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:
-                      items
-                          .map((item) {
-                            return Text(
-                              '- ${item['name']} (\$${item['price']})',
+                // Order by Header
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: _getAvatarImageProvider(
+                        user is Map ? user['avatar'] : null,
+                      ),
+                      radius: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Order by ${userName}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            'ID: ${order['_id']}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.location_on, color: Colors.red),
+                      tooltip: 'View Location',
+                      onPressed: () async {
+                        if (user is Map && user['location'] != null) {
+                          final lat = user['location']['latitude'];
+                          final lng = user['location']['longitude'];
+
+                          if (lat != null && lng != null) {
+                            final url = Uri.parse(
+                              'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
                             );
-                          })
-                          .toList()
-                          .cast<Widget>(),
+                            await launchUrl(url);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("User coordinates missing"),
+                              ),
+                            );
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Location not available"),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
+
+                const SizedBox(height: 10),
+
+                // Items
+                ...items.map<Widget>((item) {
+                  return Text('- ${item['name']} (\$${item['price']})');
+                }).toList(),
+
+                const SizedBox(height: 8),
+
+                // Delivery method and total
+                Row(
+                  children: [
+                    Text('Method: ${order['deliveryMethod'] ?? 'N/A'}'),
+                    const Spacer(),
+                    Text(
+                      'Total: \$${items.fold<double>(0, (sum, i) => sum + (i['price'] ?? 0)).toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Status
                 Row(
                   children: [
                     const Text('Status:'),
@@ -724,7 +798,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                     DropdownButton<String>(
                       value: status,
                       items:
-                          ['Placed', 'Preparing', 'Ready', 'Completed']
+                          validStatuses
                               .map(
                                 (s) =>
                                     DropdownMenuItem(value: s, child: Text(s)),
@@ -732,24 +806,19 @@ class _StoresDashboardState extends State<StoresDashboard>
                               .toList(),
                       onChanged: (newStatus) async {
                         if (newStatus != null) {
-                          // Instant UI update
-                          setState(() {
-                            orders[index]['status'] = newStatus;
-                          });
+                          setState(() => orders[index]['status'] = newStatus);
 
-                          // Update backend
                           await http.put(
                             Uri.parse(
-                              'http://192.168.1.4:3000/api/orders/${order['_id']}/status',
+                              'http://192.168.68.61:3000/api/orders/${order['_id']}/status',
                             ),
                             headers: {'Content-Type': 'application/json'},
                             body: jsonEncode({'status': newStatus}),
                           );
 
-                          // Send notification
                           await http.post(
                             Uri.parse(
-                              'http://192.168.1.4:3000/api/notifications',
+                              'http://192.168.68.61:3000/api/notifications',
                             ),
                             headers: {'Content-Type': 'application/json'},
                             body: jsonEncode({
@@ -765,9 +834,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                             }),
                           );
 
-                          // Re-fetch updated data from backend
                           await _fetchOrdersForStore();
-                          setState(() {}); // force rebuild
                         }
                       },
                     ),
@@ -1008,7 +1075,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                   storeData?['image'] != null &&
                           storeData!['image'].startsWith('http')
                       ? NetworkImage(storeData!['image'])
-                      : const AssetImage('assets/store_placeholder.png')
+                      : const AssetImage('assets/placeholder.png')
                           as ImageProvider,
               backgroundColor: Colors.white,
             ),
@@ -1033,15 +1100,30 @@ class _StoresDashboardState extends State<StoresDashboard>
             color: const Color(0xFF304D30),
             child: Column(
               children: [
+                ListTile(
+                  tileColor: _selectedIndex == -1 ? Colors.green[700] : null,
+                  leading: const Icon(Icons.receipt_long, color: Colors.white),
+                  title: const Text(
+                    'Orders',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedIndex = -1;
+                    });
+                  },
+                ),
+
                 Expanded(
                   child: ListView.builder(
                     itemCount: categories.length,
                     itemBuilder: (context, index) {
-                      final isSelected = _tabController.index == index;
+                      final isSelected = _selectedIndex == index;
+
                       return InkWell(
                         onTap: () {
                           setState(() {
-                            _tabController.index = index;
+                            _selectedIndex = index;
                           });
                         },
                         child: Container(
@@ -1139,55 +1221,13 @@ class _StoresDashboardState extends State<StoresDashboard>
                 ),
 
                 // Category Tab Content
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF304D30),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
-                      icon: const Icon(Icons.receipt_long),
-                      label: const Text('View Orders'),
-                      onPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(20),
-                            ),
-                          ),
-                          builder:
-                              (_) => DraggableScrollableSheet(
-                                expand: false,
-                                initialChildSize: 0.8,
-                                builder:
-                                    (_, controller) => SingleChildScrollView(
-                                      controller: controller,
-                                      child: _buildOrderSection(),
-                                    ),
-                              ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
 
                 // Category Tab Content
                 Expanded(
-                  child: _buildCategoryTab(categories[_tabController.index]),
+                  child:
+                      _selectedIndex == -1
+                          ? _buildOrderSection()
+                          : _buildCategoryTab(categories[_selectedIndex]),
                 ),
 
                 _buildDashboardStats(),

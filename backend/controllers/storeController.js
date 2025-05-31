@@ -398,7 +398,7 @@ exports.deleteStore = async (req, res) => {
 };
 exports.getBasicStoreInfoById = async (req, res) => {
   try {
-    const store = await Store.findById(req.params.id).select('name image');
+    const store = await Store.findById(req.params.id).select('name image location'); // 🟢 added location
 
     if (!store) {
       return res.status(404).json({ message: 'Store not found' });

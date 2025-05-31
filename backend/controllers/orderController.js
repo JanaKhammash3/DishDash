@@ -43,12 +43,16 @@ exports.getStoreOrders = async (req, res) => {
   try {
     const { storeId } = req.params;
 
-    const orders = await Order.find({ storeId }).sort({ createdAt: -1 }).populate('userId', 'name avatar');
+    const orders = await Order.find({ storeId })
+      .sort({ createdAt: -1 })
+      .populate('userId', 'name avatar location'); // 🟢 added location
+
     res.status(200).json(orders);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 // orderController.js
 exports.updateOrderStatus = async (req, res) => {
