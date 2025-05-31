@@ -120,16 +120,22 @@ class _DashboardHomeState extends State<DashboardHome> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: cardColor,
-        title: Text('DishDash Admin', style: TextStyle(color: textColor)),
+        title: Row(
+          children: [
+            Icon(Icons.dashboard, color: textColor),
+            const SizedBox(width: 10),
+            Text('DishDash Admin', style: TextStyle(color: textColor)),
+          ],
+        ),
         elevation: 1,
         actions: [
+          IconButton(
+            icon: Icon(Icons.campaign_rounded, color: darkGreen),
+            tooltip: 'Send Announcement',
+            onPressed: () => _showAnnouncementModal(context),
+          ),
           Row(
             children: [
-              IconButton(
-                icon: Icon(Icons.campaign, color: darkGreen),
-                tooltip: 'Send Announcement',
-                onPressed: () => _showAnnouncementModal(context),
-              ),
               Icon(
                 isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 color: textColor,
@@ -143,6 +149,7 @@ class _DashboardHomeState extends State<DashboardHome> {
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -274,23 +281,30 @@ class _DashboardHomeState extends State<DashboardHome> {
       width: 240,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: beigeCard,
+        color: bgColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: beigeBorder),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 28, color: iconMuted),
-          const SizedBox(height: 12),
+          CircleAvatar(
+            backgroundColor: iconColor.withOpacity(0.1),
+            child: Icon(icon, size: 20, color: iconColor),
+          ),
+          const SizedBox(height: 14),
           Text(
             title,
             style: TextStyle(fontSize: 14, color: textColor.withOpacity(0.7)),
           ),
+          const SizedBox(height: 6),
           Text(
             '$count',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 30,
               fontWeight: FontWeight.bold,
               color: textColor,
             ),
@@ -312,19 +326,22 @@ class _DashboardHomeState extends State<DashboardHome> {
         color: beigeCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: beigeBorder),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: iconMuted),
+              Icon(icon, size: 20, color: accentColor),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],

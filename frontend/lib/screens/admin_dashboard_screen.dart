@@ -1,4 +1,4 @@
-// Updated AdminDashboardScreen for Mobile App with Backend Integration
+// ✅ Updated AdminDashboardScreen (same logic, better UI/UX)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -30,7 +30,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> fetchDashboardData() async {
     setState(() => isLoading = true);
-
     try {
       final userRes = await http.get(
         Uri.parse('http://192.168.1.4:3000/api/users'),
@@ -58,17 +57,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           isLoading = false;
         });
       } else {
-        throw Exception('Failed to fetch one or more data sets');
+        throw Exception('Failed to fetch data');
       }
     } catch (e) {
-      print('Dashboard load error: $e');
+      print('Dashboard error: $e');
       setState(() => isLoading = false);
     }
   }
 
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
   void _showAnnouncementModal(BuildContext context) {
     final TextEditingController _textController = TextEditingController();
-
     showDialog(
       context: context,
       builder:
@@ -136,19 +143,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: green,
@@ -156,79 +154,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           'DishDash Admin',
           style: TextStyle(color: Colors.white),
         ),
-        elevation: 1,
+        elevation: 2,
         actions: [
           IconButton(
             icon: const Icon(Icons.campaign, color: Colors.white),
-            tooltip: 'Send Announcement',
             onPressed: () => _showAnnouncementModal(context),
           ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Logout',
             onPressed: logout,
           ),
-          const SizedBox(width: 12),
         ],
       ),
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      height: 160,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.orange[100],
-                      ),
-                      clipBehavior: Clip.hardEdge,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.asset('assets/cover.png', fit: BoxFit.cover),
-                          Container(
-                            color: Colors.black.withOpacity(
-                              0.3,
-                            ), // optional: overlay for readability
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Text(
-                                  'Welcome to DishDash Admin!',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(height: 6),
-                                Text(
-                                  'Manage users, stores, and delicious content.',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
+                    _buildWelcomeBanner(),
                     const SizedBox(height: 24),
                     Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
+                      spacing: 16,
+                      runSpacing: 16,
                       children: [
                         buildStatCard(
                           "Total Users",
@@ -261,7 +210,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             Colors.blue,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: buildChartCard(
                             "Users by Role",
@@ -284,7 +233,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             'email',
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: buildListCard(
                             "Recent Stores",
@@ -302,6 +251,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildWelcomeBanner() {
+    return Container(
+      height: 160,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        image: const DecorationImage(
+          image: AssetImage('assets/cover.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.35),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: const Align(
+          alignment: Alignment.centerLeft,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome to DishDash Admin!',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Manage users, stores, and delicious content.',
+                style: TextStyle(fontSize: 13, color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget buildStatCard(
     String title,
     int count,
@@ -312,23 +304,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       width: 160,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [iconColor.withOpacity(0.1), Colors.white],
-        ),
         borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 24, color: iconColor),
-          const SizedBox(height: 8),
+          CircleAvatar(
+            backgroundColor: iconColor.withOpacity(0.1),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(height: 12),
           Text(
             title,
-            style: const TextStyle(fontSize: 13, color: Colors.black54),
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
           ),
+          const SizedBox(height: 4),
           Text(
             '$count',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -344,23 +341,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [Colors.white, color.withOpacity(0.05)],
-        ),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: color),
+              Icon(icon, color: color),
               const SizedBox(width: 8),
               Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(height: 140, child: chart),
+          const SizedBox(height: 16),
+          SizedBox(height: 150, child: chart),
         ],
       ),
     );
@@ -395,7 +393,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget buildBarChart() {
     return BarChart(
       BarChartData(
-        alignment: BarChartAlignment.spaceAround,
         barGroups: [
           BarChartGroupData(
             x: 0,
@@ -443,7 +440,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               },
             ),
           ),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
+        borderData: FlBorderData(show: false),
+        gridData: FlGridData(show: false),
       ),
     );
   }
@@ -460,18 +460,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: Colors.black54),
+              Icon(icon, size: 20, color: Colors.black54),
               const SizedBox(width: 8),
               Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ...items.take(5).map((item) {
             final name = item[titleKey] ?? 'No name';
             final subtitle = item[subtitleKey] ?? '';
@@ -481,18 +484,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.05),
+                color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: Colors.blueAccent.withOpacity(0.2),
-                    child: Text(
-                      initial,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    backgroundColor: Colors.blueAccent.withOpacity(0.15),
+                    child: Text(initial),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
