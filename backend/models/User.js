@@ -33,6 +33,6 @@ const userSchema = new mongoose.Schema({
   otpHash: { type: String },
   otpExpiresAt: { type: Date },
   
-});
+}, { timestamps: true });;
 
 module.exports = mongoose.model('User', userSchema);

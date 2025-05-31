@@ -70,10 +70,13 @@ router.post('/:userId/scrape-pin', scrapeAndSaveRecipe);
 router.get('/', async (req, res) => {
   const User = require('../models/User');
   try {
-    const users = await User.find();
-    res.status(200).json(users);
+    const users = await User.find({
+      _id: { $ne: '6823bb9b57548e1f37f72cc3' }
+    }).sort({ createdAt: -1 });
+
+    res.json(users);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch users', error: err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 router.delete('/:id', deleteUser);

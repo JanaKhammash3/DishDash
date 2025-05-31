@@ -49,13 +49,31 @@ class _DashboardPageState extends State<DashboardPage> {
       final recipeRes = await http.get(
         Uri.parse('http://192.168.68.61:3000/api/recipes'),
       );
-
       if (userRes.statusCode == 200 &&
           storeRes.statusCode == 200 &&
           recipeRes.statusCode == 200) {
+        // ✅ Decode & sort users only once
+        users = List<Map<String, dynamic>>.from(jsonDecode(userRes.body));
+        users.sort((a, b) {
+          final aDate =
+              DateTime.tryParse(a['createdAt'] ?? '') ?? DateTime(2000);
+          final bDate =
+              DateTime.tryParse(b['createdAt'] ?? '') ?? DateTime(2000);
+          return bDate.compareTo(aDate); // Newest first
+        });
+
+        // ✅ Decode stores once
+        stores = List<Map<String, dynamic>>.from(jsonDecode(storeRes.body));
+        stores.sort((a, b) {
+          final aDate =
+              DateTime.tryParse(a['createdAt'] ?? '') ?? DateTime(2000);
+          final bDate =
+              DateTime.tryParse(b['createdAt'] ?? '') ?? DateTime(2000);
+          return bDate.compareTo(aDate); // Newest first
+        });
+
+        // ✅ Set state with prepared values
         setState(() {
-          users = List<Map<String, dynamic>>.from(jsonDecode(userRes.body));
-          stores = List<Map<String, dynamic>>.from(jsonDecode(storeRes.body));
           totalUsers = users.length;
           totalStores = stores.length;
           totalRecipes = jsonDecode(recipeRes.body).length;
