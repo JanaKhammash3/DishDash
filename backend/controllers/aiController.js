@@ -149,3 +149,27 @@ exports.imageToRecipe = async (req, res) => {
     res.status(500).json({ error: 'Failed to generate recipe from image.' });
   }
 };
+exports.instructionsToSteps = async (req, res) => {
+  const { instructions } = req.body;
+
+  try {
+    const prompt = `Break down the following recipe instructions into clear step-by-step cooking steps:\n\n${instructions}\n\nReturn them as a numbered list.`;
+
+    const completion = await openai.chat.completions.create({  // ✅ CORRECT
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const content = completion.choices[0].message.content;
+
+    const steps = content
+      .split(/\n+/)
+      .map(s => s.replace(/^\d+\.\s*/, "").trim())
+      .filter(Boolean);
+
+    res.json({ steps });
+  } catch (err) {
+    console.error("❌ Error processing steps:", err);
+    res.status(500).json({ message: "Failed to process steps", error: err.message });
+  }
+};

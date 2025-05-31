@@ -256,7 +256,10 @@ class _GroceryScreenState extends State<GroceryScreen> {
                   const SnackBar(content: Text('Order placed successfully!')),
                 );
               },
-              style: ElevatedButton.styleFrom(backgroundColor: green),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Confirm Payment'),
             ),
           ],

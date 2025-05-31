@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/colors.dart';
+import 'recipe_steps.dart';
 
 class RecipeDetailedScreen extends StatefulWidget {
   final String title;
@@ -32,7 +33,7 @@ class RecipeDetailedScreen extends StatefulWidget {
 class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
   bool translating = false;
   bool showArabic = false;
-
+  bool _loadingSteps = false;
   String? descriptionAr;
   String? instructionsAr;
   String? ingredientsAr;
@@ -260,27 +261,60 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
           ],
 
           const SizedBox(height: 30),
-          const Text(
-            "Method",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.instructions.isNotEmpty
-                ? widget.instructions
-                : "No instructions provided.",
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-              height: 1.5,
+          ElevatedButton.icon(
+            onPressed:
+                _loadingSteps
+                    ? null
+                    : () async {
+                      setState(() => _loadingSteps = true);
+
+                      final response = await http.post(
+                        Uri.parse(
+                          'http://192.168.68.61:3000/api/ai/instructions-to-steps',
+                        ),
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({'instructions': widget.instructions}),
+                      );
+
+                      if (response.statusCode == 200) {
+                        final data = jsonDecode(response.body);
+                        final steps = List<String>.from(data['steps']);
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) =>
+                                    StepByStepInstructionsScreen(steps: steps),
+                          ),
+                        );
+                      } else {
+                        setState(() => _loadingSteps = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Failed to fetch steps"),
+                          ),
+                        );
+                      }
+                    },
+            icon: const Icon(Icons.auto_mode),
+            label: const Text("Show Recipe Steps"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
+
           if (showArabic && instructionsAr != null) ...[
             const SizedBox(height: 6),
             Text(instructionsAr!, textDirection: TextDirection.rtl),
           ],
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: _showNutritionModal,
             icon: const Icon(Icons.restaurant),
