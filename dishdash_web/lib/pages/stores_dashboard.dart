@@ -678,8 +678,7 @@ class _StoresDashboardState extends State<StoresDashboard>
 
     return ListView.builder(
       itemCount: orders.length,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 20),
       itemBuilder: (context, index) {
         final order = orders[index];
         final items = order['items'] as List;
@@ -705,6 +704,14 @@ class _StoresDashboardState extends State<StoresDashboard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Order by Header
+                if (order['createdAt'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      'Created: ${DateTime.parse(order['createdAt']).toLocal().toString().split('.')[0]}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
                 Row(
                   children: [
                     CircleAvatar(
@@ -835,6 +842,15 @@ class _StoresDashboardState extends State<StoresDashboard>
                           );
 
                           await _fetchOrdersForStore();
+                          orders.sort((a, b) {
+                            final dateA =
+                                DateTime.tryParse(a['createdAt'] ?? '') ??
+                                DateTime.now();
+                            final dateB =
+                                DateTime.tryParse(b['createdAt'] ?? '') ??
+                                DateTime.now();
+                            return dateB.compareTo(dateA); // Most recent first
+                          });
                         }
                       },
                     ),
