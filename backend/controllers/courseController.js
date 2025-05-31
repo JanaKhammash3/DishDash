@@ -187,4 +187,26 @@ function generateLessons(videoUrl, fullDuration, lessonLength = 120) {
   return lessons;
 }
 
+// Delete a course
+exports.deleteCourse = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Optional: You could also delete associated videos/images from Cloudinary here
+    // by using `cloudinary.uploader.destroy(public_id)` if you store `public_id`s
+
+    await course.deleteOne();
+
+    res.status(200).json({ message: 'Course deleted successfully' });
+  } catch (err) {
+    console.error('❌ Failed to delete course:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 

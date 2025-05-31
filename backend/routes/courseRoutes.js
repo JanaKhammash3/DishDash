@@ -19,4 +19,6 @@ router.post(
   ]),
   courseController.createFromSingleVideo
 );
+router.delete('/:id', courseController.deleteCourse);
+
 module.exports = router;
