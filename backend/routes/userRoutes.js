@@ -38,6 +38,7 @@ router.get('/profile/:id', getProfile);
 router.put('/profile/:id', updateProfile);
 router.put('/profile/:id/avatar', uploadAvatar);
 router.patch('/updateAllergies/:id', updateAllergies);
+router.put('/profile/:id/update', updateProfile);
 
 // ✅ Recipes
 router.post('/:userId/saveRecipe', saveRecipeToUser);

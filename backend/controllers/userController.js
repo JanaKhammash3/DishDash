@@ -613,6 +613,24 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// PUT /api/profile/:id/update
+exports.updateProfile = async (req, res) => {
+  try {
+    const updates = {
+      name: req.body.name,
+      email: req.body.email,
+    };
+    if (req.body.password) {
+      updates.password = await bcrypt.hash(req.body.password, 10);
+    }
+
+    await User.findByIdAndUpdate(req.params.id, updates);
+    res.status(200).json({ message: 'Profile updated' });
+  } catch (err) {
+    res.status(500).json({ message: 'Update failed' });
+  }
+};
+
 
 // GET list of followers
 exports.getFollowers = async (req, res) => {

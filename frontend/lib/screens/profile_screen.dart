@@ -64,6 +64,122 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showEditProfileModal() {
+    final nameController = TextEditingController(text: name);
+    final emailController = TextEditingController(text: email);
+    final passwordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            "Edit Profile",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: "Full Name",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: "Email Address",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: passwordController,
+                  decoration: InputDecoration(
+                    labelText: "Change Password (optional)",
+                    hintText: "Leave blank to keep current password",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  obscureText: true,
+                ),
+              ],
+            ),
+          ),
+          actionsPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 10,
+          ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(foregroundColor: Colors.black87),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: green,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () async {
+                final updatedName = nameController.text.trim();
+                final updatedEmail = emailController.text.trim();
+                final newPassword = passwordController.text.trim();
+
+                final response = await http.put(
+                  Uri.parse(
+                    'http://192.168.1.4:3000/api/profile/${widget.userId}/update',
+                  ),
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({
+                    'name': updatedName,
+                    'email': updatedEmail,
+                    if (newPassword.isNotEmpty) 'password': newPassword,
+                  }),
+                );
+
+                if (response.statusCode == 200) {
+                  Navigator.pop(context);
+                  await fetchUserProfile(); // Refresh data
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Profile updated successfully"),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Failed to update profile")),
+                  );
+                }
+              },
+              child: const Text("Save", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> fetchRecipeCount() async {
     final url = Uri.parse(
       'http://192.168.1.4:3000/api/recipes/count/${widget.userId}',
@@ -411,7 +527,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Profile', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            tooltip: 'Edit Profile',
+            onPressed: _showEditProfileModal,
+          ),
+        ],
       ),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
@@ -611,37 +735,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
                         },
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 5),
                       _statBox(Icons.restaurant_menu, 'Recipes', recipeCount),
                     ],
                   ),
 
                   const SizedBox(height: 16),
-
-                  // Follow button (if visiting other user)
-                  if (currentUserId != widget.userId)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Toggle follow/unfollow logic
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: green,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                      ),
-                      icon: const Icon(Icons.person_add, color: Colors.white),
-                      label: const Text(
-                        'Follow',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-
-                  const SizedBox(height: 24),
                 ],
               ),
 
