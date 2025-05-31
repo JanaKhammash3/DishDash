@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../colors.dart';
+import 'package:geolocator/geolocator.dart';
 
 class MyOrdersScreen extends StatefulWidget {
   final String userId;
@@ -21,9 +23,38 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     fetchOrders();
   }
 
+  Future<String?> getEstimatedTime(Map<String, dynamic> storeLocation) async {
+    try {
+      final permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever)
+        return null;
+
+      final userPos = await Geolocator.getCurrentPosition();
+      final double storeLat = storeLocation['lat'] ?? storeLocation['latitude'];
+      final double storeLng =
+          storeLocation['lng'] ?? storeLocation['longitude'];
+
+      final distanceInMeters = Geolocator.distanceBetween(
+        userPos.latitude,
+        userPos.longitude,
+        storeLat,
+        storeLng,
+      );
+
+      const double avgSpeed = 40 * 1000 / 60; // 40km/h = 666.7 m/min
+      final minutes = (distanceInMeters / avgSpeed).round();
+
+      return '$minutes mins away';
+    } catch (e) {
+      print('⛔ Delivery time error: $e');
+      return null;
+    }
+  }
+
   Future<void> fetchOrders() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/orders/user/${widget.userId}',
+      'http://192.168.68.61:3000/api/orders/user/${widget.userId}',
     );
     final res = await http.get(url);
 
@@ -41,13 +72,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
           if (storeId != null) {
             final storeRes = await http.get(
-              Uri.parse('http://192.168.1.4:3000/api/stores/basic/$storeId'),
+              Uri.parse('http://192.168.68.61:3000/api/stores/basic/$storeId'),
             );
             if (storeRes.statusCode == 200) {
               final storeData = jsonDecode(storeRes.body);
-              storeName = storeData['name'] ?? 'Store'; // ✅ Correct
-              final storeImage =
-                  storeData['image']; // optional if you want to show it
+              storeName = storeData['name'] ?? 'Store';
+
+              order['storeImage'] = storeData['image'];
+              order['storeLocation'] = storeData['location'];
             }
           }
 
@@ -107,7 +139,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           : 'From Now Store';
                   final delivery = order['deliveryMethod'] ?? 'Pickup';
                   final date = DateTime.tryParse(order['createdAt'] ?? '');
-
+                  final storeImage = order['storeImage'];
+                  final storeLocation = order['storeLocation'];
                   return Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -119,19 +152,86 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            storeName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 22,
+                                backgroundImage:
+                                    storeImage != null &&
+                                            storeImage.toString().startsWith(
+                                              'http',
+                                            )
+                                        ? NetworkImage(storeImage)
+                                        : const AssetImage(
+                                              'assets/store_placeholder.png',
+                                            )
+                                            as ImageProvider,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      storeName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                    Text('Method: $delivery'),
+                                    if (date != null)
+                                      Text(
+                                        'Date: ${date.toLocal().toString().split('.')[0]}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (storeLocation != null)
+                                Column(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.location_on,
+                                        color: Colors.red,
+                                      ),
+                                      tooltip: 'Open in Maps',
+                                      onPressed: () {
+                                        final lat =
+                                            storeLocation['lat'] ??
+                                            storeLocation['latitude'];
+                                        final lng =
+                                            storeLocation['lng'] ??
+                                            storeLocation['longitude'];
+                                        final url = Uri.parse(
+                                          'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
+                                        );
+                                        launchUrl(url);
+                                      },
+                                    ),
+                                    FutureBuilder<String?>(
+                                      future: getEstimatedTime(storeLocation),
+                                      builder: (_, snapshot) {
+                                        return Text(
+                                          snapshot.data ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text('Method: $delivery'),
-                          if (date != null)
-                            Text(
-                              'Date: ${date.toLocal().toString().split('.')[0]}',
-                            ),
+                          const SizedBox(height: 10),
+
                           const Divider(height: 20),
                           ...List<Widget>.from(
                             (order['items'] as List<dynamic>).map((item) {
