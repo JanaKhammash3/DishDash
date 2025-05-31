@@ -82,100 +82,174 @@ class _RecipesPageState extends State<RecipesPage> {
 
     final detailed = jsonDecode(response.body);
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: Text(detailed['title'] ?? 'Recipe Details'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (detailed['description'] != null) ...[
-                      const Text(
-                        "📝 Description:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          maxChildSize: 0.95,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (_, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 50,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      Text(detailed['description']),
-                      const SizedBox(height: 10),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 🔹 Title
+                  Text(
+                    detailed['title'] ?? 'Recipe Details',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 🔹 Description
+                  if (detailed['description'] != null) ...[
                     const Text(
-                      "🍽️ Ingredients:",
+                      "📝 Description:",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    ...List.from(
-                      detailed['ingredients'] ?? [],
-                    ).map((i) => Text('• $i')),
-
-                    const SizedBox(height: 10),
-                    const Text(
-                      "📋 Instructions:",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(detailed['instructions'] ?? 'N/A'),
-
-                    const SizedBox(height: 10),
-                    Text("🔥 Calories: ${detailed['calories']}"),
-                    Text("🕒 Prep Time: ${detailed['prepTime']} min"),
-                    Text("🥗 Diet: ${detailed['diet']}"),
-                    Text("⏰ Meal Time: ${detailed['mealTime']}"),
-                    Text("⚙️ Difficulty: ${detailed['difficulty']}"),
-
-                    if (detailed['author'] != null) ...[
-                      const SizedBox(height: 10),
-                      const Text(
-                        "👤 Author:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(detailed['author']['name'] ?? 'N/A'),
-                    ],
-
-                    const SizedBox(height: 10),
-                    const Text(
-                      "⭐ Ratings by users:",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    ...List.from(detailed['ratedBy'] ?? []).map((r) {
-                      final user = r['user'];
-                      final value = r['value'];
-                      return Text(
-                        "• ${user?['name'] ?? 'Unknown'} rated $value",
-                      );
-                    }),
-
-                    const SizedBox(height: 10),
-                    const Text(
-                      "👍 Liked by:",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    ...List.from(
-                      detailed['likes'] ?? [],
-                    ).map((u) => Text("• ${u['name']}")),
-
-                    const SizedBox(height: 10),
-                    const Text(
-                      "💬 Comments:",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    ...List.from(detailed['comments'] ?? []).map((c) {
-                      final user = c['user'];
-                      return Text(
-                        "• ${user?['name'] ?? 'Unknown'}: ${c['text']}",
-                      );
-                    }),
+                    Text(detailed['description']),
+                    const SizedBox(height: 16),
                   ],
-                ),
+
+                  // 🔹 Ingredients
+                  const Text(
+                    "🍽️ Ingredients:",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  ...List.from(
+                    detailed['ingredients'] ?? [],
+                  ).map((i) => Text('• $i')),
+
+                  const SizedBox(height: 16),
+
+                  // 🔹 Instructions
+                  const Text(
+                    "📋 Instructions:",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(detailed['instructions'] ?? 'N/A'),
+
+                  const SizedBox(height: 16),
+
+                  // 🔹 Details
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(width: 6),
+                      Text("Calories: ${detailed['calories']}"),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const Icon(Icons.timer, color: Colors.blue),
+                      const SizedBox(width: 6),
+                      Text("Prep Time: ${detailed['prepTime']} min"),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const Icon(Icons.restaurant_menu, color: Colors.green),
+                      const SizedBox(width: 6),
+                      Text("Diet: ${detailed['diet']}"),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule, color: Colors.orange),
+                      const SizedBox(width: 6),
+                      Text("Meal Time: ${detailed['mealTime']}"),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const Icon(Icons.settings, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text("Difficulty: ${detailed['difficulty']}"),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 8),
+
+                  // 🔹 Author
+                  if (detailed['author'] != null) ...[
+                    const Text(
+                      "👤 Author:",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(detailed['author']['name'] ?? 'N/A'),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 🔹 Ratings
+                  const Text(
+                    "⭐ Ratings by users:",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  ...List.from(detailed['ratedBy'] ?? []).map((r) {
+                    final user = r['user'];
+                    final value = r['value'];
+                    return Text("• ${user?['name'] ?? 'Unknown'} rated $value");
+                  }),
+
+                  const SizedBox(height: 16),
+
+                  // 🔹 Likes
+                  const Text(
+                    "👍 Liked by:",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  ...List.from(
+                    detailed['likes'] ?? [],
+                  ).map((u) => Text("• ${u['name']}")),
+
+                  const SizedBox(height: 16),
+
+                  // 🔹 Comments
+                  const Text(
+                    "💬 Comments:",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  ...List.from(detailed['comments'] ?? []).map((c) {
+                    final user = c['user'];
+                    return Text(
+                      "• ${user?['name'] ?? 'Unknown'}: ${c['text']}",
+                    );
+                  }),
+                ],
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -354,93 +428,25 @@ class _RecipesPageState extends State<RecipesPage> {
 
               const SizedBox(height: 24),
 
-              // 🥇 Top Rated Recipe
-              if (topRatedRecipes.isNotEmpty) ...[
-                const Text(
-                  'Top Rated Recipes',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  child: Container(
-                    key: ValueKey(_currentTopIndex),
-                    width: double.infinity,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      image: DecorationImage(
-                        image: getImageProvider(
-                          topRatedRecipes[_currentTopIndex]['image'],
-                        ),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.6),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      alignment: Alignment.bottomLeft,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🔹 Filters Column (left side)
+                  Expanded(
+                    flex: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12, right: 24),
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            topRatedRecipes[_currentTopIndex]['title'] ?? '',
-                            style: const TextStyle(
-                              color: Colors.white,
+                          const Text(
+                            'Sort By Categories',
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: Colors.amber,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _averageRating(
-                                  topRatedRecipes[_currentTopIndex]['ratings'],
-                                ).toStringAsFixed(1),
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-              ],
-
-              const SizedBox(height: 10),
-
-              // 🎨 Category Filters
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // 🍃 By Diet
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                          const SizedBox(height: 16),
                           const Text(
                             'By Diet',
                             style: TextStyle(
@@ -469,16 +475,7 @@ class _RecipesPageState extends State<RecipesPage> {
                                   );
                                 }).toList(),
                           ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(width: 24), // spacing between columns
-                    // 🕒 Meal Time
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                          const SizedBox(height: 24),
                           const Text(
                             'By Meal Time',
                             style: TextStyle(
@@ -510,10 +507,120 @@ class _RecipesPageState extends State<RecipesPage> {
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  // 🔸 Top Rated Recipe Card (right side)
+                  Flexible(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Top Rated Recipes',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (topRatedRecipes.isNotEmpty &&
+                            _currentTopIndex < topRatedRecipes.length)
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 500),
+                            child: Container(
+                              key: ValueKey(_currentTopIndex),
+                              width: 600,
+                              height: 250,
+
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                                image: DecorationImage(
+                                  image: getImageProvider(
+                                    topRatedRecipes[_currentTopIndex]['image'],
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [
+                                        Colors.black.withOpacity(0.65),
+                                        Colors.transparent,
+                                      ],
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.all(16),
+                                  alignment: Alignment.bottomLeft,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        topRatedRecipes[_currentTopIndex]['title'] ??
+                                            '',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.star,
+                                            color: Colors.amber,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            _averageRating(
+                                              topRatedRecipes[_currentTopIndex]['ratings'],
+                                            ).toStringAsFixed(1),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(
+                              'No top-rated recipes available.',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 20),
               // 📦 Recipe Grid
               Wrap(
                 spacing: 20,
@@ -521,8 +628,9 @@ class _RecipesPageState extends State<RecipesPage> {
                 children:
                     filteredRecipes.map((recipe) {
                       return Container(
-                        width: MediaQuery.of(context).size.width / 2.3,
-                        height: 220,
+                        width: (MediaQuery.of(context).size.width - 80) / 4.5,
+
+                        height: 230,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           image: DecorationImage(
@@ -538,18 +646,11 @@ class _RecipesPageState extends State<RecipesPage> {
                               left: 0,
                               right: 0,
                               child: Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.55),
                                   borderRadius: const BorderRadius.vertical(
                                     bottom: Radius.circular(16),
-                                  ),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [
-                                      Colors.black.withOpacity(0.7),
-                                      Colors.transparent,
-                                    ],
                                   ),
                                 ),
                                 child: Column(
@@ -559,11 +660,13 @@ class _RecipesPageState extends State<RecipesPage> {
                                       recipe['title'] ?? '',
                                       style: const TextStyle(
                                         color: Colors.white,
+                                        fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
+                                    const SizedBox(height: 2),
                                     Text(
                                       'by ${recipe['author']?['name'] ?? 'System'}',
                                       style: const TextStyle(
@@ -571,7 +674,7 @@ class _RecipesPageState extends State<RecipesPage> {
                                         fontSize: 10,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 6),
                                     Row(
                                       children: [
                                         const Icon(
@@ -589,16 +692,37 @@ class _RecipesPageState extends State<RecipesPage> {
                                             fontSize: 12,
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 10),
+                                        const Icon(
+                                          Icons.local_fire_department,
+                                          size: 14,
+                                          color: Colors.redAccent,
+                                        ),
+                                        const SizedBox(width: 4),
                                         Text(
-                                          '${recipe['calories']} kcal • ${recipe['difficulty'] ?? 'Easy'}',
+                                          '${recipe['calories']} kcal',
                                           style: const TextStyle(
                                             color: Colors.white70,
-                                            fontSize: 11,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Icon(
+                                          Icons.settings,
+                                          size: 14,
+                                          color: Colors.grey[300],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          recipe['difficulty'] ?? 'Easy',
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
                                           ),
                                         ),
                                       ],
                                     ),
+                                    const SizedBox(height: 6),
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
@@ -616,7 +740,7 @@ class _RecipesPageState extends State<RecipesPage> {
                                         IconButton(
                                           icon: const Icon(
                                             Icons.delete_outline,
-                                            color: Colors.red,
+                                            color: Colors.redAccent,
                                           ),
                                           tooltip: 'Delete Recipe',
                                           onPressed:
