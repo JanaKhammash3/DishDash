@@ -49,20 +49,24 @@ const createNotification = async (req, res) => {
 const getNotifications = async (req, res) => {
   try {
     const { id, model } = req.params;
+
     console.log(`📩 Fetching notifications for id: ${id}, model: ${model}`);
 
     const notifications = await Notification.find({
-      recipientId: new mongoose.Types.ObjectId(id),
-      recipientModel: model,
-    }).populate('senderId', 'name avatar').sort({ createdAt: -1 });
+      recipientId: id, // ✅ remove ObjectId wrapping
+      recipientModel: model, // must be exactly 'Store'
+    })
+    .populate('senderId', 'name avatar') // ✅ already correct
+    .sort({ createdAt: -1 });
 
-    console.log(`✅ Found ${notifications.length} notifications`);
+    console.log('✅ Sample sender:', notifications[0]?.senderId);
     res.status(200).json(notifications);
   } catch (err) {
     console.error('❌ Error fetching notifications:', err);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 
 

@@ -73,12 +73,25 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
     }
   }
 
-  ImageProvider _getAvatarImage(String? base64Avatar) {
-    if (base64Avatar != null && base64Avatar.contains(',')) {
-      try {
-        return MemoryImage(base64Decode(base64Avatar.split(',').last));
-      } catch (_) {}
+  ImageProvider _resolveAvatar(String? avatar) {
+    if (avatar == null || avatar.isEmpty) {
+      return const AssetImage('assets/profile.png');
     }
+
+    if (avatar.startsWith('http')) {
+      return NetworkImage(avatar);
+    }
+
+    if (avatar.contains(',')) {
+      try {
+        final base64Str = avatar.split(',').last;
+        final bytes = base64Decode(base64Str);
+        return MemoryImage(bytes);
+      } catch (e) {
+        debugPrint('❌ Failed to decode avatar: $e');
+      }
+    }
+
     return const AssetImage('assets/profile.png');
   }
 
@@ -162,18 +175,9 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
                                         children: [
                                           CircleAvatar(
                                             radius: 20,
-                                            backgroundImage:
-                                                avatar != null &&
-                                                        avatar.contains(',')
-                                                    ? MemoryImage(
-                                                      base64Decode(
-                                                        avatar.split(',').last,
-                                                      ),
-                                                    )
-                                                    : const AssetImage(
-                                                          'assets/profile.png',
-                                                        )
-                                                        as ImageProvider,
+                                            backgroundImage: _resolveAvatar(
+                                              avatar,
+                                            ),
                                           ),
                                           CircleAvatar(
                                             radius: 8,
@@ -220,9 +224,6 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
                                                     n['_id'],
                                                     index,
                                                   );
-                                                  setState(() {
-                                                    n['isRead'] = true;
-                                                  });
                                                 },
                                               )
                                               : null,

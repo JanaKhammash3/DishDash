@@ -6,6 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
 
+final Color beigeBackground = const Color(0xFFF5F4F0); // Light beige
+final Color beigeCard = const Color(0xFFFAF9F6); // Slightly lighter beige
+final Color beigeBorder = const Color(0xFFDAD4C2); // Soft border
+final Color beigeAccent = const Color(0xFFB9A67D); // Muted gold
+final Color iconMuted = const Color(0xFF7C7155); // Muted brown-gray
+
 class DashboardHome extends StatefulWidget {
   final int totalUsers;
   final int totalStores;
@@ -114,16 +120,22 @@ class _DashboardHomeState extends State<DashboardHome> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: cardColor,
-        title: Text('DishDash Admin', style: TextStyle(color: textColor)),
+        title: Row(
+          children: [
+            Icon(Icons.dashboard, color: textColor),
+            const SizedBox(width: 10),
+            Text('DishDash Admin', style: TextStyle(color: textColor)),
+          ],
+        ),
         elevation: 1,
         actions: [
+          IconButton(
+            icon: Icon(Icons.campaign_rounded, color: darkGreen),
+            tooltip: 'Send Announcement',
+            onPressed: () => _showAnnouncementModal(context),
+          ),
           Row(
             children: [
-              IconButton(
-                icon: Icon(Icons.campaign, color: darkGreen),
-                tooltip: 'Send Announcement',
-                onPressed: () => _showAnnouncementModal(context),
-              ),
               Icon(
                 isDarkMode ? Icons.dark_mode : Icons.light_mode,
                 color: textColor,
@@ -137,6 +149,7 @@ class _DashboardHomeState extends State<DashboardHome> {
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -145,43 +158,28 @@ class _DashboardHomeState extends State<DashboardHome> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.orange[100],
-                    borderRadius: BorderRadius.circular(20),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/cover.png'),
-                      fit: BoxFit.cover,
-                      alignment: Alignment.centerRight,
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          'Welcome to DishDash Admin!',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF304D30),
-                          ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        '👋 Welcome to DishDash Admin!',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF304D30),
                         ),
-                        SizedBox(height: 6),
-                        Text(
-                          'Manage users, stores, and delicious content.',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
-                        ),
-                      ],
-                    ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Manage users, stores, and delicious content with ease.',
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                    ],
                   ),
                 ),
+
                 const SizedBox(height: 30),
                 Wrap(
                   spacing: 20,
@@ -283,48 +281,33 @@ class _DashboardHomeState extends State<DashboardHome> {
       width: 240,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [bgColor.withOpacity(0.05), Colors.white],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: beigeBorder),
         boxShadow: [
-          BoxShadow(
-            color: iconColor.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
         ],
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            right: -10,
-            top: -10,
-            child: Icon(icon, size: 80, color: iconColor.withOpacity(0.1)),
+          CircleAvatar(
+            backgroundColor: iconColor.withOpacity(0.1),
+            child: Icon(icon, size: 20, color: iconColor),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 28, color: iconColor),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: textColor.withOpacity(0.7),
-                ),
-              ),
-              Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-            ],
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: TextStyle(fontSize: 14, color: textColor.withOpacity(0.7)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
           ),
         ],
       ),
@@ -340,47 +323,31 @@ class _DashboardHomeState extends State<DashboardHome> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: [Colors.white, accentColor.withOpacity(0.04)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: beigeCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: beigeBorder),
         boxShadow: [
-          BoxShadow(
-            color: accentColor.withOpacity(0.07),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            right: -10,
-            top: -10,
-            child: Icon(icon, size: 80, color: accentColor.withOpacity(0.06)),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(icon, size: 20, color: accentColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              Icon(icon, size: 20, color: accentColor),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              const SizedBox(height: 16),
-              SizedBox(height: 150, child: chart),
             ],
           ),
+          const SizedBox(height: 16),
+          SizedBox(height: 150, child: chart),
         ],
       ),
     );
@@ -393,15 +360,15 @@ class _DashboardHomeState extends State<DashboardHome> {
         barGroups: [
           BarChartGroupData(
             x: 0,
-            barRods: [BarChartRodData(toY: 6, color: Colors.deepOrange)],
+            barRods: [BarChartRodData(toY: 6, color: iconMuted)],
           ),
           BarChartGroupData(
             x: 1,
-            barRods: [BarChartRodData(toY: 3, color: Colors.deepOrange)],
+            barRods: [BarChartRodData(toY: 3, color: iconMuted)],
           ),
           BarChartGroupData(
             x: 2,
-            barRods: [BarChartRodData(toY: 13, color: Colors.deepOrange)],
+            barRods: [BarChartRodData(toY: 13, color: iconMuted)],
           ),
         ],
         titlesData: FlTitlesData(
@@ -422,7 +389,12 @@ class _DashboardHomeState extends State<DashboardHome> {
               },
             ),
           ),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
+        gridData: FlGridData(show: false),
+        borderData: FlBorderData(show: false),
       ),
     );
   }
@@ -431,9 +403,13 @@ class _DashboardHomeState extends State<DashboardHome> {
     return PieChart(
       PieChartData(
         sections: [
-          PieChartSectionData(value: 6, title: 'Users', color: Colors.green),
-          PieChartSectionData(value: 3, title: 'Stores', color: Colors.orange),
-          PieChartSectionData(value: 13, title: 'Recipes', color: Colors.blue),
+          PieChartSectionData(value: 6, title: 'Users', color: iconMuted),
+          PieChartSectionData(value: 3, title: 'Stores', color: beigeAccent),
+          PieChartSectionData(
+            value: 13,
+            title: 'Recipes',
+            color: Colors.grey[400],
+          ),
         ],
         sectionsSpace: 2,
         centerSpaceRadius: 30,
@@ -453,18 +429,16 @@ class _DashboardHomeState extends State<DashboardHome> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: beigeCard,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10),
-        ],
+        border: Border.all(color: beigeBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: textColor.withOpacity(0.7), size: 20),
+              Icon(icon, color: iconMuted, size: 20),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -486,14 +460,14 @@ class _DashboardHomeState extends State<DashboardHome> {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.05),
+                color: Colors.grey.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: Colors.blueAccent.withOpacity(0.2),
+                    backgroundColor: iconMuted.withOpacity(0.1),
                     child: Text(
                       initial,
                       style: const TextStyle(fontWeight: FontWeight.bold),
@@ -504,13 +478,7 @@ class _DashboardHomeState extends State<DashboardHome> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                        ),
+                        Text(name, style: TextStyle(color: textColor)),
                         Text(
                           subtitle,
                           style: TextStyle(color: textColor.withOpacity(0.6)),

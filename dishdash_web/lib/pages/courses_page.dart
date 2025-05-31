@@ -629,6 +629,9 @@ class _CoursesPageState extends State<CoursesPage> {
                   ),
                   padding: const EdgeInsets.all(20),
                   child: Column(
+                    mainAxisSize:
+                        MainAxisSize.min, // 🔐 Important to prevent overflow
+
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Center(
@@ -793,6 +796,9 @@ class _CoursesPageState extends State<CoursesPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Column(
+                mainAxisSize:
+                    MainAxisSize.min, // 🔐 Important to prevent overflow
+
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Title
@@ -875,26 +881,110 @@ class _CoursesPageState extends State<CoursesPage> {
                   SizedBox(height: 8),
 
                   // View Lessons Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: Icon(
-                        Icons.play_circle_outline,
-                        color: Colors.white,
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: Icon(
+                            Icons.play_circle_outline,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            "Lessons",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          onPressed: () => showCourseDetail(course),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: green,
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
                         ),
-                        padding: EdgeInsets.symmetric(vertical: 8),
                       ),
-                      label: Text(
-                        "View Lessons",
-                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: Icon(Icons.delete, color: Colors.white),
+                          label: Text(
+                            "Delete Course",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder:
+                                  (ctx) => AlertDialog(
+                                    title: Text("Confirm Deletion"),
+                                    content: Text(
+                                      "Are you sure you want to delete this course?",
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        child: Text(
+                                          "Cancel",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                          ), // 👈 Make text white
+                                        ),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor:
+                                              Colors
+                                                  .white, // 👈 or use this (modern way)
+                                          backgroundColor: Colors.grey.shade700,
+                                        ),
+                                        onPressed:
+                                            () => Navigator.of(ctx).pop(false),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red.shade900,
+                                          foregroundColor:
+                                              Colors
+                                                  .white, // 👈 Make text white
+                                        ),
+                                        onPressed:
+                                            () => Navigator.of(ctx).pop(true),
+                                        child: Text("Delete"),
+                                      ),
+                                    ],
+                                  ),
+                            );
+
+                            if (confirm == true) {
+                              final res = await http.delete(
+                                Uri.parse(
+                                  '$baseUrl/api/courses/${course['_id']}',
+                                ),
+                              );
+                              if (res.statusCode == 200) {
+                                if (mounted) {
+                                  await fetchCourses();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Course deleted')),
+                                  );
+                                }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to delete course'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
                       ),
-                      onPressed: () => showCourseDetail(course),
-                    ),
+                    ],
                   ),
                 ],
               ),
