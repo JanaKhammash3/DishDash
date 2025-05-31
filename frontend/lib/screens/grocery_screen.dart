@@ -145,10 +145,9 @@ class _GroceryScreenState extends State<GroceryScreen> {
   Future<void> _placeOrderFirstThenPayment() async {
     if (cartItems.isEmpty) return;
 
-    final storeId = await _promptStoreSelection();
+    final storeId = await _promptStoreSelection(); // ✅ KEEP THIS
     if (storeId == null) return;
 
-    // Save all relevant info after selecting store
     for (var item in cartItems) {
       final name = item['name'];
 
@@ -170,21 +169,27 @@ class _GroceryScreenState extends State<GroceryScreen> {
     }
 
     Navigator.pop(context);
-    // THEN go to payment
-    _proceedToFakePayment(); // 👈 call payment AFTER processing
+    _proceedToFakePayment(storeId); // ✅ PASS STORE ID FORWARD
   }
 
-  void _proceedToFakePayment() {
-    showDialog(
-      context: context,
-      builder: (_) {
-        String selectedMethod = 'Pickup';
+  void _proceedToFakePayment(String storeId) {
+    String selectedMethod = 'Pickup';
 
-        return AlertDialog(
-          title: const Text('Choose Order Type'),
-          content: Column(
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const Text(
+                'Choose Delivery Method',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               RadioListTile<String>(
                 title: const Text('Pickup'),
                 value: 'Pickup',
@@ -192,7 +197,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
                 onChanged: (value) {
                   selectedMethod = value!;
                   Navigator.pop(context);
-                  _showCardInputDialog(selectedMethod);
+                  _showCardInputDialog(selectedMethod, storeId); // ✅ pass
                 },
               ),
               RadioListTile<String>(
@@ -202,7 +207,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
                 onChanged: (value) {
                   selectedMethod = value!;
                   Navigator.pop(context);
-                  _showCardInputDialog(selectedMethod);
+                  _showCardInputDialog(selectedMethod, storeId); // ✅ pass
                 },
               ),
             ],
@@ -212,60 +217,60 @@ class _GroceryScreenState extends State<GroceryScreen> {
     );
   }
 
-  void _showCardInputDialog(String method) {
-    final TextEditingController cardController = TextEditingController();
-    final TextEditingController cvvController = TextEditingController();
-    final TextEditingController expiryController = TextEditingController();
+  void _showCardInputDialog(String method, String storeId) {
+    final cardNumberController = TextEditingController();
+    final expiryDateController = TextEditingController();
+    final cvvController = TextEditingController();
 
     showDialog(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Enter Card Info'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Enter Card Information'),
+          content: SingleChildScrollView(
+            child: Column(
               children: [
                 TextField(
-                  controller: cardController,
-                  keyboardType: TextInputType.number,
+                  controller: cardNumberController,
                   decoration: const InputDecoration(labelText: 'Card Number'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: expiryDateController,
+                  decoration: const InputDecoration(labelText: 'Expiry Date'),
                 ),
                 TextField(
                   controller: cvvController,
-                  keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'CVV'),
-                ),
-                TextField(
-                  controller: expiryController,
-                  keyboardType: TextInputType.datetime,
-                  decoration: const InputDecoration(labelText: 'Expiry Date'),
+                  keyboardType: TextInputType.number,
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  Navigator.pop(context); // close dialog
-
-                  setState(() {
-                    cartItems.clear(); // ✅ clear cart
-                  });
-
-                  await _saveCartToPrefs(); // ✅ persist clear
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Order placed successfully!')),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: green),
-                child: const Text('Confirm Payment'),
-              ),
-            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context); // Close dialog
+                await _placeOrder(method, storeId); // ✅ NOW IT PLACES ORDER
+                setState(() {
+                  cartItems.clear();
+                });
+                await _saveCartToPrefs();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Order placed successfully!')),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: green),
+              child: const Text('Confirm Payment'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -380,70 +385,48 @@ class _GroceryScreenState extends State<GroceryScreen> {
     return selectedStoreId;
   }
 
-  Future<void> _placeOrder(String method) async {
-    if (cartItems.isEmpty) return;
+  Future<void> _placeOrder(String method, String storeId) async {
+    final List<Map<String, dynamic>> items =
+        cartItems.map((item) {
+          final rawPrice = item['price'];
 
-    final storeId = await _promptStoreSelection(); // you can enhance this later
-    if (storeId == null) return;
+          // Normalize the price
+          double price = 0.0;
+          if (rawPrice is num) {
+            price = rawPrice.toDouble();
+          } else if (rawPrice is String) {
+            price = double.tryParse(rawPrice) ?? 0.0;
+          }
 
-    final url = Uri.parse('http://192.168.68.61:3000/api/orders/create');
+          return {
+            'name': item['name'],
+            'price': price,
+            'quantity':
+                item['quantity'] ?? 1, // Optional if you're tracking quantity
+          };
+        }).toList();
+
+    // Final total calculation using cleaned prices
+    final double total = items.fold(
+      0.0,
+      (sum, item) => sum + item['price'] * (item['quantity'] ?? 1),
+    );
     final response = await http.post(
-      url,
+      Uri.parse('http://192.168.68.61:3000/api/orders/create'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'userId': widget.userId,
         'storeId': storeId,
-        'deliveryMethod': method,
-        'items':
-            cartItems
-                .map(
-                  (i) => {
-                    'name': i['name'],
-                    'price': i['price'],
-                    'quantity': 1, // optional
-                  },
-                )
-                .toList(),
+        'items': items,
+        'total': total,
+        'method': method, // optional, match with deliveryMethod in schema
       }),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      for (var item in cartItems) {
-        final name = item['name'];
-
-        // ✅ Add to available ingredients
-        setState(() {
-          availableIngredients.add(name);
-        });
-
-        // ✅ Save available ingredients
-        await _saveAvailableIngredients();
-
-        // ✅ Record the purchase
-        await recordPurchase(storeId, name);
-
-        // ✅ Remove from grocery list
-
-        // ✅ Send notification to store
-        await sendNotification(
-          recipientId: storeId,
-          recipientModel: 'Store',
-          senderId: widget.userId,
-          senderModel: 'User',
-          type: 'purchase',
-          message: 'purchased $name from your store!',
-          relatedId: name,
-        );
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Order placed!')));
-
-      setState(() {
-        cartItems.clear();
-      });
-      await _saveCartToPrefs();
+      print('✅ Order placed!');
+    } else {
+      print('❌ Order placement failed: ${response.body}');
     }
   }
 

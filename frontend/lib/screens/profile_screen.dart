@@ -148,7 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 final response = await http.put(
                   Uri.parse(
-                    'http://192.168.1.4:3000/api/profile/${widget.userId}/update',
+                    'http://192.168.68.61:3000/api/profile/${widget.userId}/update',
                   ),
                   headers: {'Content-Type': 'application/json'},
                   body: jsonEncode({
