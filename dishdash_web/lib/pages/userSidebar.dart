@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'homescreen.dart';
+import 'community.dart';
 
 final Color beigeBackground = const Color(0xFFF5F4F0);
 final Color beigeCard = const Color(0xFFFAF9F6);
@@ -39,6 +40,7 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
                 Placeholder(
                   child: Text("Profile Page"),
                 ), // TODO: Replace with real screen
+                CommunityScreen(userId: widget.userId),
                 Placeholder(child: Text("Community Page")), // TODO
                 Placeholder(child: Text("My Recipes Page")), // TODO
               ],
