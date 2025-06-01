@@ -1,21 +1,23 @@
 import 'dart:convert';
+import 'package:dishdash_web/colors.dart';
+import 'package:dishdash_web/pages/Store_profile_page.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/StoreMapScreen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:frontend/colors.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
-import 'store_profile_screen.dart';
+import 'package:dishdash_web/pages/StoreMapScreen.dart';
 
-class StoreItemsScreen extends StatefulWidget {
-  const StoreItemsScreen({super.key});
+class UserStoresPage extends StatefulWidget {
+  final String? storeId; // ✅ make it nullable
+
+  const UserStoresPage({super.key, this.storeId});
 
   @override
-  State<StoreItemsScreen> createState() => _StoreItemsScreenState();
+  State<UserStoresPage> createState() => _UserStoresPageState();
 }
 
-class _StoreItemsScreenState extends State<StoreItemsScreen>
+class _UserStoresPageState extends State<UserStoresPage>
     with SingleTickerProviderStateMixin {
   List<dynamic> stores = [];
   List<dynamic> filteredStores = [];
@@ -90,7 +92,8 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
     final res = await http.get(url);
 
     if (res.statusCode == 200) {
-      stores = json.decode(res.body);
+      final allStores = json.decode(res.body);
+      stores = allStores; // fetch and display all stores
       _applyTabFilter();
     }
   }
@@ -200,8 +203,7 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder:
-                                    (_) => StoreProfileScreen(store: store),
+                                builder: (_) => StoreProfilePage(store: store),
                               ),
                             );
                           },
@@ -402,10 +404,9 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
                                                   context,
                                                   MaterialPageRoute(
                                                     builder:
-                                                        (_) =>
-                                                            StoreProfileScreen(
-                                                              store: store,
-                                                            ),
+                                                        (_) => StoreProfilePage(
+                                                          store: store,
+                                                        ),
                                                   ),
                                                 );
                                               },

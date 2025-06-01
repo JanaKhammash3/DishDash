@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dishdash_web/pages/users_stores_page.dart';
 import 'package:flutter/material.dart';
 //import 'package:frontend/screens/store_items_screen.dart';
 import 'package:http/http.dart' as http;
@@ -31,7 +32,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  final String baseUrl = 'http://192.168.68.61:3000'; // Adjust for your setup
+  final String baseUrl = 'http://192.168.1.4:3000'; // Adjust for your setup
 
   @override
   void initState() {
@@ -363,10 +364,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return ElevatedButton.icon(
       onPressed: () {
         if (value == 'stores') {
-          // Navigator.push(
-          //  context,
-          //  MaterialPageRoute(builder: (_) => const StoreItemsScreen()),
-          //);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => const UserStoresPage(
+                    storeId: '',
+                  ), // 👈 Update or remove storeId if not needed
+            ),
+          );
         } else {
           if (!mounted) return;
           setState(() => selectedCategory = value);
@@ -380,7 +386,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
       icon: Icon(icon, size: 18),
       label: Text(label),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? Color(0xFF304D30) : Colors.grey[300],
+        backgroundColor:
+            isSelected ? const Color(0xFF304D30) : Colors.grey[300],
         foregroundColor: isSelected ? Colors.white : Colors.black,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui_web' as ui;
+import 'package:chewie/chewie.dart';
+import 'package:dishdash_web/colors.dart';
+import 'package:dishdash_web/pages/dashboard_page.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/colors.dart';
-import 'package:frontend/screens/video_player_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,16 +13,17 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'dart:html' as html; // 👈 for web
 import 'package:file_picker/file_picker.dart';
+import 'package:video_player/video_player.dart';
 
-class CoursesScreen extends StatefulWidget {
+class UserCoursesPage extends StatefulWidget {
   final String userId;
-  const CoursesScreen({super.key, required this.userId});
+  const UserCoursesPage({super.key, required this.userId});
 
   @override
-  State<CoursesScreen> createState() => _CoursesScreenState();
+  State<UserCoursesPage> createState() => _UserCoursesPageState();
 }
 
-class _CoursesScreenState extends State<CoursesScreen> {
+class _UserCoursesPageState extends State<UserCoursesPage> {
   List<dynamic> courses = [];
   final String baseUrl = 'http://192.168.1.4:3000';
   bool isUploading = false;
@@ -594,48 +597,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   double calculateAverageRating(List ratings) {
     if (ratings.isEmpty) return 0.0;
-    return ratings.reduce((a, b) => a + b) / ratings.length;
-  }
-
-  Future<void> submitRating(String courseId, double rating) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/api/courses/$courseId/rate'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'rating': rating}),
-      );
-
-      if (res.statusCode == 200) {
-        if (mounted) {
-          setState(() {
-            final index = courses.indexWhere((c) => c['_id'] == courseId);
-            if (index != -1) {
-              // Ensure ratings array exists
-              courses[index]['ratings'] ??= [];
-              courses[index]['ratings'].add(rating);
-            }
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Thanks for rating the course!"),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        throw Exception("Failed to submit rating");
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error submitting rating: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    final total = ratings.fold(
+      0.0,
+      (sum, r) => sum + (r is int ? r.toDouble() : (r as num).toDouble()),
+    );
+    final avg = total / ratings.length;
+    return avg.isNaN ? 0.0 : avg;
   }
 
   void showCourseDetail(Map<String, dynamic> course) {
@@ -643,7 +610,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder:
@@ -654,13 +621,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
             maxChildSize: 0.95,
             builder:
                 (context, scrollController) => Container(
-                  decoration: BoxDecoration(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(24),
                     ),
                   ),
-                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -677,11 +644,33 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       const SizedBox(height: 16),
                       Text(
                         course['title'],
-                        style: TextStyle(
-                          fontSize: 24,
+                        style: const TextStyle(
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade900,
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          RatingBarIndicator(
+                            rating: calculateAverageRating(
+                              course['ratings'] ?? [],
+                            ),
+                            itemBuilder:
+                                (context, _) =>
+                                    const Icon(Icons.star, color: Colors.amber),
+                            itemCount: 5,
+                            itemSize: 18.0,
+                            direction: Axis.horizontal,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            calculateAverageRating(
+                              course['ratings'] ?? [],
+                            ).toStringAsFixed(1),
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
                       ),
                       Text(
                         "By ${course['chefName']}",
@@ -747,7 +736,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder:
-                                            (_) => VideoPlayerScreen(
+                                            (_) => VideoPlayerPage(
                                               videoUrl: ep['videoUrl'],
                                               startTime: ep['startTime'],
                                               endTime: ep['endTime'],
@@ -762,42 +751,59 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           },
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      Divider(thickness: 1, color: Colors.grey.shade300),
                       const SizedBox(height: 10),
                       Text(
-                        "Rate this course:",
+                        "Rate this course",
                         style: TextStyle(
-                          fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          fontWeight: FontWeight.bold,
                           color: Colors.green.shade900,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                      RatingBar.builder(
+                        initialRating: 0,
+                        minRating: 1,
+                        direction: Axis.horizontal,
+                        allowHalfRating: false,
+                        itemCount: 5,
+                        itemSize: 30,
+                        itemPadding: const EdgeInsets.symmetric(
+                          horizontal: 4.0,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: RatingBar.builder(
-                            initialRating: 0,
-                            minRating: 1,
-                            direction: Axis.horizontal,
-                            allowHalfRating: false,
-                            itemCount: 5,
-                            itemSize: 30,
-                            itemBuilder:
-                                (context, _) =>
-                                    const Icon(Icons.star, color: Colors.amber),
-                            onRatingUpdate:
-                                (rating) => submitRating(course['_id'], rating),
-                          ),
-                        ),
+                        itemBuilder:
+                            (context, _) =>
+                                const Icon(Icons.star, color: Colors.amber),
+                        onRatingUpdate: (rating) async {
+                          final response = await http.post(
+                            Uri.parse(
+                              '$baseUrl/api/courses/${course['_id']}/rate',
+                            ),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({
+                              'userId': widget.userId,
+                              'rating': rating.toInt(),
+                            }),
+                          );
+
+                          if (response.statusCode == 200) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("✅ Rating submitted"),
+                              ),
+                            );
+                            fetchCourses();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("❌ Failed to submit rating"),
+                              ),
+                            );
+                          }
+                        },
                       ),
-                      const SizedBox(height: 10),
                     ],
                   ),
                 ),
@@ -806,60 +812,73 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Widget buildCourseCard(course) {
-    return GestureDetector(
-      onTap: () => showCourseDetail(course),
+    double avgRating = calculateAverageRating(course['ratings'] ?? []);
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: 450), // limits card width
       child: Card(
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 3,
+        clipBehavior: Clip.antiAlias, // prevents image bleed
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              child:
-                  course['image'] != null
-                      ? Image.network(
-                        course['image'],
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                      : Container(
-                        height: 180,
-                        width: double.infinity,
-                        color: Colors.grey[300],
-                        child: Icon(Icons.image_not_supported, size: 40),
-                      ),
-            ),
+            // Cover Image
+            course['image'] != null
+                ? Image.network(
+                  course['image'],
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                )
+                : Container(
+                  height: 160,
+                  width: double.infinity,
+                  color: Colors.grey[300],
+                  child: Icon(Icons.image_not_supported, size: 40),
+                ),
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Column(
+                mainAxisSize:
+                    MainAxisSize.min, // 🔐 Important to prevent overflow
+
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title
                   Text(
                     course['title'],
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: 4),
+                  SizedBox(height: 6),
+
+                  // Chef Info
                   Row(
                     children: [
-                      if (course['chefAvatar'] != null)
-                        CircleAvatar(
-                          backgroundImage: NetworkImage(course['chefAvatar']),
-                          radius: 16,
-                        )
-                      else
-                        CircleAvatar(
-                          backgroundColor: Colors.grey[300],
-                          child: Icon(Icons.person, color: Colors.grey),
-                          radius: 16,
-                        ),
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundImage:
+                            course['chefAvatar'] != null
+                                ? NetworkImage(course['chefAvatar'])
+                                : null,
+                        backgroundColor: Colors.grey[300],
+                        child:
+                            course['chefAvatar'] == null
+                                ? Icon(Icons.person, color: Colors.grey)
+                                : null,
+                      ),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           course['chefName'] ?? 'Unknown Chef',
-                          style: TextStyle(color: Colors.grey[700]),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -867,50 +886,71 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   ),
 
                   SizedBox(height: 8),
+
+                  // Lessons & Duration
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("🎬 ${course['episodes'].length} Lessons"),
-                      Text("⏱️ ${getTotalDuration(course['episodes'])} min"),
+                      Text(
+                        "🎬 ${course['episodes'].length} Lessons",
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      Text(
+                        "⏱️ ${getTotalDuration(course['episodes'])} min",
+                        style: TextStyle(fontSize: 12),
+                      ),
                     ],
                   ),
-                  SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: Icon(
-                        Icons.play_circle_outline,
-                        color: Colors.white, // ✅ White icon
+
+                  SizedBox(height: 6),
+
+                  // Rating
+                  Row(
+                    children: [
+                      RatingBarIndicator(
+                        rating: avgRating,
+                        itemBuilder:
+                            (context, _) =>
+                                Icon(Icons.star, color: Colors.amber),
+                        itemCount: 5,
+                        itemSize: 18,
+                        direction: Axis.horizontal,
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                      SizedBox(width: 6),
+                      Text(
+                        avgRating.toStringAsFixed(1),
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
-                      label: Text(
-                        "View Lessons",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onPressed: () => showCourseDetail(course),
-                    ),
+                    ],
                   ),
-                  if (course['ratings'] != null &&
-                      course['ratings'].isNotEmpty) ...[
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Colors.amber, size: 20),
-                        SizedBox(width: 4),
-                        Text(
-                          calculateAverageRating(
-                            course['ratings'],
-                          ).toStringAsFixed(1),
-                          style: TextStyle(color: Colors.grey[800]),
+
+                  SizedBox(height: 8),
+
+                  // View Lessons Button
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: Icon(
+                            Icons.play_circle_outline,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            "Lessons",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          onPressed: () => showCourseDetail(course),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: green,
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -931,27 +971,214 @@ class _CoursesScreenState extends State<CoursesScreen> {
           style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded, // ✅ NY2-style back arrow
-            color: Colors.white,
-          ),
-          onPressed: () {
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
+        automaticallyImplyLeading: false, // ✅ Optional for safety
       ),
+
       backgroundColor: Colors.grey[100],
       body:
           courses.isEmpty
               ? Center(child: CircularProgressIndicator(color: green))
-              : ListView.builder(
-                itemCount: courses.length,
-                padding: EdgeInsets.symmetric(vertical: 12),
-                itemBuilder: (_, index) => buildCourseCard(courses[index]),
+              : Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: GridView.builder(
+                  itemCount: courses.length,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 450,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    mainAxisExtent: null, // Let it auto-size based on content
+                  ),
+
+                  itemBuilder: (_, index) => buildCourseCard(courses[index]),
+                ),
               ),
+    );
+  }
+}
+
+class VideoPlayerPage extends StatefulWidget {
+  final String videoUrl;
+  final int startTime; // in seconds
+  final int endTime; // in seconds
+
+  const VideoPlayerPage({
+    super.key,
+    required this.videoUrl,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  @override
+  State<VideoPlayerPage> createState() => _VideoPlayerPageState();
+}
+
+class _VideoPlayerPageState extends State<VideoPlayerPage> {
+  late VideoPlayerController _videoPlayerController;
+  ChewieController? _chewieController;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    try {
+      if (kIsWeb) {
+        print('🌐 Web mode: using HTML5 video element');
+        setState(() => _hasError = false);
+        return;
+      }
+
+      final optimizedUrl =
+          widget.videoUrl.contains('/upload/')
+              ? widget.videoUrl.replaceFirst(
+                '/upload/',
+                '/upload/f_auto,q_auto/',
+              )
+              : widget.videoUrl;
+
+      _videoPlayerController = VideoPlayerController.network(optimizedUrl);
+      await _videoPlayerController.initialize();
+      await _videoPlayerController.seekTo(Duration(seconds: widget.startTime));
+
+      _videoPlayerController.addListener(() {
+        final pos = _videoPlayerController.value.position;
+        if (pos.inSeconds >= widget.endTime) {
+          _videoPlayerController.pause();
+        }
+      });
+
+      _chewieController = ChewieController(
+        videoPlayerController: _videoPlayerController,
+        autoPlay: true,
+        looping: false,
+        aspectRatio:
+            _videoPlayerController.value.aspectRatio > 0
+                ? _videoPlayerController.value.aspectRatio
+                : 16 / 9,
+        showControls: true,
+        allowMuting: true,
+        allowPlaybackSpeedChanging: true,
+      );
+
+      setState(() => _hasError = false);
+    } catch (e) {
+      print('❌ Error initializing video: $e');
+      setState(() => _hasError = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!kIsWeb) {
+      _videoPlayerController.dispose();
+      _chewieController?.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (kIsWeb) {
+      final viewId = 'video-${DateTime.now().millisecondsSinceEpoch}';
+      // ignore: undefined_prefixed_name
+      ui.platformViewRegistry.registerViewFactory(viewId, (int _) {
+        final video =
+            html.VideoElement()
+              ..src = widget.videoUrl
+              ..autoplay = true
+              ..controls = true
+              ..style.border = 'none'
+              ..style.width = '100%'
+              ..style.height = '100%'
+              ..setAttribute('playsinline', 'true');
+
+        video.onCanPlay.first.then((_) {
+          video.currentTime = widget.startTime.toDouble();
+        });
+
+        video.onTimeUpdate.listen((event) {
+          if (video.currentTime >= widget.endTime) {
+            video.pause();
+          }
+        });
+
+        return video;
+      });
+
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          title: const Text("🎥 Watch Episode"),
+          backgroundColor: green,
+          foregroundColor: Colors.white,
+        ),
+        body: HtmlElementView(viewType: viewId),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text("🎥 Watch Episode"),
+        backgroundColor: Colors.green.shade800,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Center(
+        child:
+            _hasError
+                ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 50,
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      '❌ Failed to load video',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      icon: Icon(Icons.refresh),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: _initializePlayer,
+                      label: Text("Retry"),
+                    ),
+                  ],
+                )
+                : (_chewieController != null &&
+                    _chewieController!
+                        .videoPlayerController
+                        .value
+                        .isInitialized)
+                ? AspectRatio(
+                  aspectRatio: _videoPlayerController.value.aspectRatio,
+                  child: Chewie(controller: _chewieController!),
+                )
+                : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    CircularProgressIndicator(color: Colors.green),
+                    SizedBox(height: 12),
+                    Text(
+                      "Loading video...",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+      ),
     );
   }
 }

@@ -54,7 +54,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
   Future<void> fetchOrders() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/orders/user/${widget.userId}',
+      'http://192.168.1.4:3000/api/orders/user/${widget.userId}',
     );
     final res = await http.get(url);
 
@@ -72,7 +72,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 
           if (storeId != null) {
             final storeRes = await http.get(
-              Uri.parse('http://192.168.68.61:3000/api/stores/basic/$storeId'),
+              Uri.parse('http://192.168.1.4:3000/api/stores/basic/$storeId'),
             );
             if (storeRes.statusCode == 200) {
               final storeData = jsonDecode(storeRes.body);
