@@ -43,7 +43,7 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.68.61:3000/translate'),
+        Uri.parse('http://192.168.1.4:3000/translate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'text': text, 'target': 'ar'}),
       );
@@ -79,7 +79,7 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
   }
 
   Future<void> _showNutritionModal() async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/analyze-nutrition');
+    final url = Uri.parse('http://192.168.1.4:3000/api/analyze-nutrition');
 
     final response = await http.post(
       url,
@@ -270,7 +270,7 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
 
                       final response = await http.post(
                         Uri.parse(
-                          'http://192.168.68.61:3000/api/ai/instructions-to-steps',
+                          'http://192.168.1.4:3000/api/ai/instructions-to-steps',
                         ),
                         headers: {'Content-Type': 'application/json'},
                         body: jsonEncode({'instructions': widget.instructions}),

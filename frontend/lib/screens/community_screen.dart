@@ -24,6 +24,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
   bool isLoading = true;
   bool showFollowingOnly = false;
   List<String> followingUserIds = [];
+  Set<String> expandedPostIds = {};
 
   bool hasAllergyConflict(List<String> ingredients, List<String> allergies) {
     final lowerIngredients = ingredients.join(',').toLowerCase();
@@ -32,7 +33,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
-  final String baseUrl = 'http://192.168.68.61:3000'; // Adjust for your setup
+  final String baseUrl = 'http://192.168.1.4:3000'; // Adjust for your setup
 
   @override
   void initState() {
@@ -425,7 +426,61 @@ class _CommunityScreenState extends State<CommunityScreen> {
             ),
 
             const SizedBox(height: 6),
-            Text(post['description'] ?? ''),
+            if ((post['description'] ?? '').toString().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 4,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      post['description'],
+                      maxLines:
+                          post['description'].length > 110
+                              ? (expandedPostIds.contains(post['_id'])
+                                  ? null
+                                  : 2)
+                              : null, // ✅ show full if short
+                      overflow:
+                          post['description'].length > 100
+                              ? (expandedPostIds.contains(post['_id'])
+                                  ? TextOverflow.visible
+                                  : TextOverflow.ellipsis)
+                              : TextOverflow.visible,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    if (post['description'].length > 100)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () {
+                            setState(() {
+                              if (expandedPostIds.contains(post['_id'])) {
+                                expandedPostIds.remove(post['_id']);
+                              } else {
+                                expandedPostIds.add(post['_id']);
+                              }
+                            });
+                          },
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                          child: Text(
+                            expandedPostIds.contains(post['_id'])
+                                ? 'Show Less'
+                                : 'Read More',
+                            style: TextStyle(
+                              color: green,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
             const SizedBox(height: 6),
             Text(
               'Type: ${post['type']}',
@@ -654,13 +709,64 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                     ),
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
-                                    vertical: 8,
+                                if ((post['description'] ?? '')
+                                    .toString()
+                                    .isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0,
+                                      vertical: 8,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          post['description'],
+                                          maxLines:
+                                              expandedPostIds.contains(
+                                                    post['_id'],
+                                                  )
+                                                  ? null
+                                                  : 3,
+                                          overflow:
+                                              expandedPostIds.contains(
+                                                    post['_id'],
+                                                  )
+                                                  ? TextOverflow.visible
+                                                  : TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                        if (post['description'].length > 100)
+                                          TextButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                if (expandedPostIds.contains(
+                                                  post['_id'],
+                                                )) {
+                                                  expandedPostIds.remove(
+                                                    post['_id'],
+                                                  );
+                                                } else {
+                                                  expandedPostIds.add(
+                                                    post['_id'],
+                                                  );
+                                                }
+                                              });
+                                            },
+                                            child: Text(
+                                              expandedPostIds.contains(
+                                                    post['_id'],
+                                                  )
+                                                  ? 'Show Less'
+                                                  : 'Read More',
+                                              style: TextStyle(color: green),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                  child: Text(post['description'] ?? ''),
-                                ),
+
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16.0,

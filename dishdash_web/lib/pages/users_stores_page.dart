@@ -21,7 +21,7 @@ class _UserStoresPageState extends State<UserStoresPage>
     with SingleTickerProviderStateMixin {
   List<dynamic> stores = [];
   List<dynamic> filteredStores = [];
-  final String baseUrl = 'http://192.168.68.61:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   String searchQuery = '';
   Position? userPosition;
   late TabController _tabController;
