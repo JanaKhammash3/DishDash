@@ -3,6 +3,7 @@ import 'homescreen.dart';
 import 'community.dart';
 import 'my_recipes.dart';
 import 'package:dishdash_web/pages/users_courses_page.dart';
+import 'userprofile.dart';
 
 final Color beigeBackground = const Color(0xFFF5F4F0);
 final Color beigeCard = const Color(0xFFFAF9F6);
@@ -49,7 +50,7 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
               index: selectedIndex,
               children: [
                 UserHomeScreen(userId: widget.userId),
-                Placeholder(child: Text("Profile Page")), // Replace soon
+                WebProfileScreen(userId: widget.userId),
                 CommunityScreen(userId: widget.userId),
                 MyRecipesWebPage(userId: widget.userId),
                 UserCoursesPage(userId: widget.userId),

@@ -883,7 +883,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildCard(
                 Icons.flag,
                 'My Challenges',
-                'TView and Submit your progress',
+                'View and Submit your progress',
                 () {
                   Navigator.push(
                     context,
