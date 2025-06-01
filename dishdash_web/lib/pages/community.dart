@@ -363,24 +363,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final isSelected = selectedCategory == value;
     return ElevatedButton.icon(
       onPressed: () {
-        if (value == 'stores') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (_) => const UserStoresPage(
-                    storeId: '',
-                  ), // 👈 Update or remove storeId if not needed
-            ),
-          );
-        } else {
-          if (!mounted) return;
-          setState(() => selectedCategory = value);
-          if (value == 'users') {
-            fetchPosts();
-          } else if (value == 'challenges') {
-            fetchChallenges();
-          }
+        if (!mounted) return;
+        setState(() => selectedCategory = value);
+        if (value == 'users') {
+          fetchPosts();
+        } else if (value == 'challenges') {
+          fetchChallenges();
         }
       },
       icon: Icon(icon, size: 18),
@@ -490,247 +478,204 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F4F4),
       appBar: AppBar(
-        title: const Text(
-          'Our Community',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        backgroundColor: const Color(0xFF304D30),
+        title: Row(
+          children: [
+            const Text(
+              '🍽️ DishDash',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const Spacer(),
+            _buildCategoryButton('Users', 'users', Icons.person),
+            const SizedBox(width: 12),
+            _buildCategoryButton('Stores', 'stores', Icons.store),
+            const SizedBox(width: 12),
+            _buildCategoryButton('Challenges', 'challenges', Icons.flag),
+            const SizedBox(width: 24),
+          ],
         ),
-        backgroundColor: Color(0xFF304D30),
-        centerTitle: true,
-        foregroundColor: Colors.white,
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : posts.isEmpty
-              ? const Center(child: Text('No challenges yet.'))
-              : Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildCategoryButton('Users', 'users', Icons.person),
-                        _buildCategoryButton('Stores', 'stores', Icons.store),
-                        _buildCategoryButton(
-                          'Challenges',
-                          'challenges',
-                          Icons.flag,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (selectedCategory == 'users') ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 4,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildToggleButton(
-                              label: 'All Users',
-                              isSelected: !showFollowingOnly,
-                              onTap: () {
-                                if (!showFollowingOnly) return;
-                                setState(() {
-                                  showFollowingOnly = false;
-                                  fetchPosts();
-                                });
-                              },
-                            ),
-                            const SizedBox(width: 6),
-                            _buildToggleButton(
-                              label: 'Following',
-                              isSelected: showFollowingOnly,
-                              onTap: () {
-                                if (showFollowingOnly) return;
-                                setState(() {
-                                  showFollowingOnly = true;
-                                  fetchPosts();
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                  Expanded(
+      body: Column(
+        children: [
+          if (selectedCategory == 'users')
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: _buildFilterToggleRow(),
+            ),
+          Expanded(
+            child: Builder(
+              builder: (_) {
+                if (selectedCategory == 'stores') {
+                  // 🔥 Full-screen store page
+                  return UserStoresPage(storeId: '');
+                }
+
+                // ✅ Keep constrained layout for posts and challenges
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
                     child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
                       itemCount: posts.length,
                       itemBuilder: (context, index) {
                         final post = posts[index];
-                        final recipeId = post['_id'];
-                        final author = post['author'];
-                        final liked =
-                            (post['likes'] as List?)?.contains(userId) ?? false;
-                        final isSaved = savedRecipeIds.contains(recipeId);
-
-                        if (selectedCategory == 'challenges') {
-                          return _buildChallengeJoinCard(post, index);
-                        } else {
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 4,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundImage: _getImageProvider(
-                                      author?['avatar'],
-                                    ),
-                                  ),
-                                  title: Text(author?['name'] ?? 'Unknown'),
-                                  trailing:
-                                      author?['_id'] != userId
-                                          ? ElevatedButton(
-                                            onPressed: () async {
-                                              // Navigator.push(
-                                              // context,
-                                              // MaterialPageRoute(
-                                              //  builder:
-                                              //   (_) => UserProfileScreen(
-                                              //    userId:
-                                              //        author?['_id'] ??
-                                              //  '',
-                                              //   ),
-                                              // ),
-                                              //   );
-                                              await fetchPosts();
-                                              await fetchUserProfile();
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Color(
-                                                0xFF304D30,
-                                              ),
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 14,
-                                                    vertical: 6,
-                                                  ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'Profile',
-                                              style: TextStyle(fontSize: 12),
-                                            ),
-                                          )
-                                          : null,
-                                ),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Image(
-                                    image: _getImageProvider(post['image']),
-                                    width: double.infinity,
-                                    height: 200,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
-                                    vertical: 4,
-                                  ),
-                                  child: Text(
-                                    post['title'] ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
-                                    vertical: 8,
-                                  ),
-                                  child: Text(post['description'] ?? ''),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
-                                    vertical: 4,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          liked
-                                              ? Icons.favorite
-                                              : Icons.favorite_border,
-                                          color:
-                                              liked ? Colors.red : Colors.grey,
-                                        ),
-                                        onPressed:
-                                            () => toggleLike(recipeId, index),
-                                      ),
-                                      Text('${post['likes']?.length ?? 0}'),
-                                      const SizedBox(width: 12),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.comment,
-                                          color: Colors.grey,
-                                        ),
-                                        onPressed:
-                                            () => openCommentModal(recipeId),
-                                      ),
-                                      Text('${post['commentCount'] ?? 0}'),
-                                      const Spacer(),
-                                      IconButton(
-                                        icon: Icon(
-                                          isSaved
-                                              ? Icons.bookmark
-                                              : Icons.bookmark_outline,
-                                          color:
-                                              isSaved
-                                                  ? Colors.black
-                                                  : Colors.grey,
-                                        ),
-                                        onPressed: () {
-                                          final ingredients = List<String>.from(
-                                            post['ingredients'] ?? [],
-                                          );
-                                          _saveRecipeWithCheck(
-                                            recipeId: recipeId,
-                                            ingredients: ingredients,
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
+                        return selectedCategory == 'challenges'
+                            ? _buildChallengeJoinCard(post, index)
+                            : _buildPostCard(post, index);
                       },
                     ),
                   ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterToggleRow() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(30),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      margin: const EdgeInsets.only(top: 8, bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildToggleButton(
+            label: 'All Users',
+            isSelected: !showFollowingOnly,
+            onTap: () {
+              if (!showFollowingOnly) return;
+              setState(() {
+                showFollowingOnly = false;
+                fetchPosts();
+              });
+            },
+          ),
+          const SizedBox(width: 6),
+          _buildToggleButton(
+            label: 'Following',
+            isSelected: showFollowingOnly,
+            onTap: () {
+              if (showFollowingOnly) return;
+              setState(() {
+                showFollowingOnly = true;
+                fetchPosts();
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPostCard(Map post, int index) {
+    final recipeId = post['_id'];
+    final author = post['author'];
+    final liked = (post['likes'] as List?)?.contains(userId) ?? false;
+    final isSaved = savedRecipeIds.contains(recipeId);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Card(
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              leading: CircleAvatar(
+                backgroundImage: _getImageProvider(author?['avatar']),
+                radius: 22,
+              ),
+              title: Text(
+                author?['name'] ?? 'Unknown',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              trailing:
+                  author?['_id'] != userId
+                      ? TextButton(
+                        onPressed: () async {
+                          await fetchPosts();
+                          await fetchUserProfile();
+                        },
+                        child: const Text("Profile"),
+                      )
+                      : null,
+            ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image(
+                image: _getImageProvider(post['image']),
+                width: double.infinity,
+                height: 240,
+                fit: BoxFit.cover,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    post['title'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    post['description'] ?? '',
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          liked ? Icons.favorite : Icons.favorite_border,
+                          color: liked ? Colors.red : Colors.grey,
+                        ),
+                        onPressed: () => toggleLike(recipeId, index),
+                      ),
+                      Text('${post['likes']?.length ?? 0}'),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: const Icon(Icons.comment, color: Colors.grey),
+                        onPressed: () => openCommentModal(recipeId),
+                      ),
+                      Text('${post['commentCount'] ?? 0}'),
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(
+                          isSaved ? Icons.bookmark : Icons.bookmark_outline,
+                          color: isSaved ? Colors.black : Colors.grey,
+                        ),
+                        onPressed: () {
+                          final ingredients = List<String>.from(
+                            post['ingredients'] ?? [],
+                          );
+                          _saveRecipeWithCheck(
+                            recipeId: recipeId,
+                            ingredients: ingredients,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

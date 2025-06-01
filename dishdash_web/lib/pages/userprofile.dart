@@ -69,7 +69,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
       final base64String = base64Encode(compressedBytes);
 
       final url = Uri.parse(
-        'http://192.168.68.61:3000/api/profile/${widget.userId}/avatar',
+        'http://192.168.1.4:3000/api/profile/${widget.userId}/avatar',
       );
 
       final response = await http.put(
@@ -93,7 +93,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
   Future<void> fetchRecipeCount() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/recipes/count/${widget.userId}',
+      'http://192.168.1.4:3000/api/recipes/count/${widget.userId}',
     );
 
     try {
@@ -111,7 +111,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/profile/${widget.userId}',
+      'http://192.168.1.4:3000/api/profile/${widget.userId}',
     );
 
     try {
