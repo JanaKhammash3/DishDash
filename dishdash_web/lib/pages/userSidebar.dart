@@ -2,6 +2,7 @@ import 'package:dishdash_web/pages/users_courses_page.dart';
 import 'package:flutter/material.dart';
 import 'homescreen.dart';
 import 'community.dart';
+import 'my_recipes.dart';
 
 final Color beigeBackground = const Color(0xFFF5F4F0);
 final Color beigeCard = const Color(0xFFFAF9F6);
@@ -28,6 +29,8 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
     'Courses', // ✅ Added Courses
   ];
 
+  final icons = [Icons.home, Icons.person, Icons.people_alt, Icons.book];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,9 +44,14 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
               children: [
                 UserHomeScreen(userId: widget.userId),
                 Placeholder(child: Text("Profile Page")), // TODO: Replace
+                Placeholder(
+                  child: Text("Profile Page"),
+                ), // You’ll replace this later
                 CommunityScreen(userId: widget.userId),
                 Placeholder(child: Text("My Recipes Page")), // TODO: Replace
                 UserCoursesPage(userId: widget.userId), // ✅ Added Courses page
+                MyRecipesWebPage(userId: widget.userId),
+                Placeholder(child: Text("Home Screen")),
               ],
             ),
           ),
@@ -116,8 +124,9 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.redAccent),
             title: const Text('Logout', style: TextStyle(color: Colors.white)),
-            onTap: () {
-              // TODO: Clear session and navigate to login screen
+            onTap: () async {
+              if (!mounted) return;
+              Navigator.pushReplacementNamed(context, '/login');
             },
           ),
           const SizedBox(height: 20),
