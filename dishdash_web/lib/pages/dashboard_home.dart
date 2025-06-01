@@ -63,14 +63,14 @@ void _showAnnouncementModal(BuildContext context) {
                 if (message.isEmpty) return;
 
                 final res = await http.get(
-                  Uri.parse('http://192.168.68.61:3000/api/users'),
+                  Uri.parse('http://192.168.1.4:3000/api/users'),
                 );
 
                 if (res.statusCode == 200) {
                   final users = jsonDecode(res.body);
                   for (var user in users) {
                     await http.post(
-                      Uri.parse('http://192.168.68.61:3000/api/notifications'),
+                      Uri.parse('http://192.168.1.4:3000/api/notifications'),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode({
                         'recipientId': user['_id'],

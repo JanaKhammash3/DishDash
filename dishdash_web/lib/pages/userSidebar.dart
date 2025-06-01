@@ -1,3 +1,4 @@
+import 'package:dishdash_web/pages/users_courses_page.dart';
 import 'package:flutter/material.dart';
 import 'homescreen.dart';
 import 'community.dart';
@@ -18,11 +19,13 @@ class UserDashboardWrapper extends StatefulWidget {
 
 class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
   int selectedIndex = 0;
+
   final List<String> menuTitles = [
     'Home',
     'Profile',
     'Community',
     'My Recipes',
+    'Courses', // ✅ Added Courses
   ];
 
   @override
@@ -37,12 +40,10 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
               index: selectedIndex,
               children: [
                 UserHomeScreen(userId: widget.userId),
-                Placeholder(
-                  child: Text("Profile Page"),
-                ), // TODO: Replace with real screen
+                Placeholder(child: Text("Profile Page")), // TODO: Replace
                 CommunityScreen(userId: widget.userId),
-                Placeholder(child: Text("Community Page")), // TODO
-                Placeholder(child: Text("My Recipes Page")), // TODO
+                Placeholder(child: Text("My Recipes Page")), // TODO: Replace
+                UserCoursesPage(userId: widget.userId), // ✅ Added Courses page
               ],
             ),
           ),
@@ -52,7 +53,14 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
   }
 
   Widget buildSidebar() {
-    final icons = [Icons.home, Icons.person, Icons.people_alt, Icons.book];
+    final icons = [
+      Icons.home,
+      Icons.person,
+      Icons.people_alt,
+      Icons.book,
+      Icons.video_library, // ✅ Courses icon
+    ];
+
     return Container(
       width: 240,
       color: const Color(0xFF304D30),
@@ -109,7 +117,7 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
             leading: const Icon(Icons.logout, color: Colors.redAccent),
             title: const Text('Logout', style: TextStyle(color: Colors.white)),
             onTap: () {
-              // TODO: Clear session, navigate to login
+              // TODO: Clear session and navigate to login screen
             },
           ),
           const SizedBox(height: 20),

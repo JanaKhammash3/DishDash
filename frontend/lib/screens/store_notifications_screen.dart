@@ -27,7 +27,7 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
 
     try {
       final url = Uri.parse(
-        'http://192.168.68.61:3000/api/notifications/${widget.storeId}/Store',
+        'http://192.168.1.4:3000/api/notifications/${widget.storeId}/Store',
       );
       final res = await http.get(url);
 
@@ -52,7 +52,7 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
   Future<void> markAsRead(String notificationId, int index) async {
     final res = await http.patch(
       Uri.parse(
-        'http://192.168.68.61:3000/api/notifications/read/$notificationId',
+        'http://192.168.1.4:3000/api/notifications/read/$notificationId',
       ),
     );
     if (res.statusCode == 200) {
@@ -64,7 +64,7 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
 
   Future<void> deleteNotification(String notificationId) async {
     final res = await http.delete(
-      Uri.parse('http://192.168.68.61:3000/api/notifications/$notificationId'),
+      Uri.parse('http://192.168.1.4:3000/api/notifications/$notificationId'),
     );
     if (res.statusCode == 200) {
       setState(() {

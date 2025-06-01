@@ -11,16 +11,16 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import '../colors.dart';
 
-class StoreProfileScreen extends StatefulWidget {
+class StoreProfilePage extends StatefulWidget {
   final Map<String, dynamic> store;
 
-  const StoreProfileScreen({super.key, required this.store});
+  const StoreProfilePage({super.key, required this.store});
 
   @override
-  State<StoreProfileScreen> createState() => _StoreProfileScreenState();
+  State<StoreProfilePage> createState() => _StoreProfilePageState();
 }
 
-class _StoreProfileScreenState extends State<StoreProfileScreen> {
+class _StoreProfilePageState extends State<StoreProfilePage> {
   LatLng? userLocation;
   LatLng? storeLocation;
   Timer? _countdownTimer;
