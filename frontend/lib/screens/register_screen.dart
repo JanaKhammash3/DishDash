@@ -19,7 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController telephoneController = TextEditingController();
-
+  LatLng? _selectedLocation;
   String selectedRole = 'user'; // default value
 
   double? latitude;
@@ -104,8 +104,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _pickLocation() async {
     final picked = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+      MaterialPageRoute(
+        builder:
+            (_) => LocationPickerScreen(
+              initialLocation: _selectedLocation ?? LatLng(32.2211, 35.2544),
+            ),
+      ),
     );
+
+    if (picked != null && picked is LatLng) {
+      setState(() => _selectedLocation = picked);
+    }
 
     if (picked != null && picked is LatLng) {
       setState(() {

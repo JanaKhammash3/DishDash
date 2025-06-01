@@ -6,14 +6,22 @@ import 'package:latlong2/latlong.dart';
 final MapController _mapController = MapController();
 
 class LocationPickerScreen extends StatefulWidget {
-  const LocationPickerScreen({super.key});
+  final LatLng initialLocation;
+
+  const LocationPickerScreen({super.key, required this.initialLocation});
 
   @override
   State<LocationPickerScreen> createState() => _LocationPickerScreenState();
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  LatLng selectedLocation = LatLng(32.2211, 35.2544); // Default to Nablus
+  late LatLng selectedLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedLocation = widget.initialLocation;
+  }
 
   void _confirmLocation() {
     Navigator.pop(context, selectedLocation);
@@ -23,8 +31,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pick a Location'),
+        title: const Text(
+          'Pick a Location',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: green,
+        iconTheme: const IconThemeData(color: Colors.white), // white back arrow
+        elevation: 0,
       ),
       body: Stack(
         children: [

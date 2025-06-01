@@ -22,6 +22,8 @@ import 'package:frontend/screens/followers_screen.dart';
 import 'package:frontend/screens/update_survey_screen.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:frontend/screens/my_orders_screen.dart' as saved;
+import 'package:latlong2/latlong.dart';
+import 'LocationPickerScreen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -43,7 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? currentUserId;
   int recipeCount = 0;
   int unreadCount = 0;
-
+  LatLng? selectedLocation;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -68,113 +70,179 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final nameController = TextEditingController(text: name);
     final emailController = TextEditingController(text: email);
     final passwordController = TextEditingController();
-
+    final parentContext = context;
     showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            "Edit Profile",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: "Full Name",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+      context: parentContext,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                "Edit Profile",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: "Full Name",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: "Email Address",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: emailController,
+                      decoration: InputDecoration(
+                        labelText: "Email Address",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
                     ),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: passwordController,
-                  decoration: InputDecoration(
-                    labelText: "Change Password (optional)",
-                    hintText: "Leave blank to keep current password",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    const SizedBox(height: 16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          "Location",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        IconButton(
+                          icon: const Icon(Icons.location_on, color: green),
+                          onPressed: () async {
+                            final picked = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => LocationPickerScreen(
+                                      initialLocation:
+                                          selectedLocation ??
+                                          LatLng(32.2211, 35.2544),
+                                    ),
+                              ),
+                            );
+
+                            if (picked != null && picked is LatLng) {
+                              setState(() {
+                                this.selectedLocation = picked;
+                              });
+                            }
+                          },
+                        ),
+                        if (selectedLocation != null)
+                          Expanded(
+                            child: Text(
+                              "Lat: ${selectedLocation!.latitude.toStringAsFixed(4)}, "
+                              "Lng: ${selectedLocation!.longitude.toStringAsFixed(4)}",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                  obscureText: true,
-                ),
-              ],
-            ),
-          ),
-          actionsPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 10,
-          ),
-          actionsAlignment: MainAxisAlignment.spaceBetween,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Colors.black87),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: green,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: passwordController,
+                      decoration: InputDecoration(
+                        labelText: "Change Password (optional)",
+                        hintText: "Leave blank to keep current password",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      obscureText: true,
+                    ),
+                  ],
                 ),
               ),
-              onPressed: () async {
-                final updatedName = nameController.text.trim();
-                final updatedEmail = emailController.text.trim();
-                final newPassword = passwordController.text.trim();
-
-                final response = await http.put(
-                  Uri.parse(
-                    'http://192.168.68.61:3000/api/profile/${widget.userId}/update',
-                  ),
-                  headers: {'Content-Type': 'application/json'},
-                  body: jsonEncode({
-                    'name': updatedName,
-                    'email': updatedEmail,
-                    if (newPassword.isNotEmpty) 'password': newPassword,
-                  }),
-                );
-
-                if (response.statusCode == 200) {
-                  Navigator.pop(context);
-                  await fetchUserProfile(); // Refresh data
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Profile updated successfully"),
+              actionsPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
+              actionsAlignment: MainAxisAlignment.spaceBetween,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(foregroundColor: Colors.black87),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: green,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
                     ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Failed to update profile")),
-                  );
-                }
-              },
-              child: const Text("Save", style: TextStyle(color: Colors.white)),
-            ),
-          ],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () async {
+                    final updatedName = nameController.text.trim();
+                    final updatedEmail = emailController.text.trim();
+                    final newPassword = passwordController.text.trim();
+
+                    final response = await http.put(
+                      Uri.parse(
+                        'http://192.168.68.61:3000/api/profile/${widget.userId}/update',
+                      ),
+                      headers: {'Content-Type': 'application/json'},
+                      body: jsonEncode({
+                        'name': updatedName,
+                        'email': updatedEmail,
+                        if (newPassword.isNotEmpty) 'password': newPassword,
+                        if (selectedLocation != null)
+                          'location': {
+                            'latitude': selectedLocation!.latitude,
+                            'longitude': selectedLocation!.longitude,
+                          },
+                      }),
+                    );
+
+                    if (response.statusCode == 200) {
+                      Navigator.pop(dialogContext); // dismiss dialog
+
+                      await fetchUserProfile();
+
+                      if (!parentContext.mounted) return;
+
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                        const SnackBar(
+                          content: Text("Profile updated successfully"),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Failed to update profile"),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text(
+                    "Save",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -239,6 +307,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           name = data['name'];
           email = data['email'];
+          if (data['location'] != null) {
+            selectedLocation = LatLng(
+              data['location']['latitude'],
+              data['location']['longitude'],
+            );
+          }
           avatarBase64 = data['avatar'];
           followerCount =
               data['followers'] is List

@@ -620,13 +620,24 @@ exports.updateProfile = async (req, res) => {
       name: req.body.name,
       email: req.body.email,
     };
+
     if (req.body.password) {
       updates.password = await bcrypt.hash(req.body.password, 10);
     }
 
-    await User.findByIdAndUpdate(req.params.id, updates);
+    // Optional location update
+    if (req.body.location && req.body.location.latitude && req.body.location.longitude) {
+      updates.location = {
+        latitude: req.body.location.latitude,
+        longitude: req.body.location.longitude,
+      };
+    }
+
+    await User.findByIdAndUpdate(req.params.id, updates, { new: true });
+
     res.status(200).json({ message: 'Profile updated' });
   } catch (err) {
+    console.error('❌ Profile update error:', err);
     res.status(500).json({ message: 'Update failed' });
   }
 };
