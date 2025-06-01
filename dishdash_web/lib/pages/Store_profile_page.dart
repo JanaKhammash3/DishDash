@@ -26,6 +26,8 @@ class _StoreProfilePageState extends State<StoreProfilePage> {
   Timer? _countdownTimer;
   Duration? _timeToClose;
   double _currentRating = 0.0;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -33,6 +35,127 @@ class _StoreProfilePageState extends State<StoreProfilePage> {
     _setStoreLocation();
     _fetchUserLocation();
     _startClosingCountdown();
+  }
+
+  void _showMenuDrawer() {
+    _searchController.clear(); // reset search
+    _searchQuery = '';
+
+    final grouped = _groupItemsByCategory(widget.store['items'] ?? []);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.9,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 50,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Store Menu',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 🔍 Search Bar
+                      TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search item...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setModalState(() {
+                            _searchQuery = value.toLowerCase();
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // 📋 Filtered List
+                      Expanded(
+                        child: ListView(
+                          controller: scrollController,
+                          children: _buildFilteredMenuItems(),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildFilteredMenuItems() {
+    final grouped = _groupItemsByCategory(widget.store['items'] ?? []);
+
+    return grouped.entries.map((entry) {
+      final category = entry.key;
+      final items =
+          entry.value.where((item) {
+            final name = item['name']?.toString().toLowerCase() ?? '';
+            return name.contains(_searchQuery);
+          }).toList();
+
+      if (items.isEmpty) return const SizedBox();
+
+      return ExpansionTile(
+        initiallyExpanded: false,
+        leading: Icon(_getCategoryIcon(category), color: green),
+        title: Text(
+          category,
+          style: const TextStyle(fontWeight: FontWeight.bold, color: green),
+        ),
+        children:
+            items.map((item) {
+              return ListTile(
+                title: Text(item['name']),
+                subtitle: Row(children: [_buildStatusChip(item['status'])]),
+                trailing: Text(
+                  '\$${item['price']}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: green,
+                  ),
+                ),
+              );
+            }).toList(),
+      );
+    }).toList();
   }
 
   IconData _getCategoryIcon(String category) {
@@ -327,7 +450,16 @@ class _StoreProfilePageState extends State<StoreProfilePage> {
         title: Text(widget.store['name']),
         backgroundColor: green,
         foregroundColor: Colors.white,
+        actions: [
+          TextButton.icon(
+            onPressed: _showMenuDrawer,
+            icon: const Icon(Icons.restaurant_menu, color: Colors.white),
+            label: const Text("Menu", style: TextStyle(color: Colors.white)),
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+          ),
+        ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
