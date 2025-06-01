@@ -22,7 +22,7 @@ class CoursesScreen extends StatefulWidget {
 
 class _CoursesScreenState extends State<CoursesScreen> {
   List<dynamic> courses = [];
-  final String baseUrl = 'http://192.168.68.61:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   bool isUploading = false;
   // Controllers
   final TextEditingController titleController = TextEditingController();
@@ -643,24 +643,29 @@ class _CoursesScreenState extends State<CoursesScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder:
-          (context) => DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: 0.9,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            builder:
-                (context, scrollController) => Container(
-                  decoration: BoxDecoration(
+      builder: (context) {
+        // ✅ Declare here to persist between rebuilds
+        bool showFullDescription = false;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.9,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) {
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(24),
                     ),
                   ),
-                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -668,17 +673,17 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         child: Container(
                           width: 40,
                           height: 5,
+                          margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade300,
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
                       Text(
                         course['title'],
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.green.shade900,
                         ),
@@ -686,22 +691,81 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       Text(
                         "By ${course['chefName']}",
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           color: Colors.grey.shade700,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 6),
+
+                      // ✅ More compact description with Read More
+                      if (course['description'] != null &&
+                          course['description'].toString().trim().isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.green.shade100),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                course['description'],
+                                maxLines: showFullDescription ? null : 2,
+                                overflow: TextOverflow.fade,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                              if (course['description'].length > 100)
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      setModalState(() {
+                                        showFullDescription =
+                                            !showFullDescription;
+                                      });
+                                    },
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.all(0),
+                                    ),
+                                    child: Text(
+                                      showFullDescription
+                                          ? "Show Less"
+                                          : "Read More",
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.green.shade800,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                      const SizedBox(height: 3),
                       Divider(thickness: 1, color: Colors.grey.shade300),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 3),
+
                       Text(
                         "Lessons",
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                           color: Colors.green.shade800,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
+
                       Expanded(
                         child: ListView.builder(
                           controller: scrollController,
@@ -715,7 +779,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               color: Colors.green.shade50,
-                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              margin: const EdgeInsets.symmetric(vertical: 5),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -762,20 +826,21 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           },
                         ),
                       ),
+
                       const SizedBox(height: 10),
                       Text(
                         "Rate this course:",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 15,
                           color: Colors.green.shade900,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: 8,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
@@ -788,7 +853,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             direction: Axis.horizontal,
                             allowHalfRating: false,
                             itemCount: 5,
-                            itemSize: 30,
+                            itemSize: 25, // ✅ Smaller stars
                             itemBuilder:
                                 (context, _) =>
                                     const Icon(Icons.star, color: Colors.amber),
@@ -797,11 +862,16 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+
+                      const SizedBox(height: 5),
                     ],
                   ),
-                ),
-          ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 

@@ -27,7 +27,7 @@ class _UpdateSurveyScreenState extends State<UpdateSurveyScreen> {
 
   Future<void> _fetchExistingData() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/profile/${widget.userId}',
+      'http://192.168.1.4:3000/api/profile/${widget.userId}',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -74,14 +74,14 @@ class _UpdateSurveyScreenState extends State<UpdateSurveyScreen> {
 
     final allergyRes = await http.patch(
       Uri.parse(
-        'http://192.168.68.61:3000/api/users/updateAllergies/${widget.userId}',
+        'http://192.168.1.4:3000/api/users/updateAllergies/${widget.userId}',
       ),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'allergies': allergies}),
     );
 
     final surveyRes = await http.put(
-      Uri.parse('http://192.168.68.61:3000/api/users/${widget.userId}/survey'),
+      Uri.parse('http://192.168.1.4:3000/api/users/${widget.userId}/survey'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(surveyData),
     );

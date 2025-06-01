@@ -25,7 +25,7 @@ class CoursesPage extends StatefulWidget {
 
 class _CoursesPageState extends State<CoursesPage> {
   List<dynamic> courses = [];
-  final String baseUrl = 'http://192.168.68.61:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   bool isUploading = false;
   // Controllers
   final TextEditingController titleController = TextEditingController();
@@ -164,179 +164,188 @@ class _CoursesPageState extends State<CoursesPage> {
   }
 
   Future<void> pickAndUploadAndSplitVideo() async {
-    setState(() => isUploading = true);
+    setState(() => isUploading = true); // ✅ Begin full-page loading
 
     final videoUrl = await uploadVideo();
 
-    setState(() => isUploading = false);
+    if (videoUrl == null || videoUrl.isEmpty) {
+      setState(() => isUploading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Video upload failed")));
+      return;
+    }
 
-    if (videoUrl != null && videoUrl.isNotEmpty) {
-      final titleController = TextEditingController();
-      final descriptionController = TextEditingController();
-      final chefController = TextEditingController();
-      final avatarController = TextEditingController();
-      final imageController = TextEditingController();
-      final durationController = TextEditingController(); // seconds
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final chefController = TextEditingController();
+    final durationController = TextEditingController(); // seconds
 
-      showDialog(
-        context: context,
-        builder:
-            (context) => AlertDialog(
-              scrollable: true,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            scrollable: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              '📽️ Auto-Split Course Details',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green.shade800,
               ),
-              title: Text(
-                '📽️ Auto-Split Course Details',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade800,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Course Title',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                  ),
-                  SizedBox(height: 12),
-                  TextField(
-                    controller: chefController,
-                    decoration: InputDecoration(
-                      labelText: 'Chef Name',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      if (kIsWeb) {
-                        final input =
-                            html.FileUploadInputElement()..accept = 'image/*';
-                        input.click();
-                        await input.onChange.first;
-                        final file = input.files?.first;
-                        if (file != null) {
-                          avatarWebFile = file;
-                          print('✅ Avatar file selected: ${file.name}');
-                        }
-                      } else {
-                        final file = await _pickImageFile();
-                        if (file != null) {
-                          setState(() {
-                            avatarFile = file;
-                          });
-                        }
-                      }
-                    },
-                    icon: Icon(Icons.person),
-                    label: Text("Upload Chef Avatar"),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.green,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      if (kIsWeb) {
-                        final input =
-                            html.FileUploadInputElement()..accept = 'image/*';
-                        input.click();
-                        await input.onChange.first;
-                        final file = input.files?.first;
-                        if (file != null) {
-                          setState(() {
-                            coverWebFile = file;
-                          });
-                        }
-                      } else {
-                        final file = await _pickImageFile();
-                        if (file != null) {
-                          setState(() {
-                            coverFile = file;
-                          });
-                        }
-                      }
-                    },
-                    icon: Icon(Icons.image),
-                    label: Text("Upload Cover Image"),
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.green,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  TextField(
-                    controller: durationController,
-                    decoration: InputDecoration(
-                      labelText: 'Full Video Duration (sec)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.grey[700]),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Course Title',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-                ElevatedButton(
+                SizedBox(height: 12),
+                TextField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: chefController,
+                  decoration: InputDecoration(
+                    labelText: 'Chef Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 12),
+                ElevatedButton.icon(
                   onPressed: () async {
-                    if ((kIsWeb &&
-                            (avatarWebFile == null || coverWebFile == null)) ||
-                        (!kIsWeb &&
-                            (avatarFile == null || coverFile == null))) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Please upload both images")),
-                      );
-                      return;
+                    if (kIsWeb) {
+                      final input =
+                          html.FileUploadInputElement()..accept = 'image/*';
+                      input.click();
+                      await input.onChange.first;
+                      final file = input.files?.first;
+                      if (file != null) {
+                        avatarWebFile = file;
+                        print('✅ Avatar file selected: ${file.name}');
+                      }
+                    } else {
+                      final file = await _pickImageFile();
+                      if (file != null) {
+                        setState(() {
+                          avatarFile = file;
+                        });
+                      }
                     }
-
-                    await uploadCourseWithImages(
-                      title: titleController.text.trim(),
-                      description: descriptionController.text.trim(),
-                      chefName: chefController.text.trim(),
-                      videoUrl: videoUrl,
-                      fullDuration:
-                          int.tryParse(durationController.text.trim()) ?? 600,
-                      avatarFileWeb: kIsWeb ? avatarWebFile : null,
-                      coverFileWeb: kIsWeb ? coverWebFile : null,
-                      chefAvatarMobile: kIsWeb ? null : avatarFile,
-                      coverImageMobile: kIsWeb ? null : coverFile,
-                    );
-
-                    Navigator.pop(context);
-                    await fetchCourses();
                   },
+                  icon: Icon(Icons.person),
+                  label: Text("Upload Chef Avatar"),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    backgroundColor: Colors.green,
                   ),
-                  child: Text('Create Course'),
+                ),
+                SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (kIsWeb) {
+                      final input =
+                          html.FileUploadInputElement()..accept = 'image/*';
+                      input.click();
+                      await input.onChange.first;
+                      final file = input.files?.first;
+                      if (file != null) {
+                        setState(() {
+                          coverWebFile = file;
+                        });
+                      }
+                    } else {
+                      final file = await _pickImageFile();
+                      if (file != null) {
+                        setState(() {
+                          coverFile = file;
+                        });
+                      }
+                    }
+                  },
+                  icon: Icon(Icons.image),
+                  label: Text("Upload Cover Image"),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.green,
+                  ),
+                ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: durationController,
+                  decoration: InputDecoration(
+                    labelText: 'Full Video Duration (sec)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
                 ),
               ],
             ),
-      );
-    }
+            actions: [
+              TextButton(
+                onPressed: () {
+                  setState(() => isUploading = false); // ❌ Cancel resets loader
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if ((kIsWeb &&
+                          (avatarWebFile == null || coverWebFile == null)) ||
+                      (!kIsWeb && (avatarFile == null || coverFile == null))) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Please upload both images"),
+                      ),
+                    );
+                    return;
+                  }
+
+                  Navigator.pop(context); // ✅ Close dialog before uploading
+
+                  await uploadCourseWithImages(
+                    title: titleController.text.trim(),
+                    description: descriptionController.text.trim(),
+                    chefName: chefController.text.trim(),
+                    videoUrl: videoUrl,
+                    fullDuration:
+                        int.tryParse(durationController.text.trim()) ?? 600,
+                    avatarFileWeb: kIsWeb ? avatarWebFile : null,
+                    coverFileWeb: kIsWeb ? coverWebFile : null,
+                    chefAvatarMobile: kIsWeb ? null : avatarFile,
+                    coverImageMobile: kIsWeb ? null : coverFile,
+                  );
+
+                  await fetchCourses();
+
+                  setState(() => isUploading = false); // ✅ Done: reset loading
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+                child: const Text('Create Course'),
+              ),
+            ],
+          ),
+    );
   }
 
   Future<void> uploadCourseWithImages({
@@ -1047,15 +1056,22 @@ class _CoursesPageState extends State<CoursesPage> {
           FloatingActionButton.extended(
             heroTag: 'split',
             onPressed: isUploading ? null : pickAndUploadAndSplitVideo,
-            backgroundColor: Colors.white, // Make the button white
+            backgroundColor: isUploading ? Colors.grey[300] : Colors.white,
             elevation: 4,
-            icon: Icon(Icons.video_call, color: green), // Green icon
+            icon:
+                isUploading
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: green,
+                      ),
+                    )
+                    : Icon(Icons.video_call, color: green),
             label: Text(
-              "Import Lessons",
-              style: TextStyle(
-                color: green, // Green text
-                fontWeight: FontWeight.w600,
-              ),
+              isUploading ? "Uploading..." : "Import Lessons",
+              style: TextStyle(color: green, fontWeight: FontWeight.w600),
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),

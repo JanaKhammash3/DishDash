@@ -224,7 +224,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
     required String message,
     String? relatedId,
   }) async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/notifications');
+    final url = Uri.parse('http://192.168.1.4:3000/api/notifications');
     try {
       final response = await http.post(
         url,
@@ -549,7 +549,7 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
                 try {
                   final response = await http.post(
                     Uri.parse(
-                      'http://192.168.68.61:3000/api/stores/${widget.store['_id']}/rate',
+                      'http://192.168.1.4:3000/api/stores/${widget.store['_id']}/rate',
                     ),
 
                     headers: {'Content-Type': 'application/json'},
