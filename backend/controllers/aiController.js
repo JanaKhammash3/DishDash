@@ -174,3 +174,72 @@ exports.instructionsToSteps = async (req, res) => {
     res.status(500).json({ message: "Failed to process steps", error: err.message });
   }
 };
+exports.generateFromAvailableIngredients = async (req, res) => {
+  const { availableIngredients, mealTime = 'Lunch', servings = 1 } = req.body;
+
+  if (!availableIngredients || availableIngredients.length === 0) {
+    return res.status(400).json({ error: 'availableIngredients is required' });
+  }
+
+  try {
+    const prompt = `
+You are a recipe assistant. ONLY respond in raw JSON. DO NOT explain anything.
+
+Create a ${mealTime.toLowerCase()} recipe using ONLY the following available ingredients: ${availableIngredients.join(', ')}.
+Do NOT use any ingredient that is not in the list above.
+Make it suitable for ${servings} people.
+
+Choose an appropriate diet (e.g., Vegetarian, Vegan, Keto, None), estimate preparation time in minutes, and provide calorie count.
+
+Respond ONLY in this exact JSON format:
+
+{
+  "title": "...",
+  "description": "...",
+  "ingredients": ["..."],
+  "instructions": ["..."],
+  "calories": number,
+  "prepTime": number,
+  "diet": "None" | "Vegan" | "Vegetarian" | "Keto" | "Gluten-Free",
+  "mealTime": "${mealTime}",
+  "servings": number
+}
+`;
+
+    const chatResponse = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+    });
+
+    const raw = chatResponse.choices[0].message.content;
+    const cleaned = raw.trim().replace(/```json|```/g, '');
+
+    let recipe;
+    try {
+      recipe = JSON.parse(cleaned);
+    } catch (err) {
+      console.error('❌ JSON parse failed:', cleaned);
+      return res.status(500).json({ error: 'Invalid AI response', raw });
+    }
+
+    // 🖼️ Generate image using DALL·E 2
+    const imagePrompt = `A high-quality photo of a cooked ${recipe.title}, made using only: ${availableIngredients.join(', ')}, served on a plate.`;
+    const imageResponse = await openai.images.generate({
+      prompt: imagePrompt,
+      n: 1,
+      size: '512x512',
+      response_format: 'b64_json',
+    });
+
+    recipe.image = imageResponse.data[0].b64_json;
+    recipe.diet ??= 'None';
+    recipe.prepTime ??= 30;
+    recipe.mealTime ??= mealTime;
+    res.json(recipe);
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+    res.status(500).json({ error: 'Failed to generate recipe from available ingredients' });
+  }
+};
+

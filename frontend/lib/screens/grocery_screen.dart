@@ -7,6 +7,7 @@ import 'package:frontend/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:frontend/screens/generate_byavailable.dart';
 
 class GroceryScreen extends StatefulWidget {
   final String userId;
@@ -882,6 +883,32 @@ class _GroceryScreenState extends State<GroceryScreen> {
               color: green,
             ),
           ),
+          const SizedBox(height: 12),
+          // 🔸 NEW AI BUTTON HERE
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => AiFromIngredientsScreen(userId: widget.userId),
+                ),
+              );
+            },
+            icon: const Icon(Icons.auto_awesome, color: Colors.white),
+            label: const Text(
+              'Generate From my ingredients',
+              style: TextStyle(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+          ),
+
           const SizedBox(height: 12),
           Expanded(
             child:

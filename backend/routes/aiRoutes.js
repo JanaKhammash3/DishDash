@@ -3,7 +3,8 @@ const router = express.Router();
 const { generateAIRecipe } = require('../controllers/aiController');
 const { imageToRecipe } = require('../controllers/aiController');
 const { instructionsToSteps } = require('../controllers/aiController');
-
+const { generateFromAvailableIngredients } = require('../controllers/aiController');
+router.post('/generate-from-ingredients', generateFromAvailableIngredients);
 router.post('/generate-recipe', generateAIRecipe);
 router.post('/image-to-recipe', imageToRecipe);
 router.post('/instructions-to-steps', instructionsToSteps);
