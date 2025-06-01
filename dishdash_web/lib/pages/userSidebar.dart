@@ -1,8 +1,8 @@
-import 'package:dishdash_web/pages/users_courses_page.dart';
 import 'package:flutter/material.dart';
 import 'homescreen.dart';
 import 'community.dart';
 import 'my_recipes.dart';
+import 'package:dishdash_web/pages/users_courses_page.dart';
 
 final Color beigeBackground = const Color(0xFFF5F4F0);
 final Color beigeCard = const Color(0xFFFAF9F6);
@@ -26,10 +26,16 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
     'Profile',
     'Community',
     'My Recipes',
-    'Courses', // ✅ Added Courses
+    'Courses',
   ];
 
-  final icons = [Icons.home, Icons.person, Icons.people_alt, Icons.book];
+  final List<IconData> icons = [
+    Icons.home,
+    Icons.person,
+    Icons.people_alt,
+    Icons.book,
+    Icons.video_library,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -43,15 +49,10 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
               index: selectedIndex,
               children: [
                 UserHomeScreen(userId: widget.userId),
-                Placeholder(child: Text("Profile Page")), // TODO: Replace
-                Placeholder(
-                  child: Text("Profile Page"),
-                ), // You’ll replace this later
+                Placeholder(child: Text("Profile Page")), // Replace soon
                 CommunityScreen(userId: widget.userId),
-                Placeholder(child: Text("My Recipes Page")), // TODO: Replace
-                UserCoursesPage(userId: widget.userId), // ✅ Added Courses page
                 MyRecipesWebPage(userId: widget.userId),
-                Placeholder(child: Text("Home Screen")),
+                UserCoursesPage(userId: widget.userId),
               ],
             ),
           ),
@@ -61,14 +62,6 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
   }
 
   Widget buildSidebar() {
-    final icons = [
-      Icons.home,
-      Icons.person,
-      Icons.people_alt,
-      Icons.book,
-      Icons.video_library, // ✅ Courses icon
-    ];
-
     return Container(
       width: 240,
       color: const Color(0xFF304D30),
@@ -93,30 +86,27 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
           const SizedBox(height: 30),
           ...List.generate(menuTitles.length, (index) {
             final isSelected = selectedIndex == index;
-            return MouseRegion(
-              onHover: (_) => setState(() => selectedIndex = index),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color:
-                      isSelected
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.transparent,
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color:
+                    isSelected
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: Icon(icons[index], color: Colors.white),
+                title: Text(
+                  menuTitles[index],
+                  style: const TextStyle(color: Colors.white),
+                ),
+                selected: isSelected,
+                selectedTileColor: Colors.white.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: ListTile(
-                  leading: Icon(icons[index], color: Colors.white),
-                  title: Text(
-                    menuTitles[index],
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  selected: isSelected,
-                  selectedTileColor: Colors.white.withOpacity(0.1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  onTap: () => setState(() => selectedIndex = index),
-                ),
+                onTap: () => setState(() => selectedIndex = index),
               ),
             );
           }),
@@ -126,7 +116,7 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
             title: const Text('Logout', style: TextStyle(color: Colors.white)),
             onTap: () async {
               if (!mounted) return;
-              Navigator.pushReplacementNamed(context, '/login');
+              Navigator.pushReplacementNamed(context, '/');
             },
           ),
           const SizedBox(height: 20),
