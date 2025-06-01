@@ -36,7 +36,11 @@ class LoginPage extends StatelessWidget {
         await prefs.setString('storeId', userId);
         Navigator.pushReplacementNamed(context, '/store');
       } else {
-        _showError(context, 'Access denied. Invalid role.');
+        Navigator.pushReplacementNamed(
+          context,
+          '/user',
+          arguments: {'userId': userId},
+        );
       }
     }
   }
