@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'homescreen.dart';
 import 'community.dart';
+import 'my_recipes.dart';
 
 final Color beigeBackground = const Color(0xFFF5F4F0);
 final Color beigeCard = const Color(0xFFFAF9F6);
@@ -25,6 +26,8 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
     'My Recipes',
   ];
 
+  final icons = [Icons.home, Icons.person, Icons.people_alt, Icons.book];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,10 +42,10 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
                 UserHomeScreen(userId: widget.userId),
                 Placeholder(
                   child: Text("Profile Page"),
-                ), // TODO: Replace with real screen
+                ), // You’ll replace this later
                 CommunityScreen(userId: widget.userId),
-                Placeholder(child: Text("Community Page")), // TODO
-                Placeholder(child: Text("My Recipes Page")), // TODO
+                MyRecipesWebPage(userId: widget.userId),
+                Placeholder(child: Text("Home Screen")),
               ],
             ),
           ),
@@ -108,8 +111,9 @@ class _UserDashboardWrapperState extends State<UserDashboardWrapper> {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.redAccent),
             title: const Text('Logout', style: TextStyle(color: Colors.white)),
-            onTap: () {
-              // TODO: Clear session, navigate to login
+            onTap: () async {
+              if (!mounted) return;
+              Navigator.pushReplacementNamed(context, '/login');
             },
           ),
           const SizedBox(height: 20),
