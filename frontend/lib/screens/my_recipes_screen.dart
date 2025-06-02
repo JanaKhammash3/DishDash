@@ -943,6 +943,84 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                                         ),
                                         IconButton(
                                           icon: const Icon(
+                                            Icons.delete,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () async {
+                                            final confirm = await showDialog<
+                                              bool
+                                            >(
+                                              context: context,
+                                              builder:
+                                                  (_) => AlertDialog(
+                                                    title: const Text(
+                                                      'Confirm Deletion',
+                                                    ),
+                                                    content: const Text(
+                                                      'Are you sure you want to delete this recipe?',
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed:
+                                                            () => Navigator.pop(
+                                                              context,
+                                                              false,
+                                                            ),
+                                                        child: const Text(
+                                                          'Cancel',
+                                                        ),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed:
+                                                            () => Navigator.pop(
+                                                              context,
+                                                              true,
+                                                            ),
+                                                        child: const Text(
+                                                          'Delete',
+                                                          style: TextStyle(
+                                                            color: Colors.red,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                            );
+
+                                            if (confirm == true) {
+                                              final res = await http.delete(
+                                                Uri.parse(
+                                                  'http://192.168.68.61:3000/api/recipes/${r['_id']}',
+                                                ),
+                                              );
+
+                                              if (res.statusCode == 200) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Recipe deleted successfully.',
+                                                    ),
+                                                  ),
+                                                );
+                                                fetchUserRecipes();
+                                              } else {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Failed to delete recipe.',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
                                             Icons.arrow_forward_ios,
                                             size: 16,
                                           ),
