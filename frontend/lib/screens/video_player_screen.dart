@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/colors.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:ui_web' as ui;
-import 'dart:html' as html;
+import 'package:frontend/colors.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final String videoUrl;
-  final int startTime; // in seconds
-  final int endTime; // in seconds
+  final int startTime;
+  final int endTime;
 
   const VideoPlayerScreen({
     super.key,
@@ -35,12 +32,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     try {
-      if (kIsWeb) {
-        print('🌐 Web mode: using HTML5 video element');
-        setState(() => _hasError = false);
-        return;
-      }
-
       final optimizedUrl =
           widget.videoUrl.contains('/upload/')
               ? widget.videoUrl.replaceFirst(
@@ -82,53 +73,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
-    if (!kIsWeb) {
-      _videoPlayerController.dispose();
-      _chewieController?.dispose();
-    }
+    _videoPlayerController.dispose();
+    _chewieController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      final viewId = 'video-${DateTime.now().millisecondsSinceEpoch}';
-      // ignore: undefined_prefixed_name
-      ui.platformViewRegistry.registerViewFactory(viewId, (int _) {
-        final video =
-            html.VideoElement()
-              ..src = widget.videoUrl
-              ..autoplay = true
-              ..controls = true
-              ..style.border = 'none'
-              ..style.width = '100%'
-              ..style.height = '100%'
-              ..setAttribute('playsinline', 'true');
-
-        video.onCanPlay.first.then((_) {
-          video.currentTime = widget.startTime.toDouble();
-        });
-
-        video.onTimeUpdate.listen((event) {
-          if (video.currentTime >= widget.endTime) {
-            video.pause();
-          }
-        });
-
-        return video;
-      });
-
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          title: const Text("🎥 Watch Episode"),
-          backgroundColor: green,
-          foregroundColor: Colors.white,
-        ),
-        body: HtmlElementView(viewType: viewId),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(

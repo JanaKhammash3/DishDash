@@ -50,7 +50,7 @@ class _StoresDashboardState extends State<StoresDashboard>
   Future<void> _fetchOrdersForStore() async {
     if (storeId == null) return;
     final res = await http.get(
-      Uri.parse('http://192.168.1.4:3000/api/orders/store/$storeId'),
+      Uri.parse('http://192.168.68.61:3000/api/orders/store/$storeId'),
     );
 
     if (res.statusCode == 200) {
@@ -97,12 +97,12 @@ class _StoresDashboardState extends State<StoresDashboard>
     }
 
     // fallback if it's a filename from MongoDB like 'avatar123.png'
-    return NetworkImage('http://192.168.1.4:3000/images/$avatar');
+    return NetworkImage('http://192.168.68.61:3000/images/$avatar');
   }
 
   Future<void> _fetchItemsByStore(String id) async {
     try {
-      const baseUrl = 'http://192.168.1.4:3000';
+      const baseUrl = 'http://192.168.68.61:3000';
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id/items'));
 
       if (res.statusCode == 200) {
@@ -147,7 +147,7 @@ class _StoresDashboardState extends State<StoresDashboard>
 
   Future<void> _fetchStoreInfo(String id) async {
     try {
-      const baseUrl = 'http://192.168.1.4:3000'; // your backend IP
+      const baseUrl = 'http://192.168.68.61:3000'; // your backend IP
       final res = await http.get(Uri.parse('$baseUrl/api/stores/$id'));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -363,7 +363,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                           'category': category,
                         };
 
-                        const baseUrl = 'http://192.168.1.4:3000';
+                        const baseUrl = 'http://192.168.68.61:3000';
 
                         try {
                           http.Response response;
@@ -609,7 +609,7 @@ class _StoresDashboardState extends State<StoresDashboard>
                                 );
                               } else if (value == 'Delete') {
                                 final String itemId = item['_id'];
-                                const baseUrl = 'http://192.168.1.4:3000';
+                                const baseUrl = 'http://192.168.68.61:3000';
 
                                 try {
                                   final res = await http.delete(
@@ -817,7 +817,7 @@ class _StoresDashboardState extends State<StoresDashboard>
 
                           await http.put(
                             Uri.parse(
-                              'http://192.168.1.4:3000/api/orders/${order['_id']}/status',
+                              'http://192.168.68.61:3000/api/orders/${order['_id']}/status',
                             ),
                             headers: {'Content-Type': 'application/json'},
                             body: jsonEncode({'status': newStatus}),
@@ -825,7 +825,7 @@ class _StoresDashboardState extends State<StoresDashboard>
 
                           await http.post(
                             Uri.parse(
-                              'http://192.168.1.4:3000/api/notifications',
+                              'http://192.168.68.61:3000/api/notifications',
                             ),
                             headers: {'Content-Type': 'application/json'},
                             body: jsonEncode({

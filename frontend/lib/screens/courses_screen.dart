@@ -8,9 +8,6 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
-import 'dart:html' as html; // 👈 for web
-import 'package:file_picker/file_picker.dart';
 
 class CoursesScreen extends StatefulWidget {
   final String userId;
@@ -22,15 +19,13 @@ class CoursesScreen extends StatefulWidget {
 
 class _CoursesScreenState extends State<CoursesScreen> {
   List<dynamic> courses = [];
-  final String baseUrl = 'http://192.168.1.4:3000';
+  final String baseUrl = 'http://192.168.68.61:3000';
   bool isUploading = false;
   // Controllers
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController chefController = TextEditingController();
   final TextEditingController durationController = TextEditingController();
-  html.File? avatarWebFile;
-  html.File? coverWebFile;
 
   // Video URL
   String videoUrl = '';
@@ -57,72 +52,28 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   Future<String?> uploadVideo() async {
     final uri = Uri.parse('$baseUrl/api/courses/upload-video');
+    final picker = ImagePicker();
+    final picked = await picker.pickVideo(source: ImageSource.gallery);
+    if (picked == null) return null;
 
-    if (kIsWeb) {
-      final uploadInput = html.FileUploadInputElement();
-      uploadInput.accept = 'video/*';
-      uploadInput.click();
+    final request = http.MultipartRequest('POST', uri);
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'video',
+        picked.path,
+        contentType: MediaType('video', 'mp4'),
+      ),
+    );
 
-      await uploadInput.onChange.first;
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
-      final file = uploadInput.files?.first;
-      if (file == null) return null;
-
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(file);
-
-      await reader.onLoad.first;
-
-      final data = Uint8List.fromList(reader.result as List<int>);
-
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'video',
-          data,
-          filename: file.name,
-          contentType: MediaType('video', 'mp4'),
-        ),
-      );
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      print('📥 Response: ${response.statusCode}');
-      print('📥 Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final jsonRes = jsonDecode(response.body);
-        return jsonRes['url'];
-      } else {
-        print('❌ Upload failed: ${response.statusCode}');
-        return null;
-      }
+    if (response.statusCode == 200) {
+      final jsonRes = jsonDecode(response.body);
+      return jsonRes['url'];
     } else {
-      // ✅ Mobile path (ImagePicker is fine)
-      final picker = ImagePicker();
-      final picked = await picker.pickVideo(source: ImageSource.gallery);
-      if (picked == null) return null;
-
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'video',
-          picked.path,
-          contentType: MediaType('video', 'mp4'),
-        ),
-      );
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final jsonRes = jsonDecode(response.body);
-        return jsonRes['url'];
-      } else {
-        print('❌ Upload failed');
-        return null;
-      }
+      print('❌ Upload failed');
+      return null;
     }
   }
 
@@ -141,22 +92,22 @@ class _CoursesScreenState extends State<CoursesScreen> {
     required List<Map<String, dynamic>> episodes,
   }) async {
     final uri = Uri.parse('$baseUrl/api/courses');
-    if (!kIsWeb && (avatarFile == null || coverFile == null)) {
+
+    if (avatarFile == null || coverFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Please upload both avatar and cover images.")),
       );
       return;
     }
+
     await uploadCourseWithImages(
       title: titleController.text.trim(),
       description: descriptionController.text.trim(),
       chefName: chefController.text.trim(),
       videoUrl: videoUrl,
       fullDuration: int.tryParse(durationController.text.trim()) ?? 600,
-      avatarFileWeb: kIsWeb ? avatarWebFile : null,
-      coverFileWeb: kIsWeb ? coverWebFile : null,
-      chefAvatarMobile: kIsWeb ? null : avatarFile!,
-      coverImageMobile: kIsWeb ? null : coverFile!,
+      chefAvatarMobile: avatarFile!,
+      coverImageMobile: coverFile!,
     );
   }
 
@@ -171,9 +122,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
       final titleController = TextEditingController();
       final descriptionController = TextEditingController();
       final chefController = TextEditingController();
-      final avatarController = TextEditingController();
-      final imageController = TextEditingController();
-      final durationController = TextEditingController(); // seconds
+      final durationController = TextEditingController();
 
       showDialog(
         context: context,
@@ -220,23 +169,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   SizedBox(height: 12),
                   ElevatedButton.icon(
                     onPressed: () async {
-                      if (kIsWeb) {
-                        final input =
-                            html.FileUploadInputElement()..accept = 'image/*';
-                        input.click();
-                        await input.onChange.first;
-                        final file = input.files?.first;
-                        if (file != null) {
-                          avatarWebFile = file;
-                          print('✅ Avatar file selected: ${file.name}');
-                        }
-                      } else {
-                        final file = await _pickImageFile();
-                        if (file != null) {
-                          setState(() {
-                            avatarFile = file;
-                          });
-                        }
+                      final file = await _pickImageFile();
+                      if (file != null) {
+                        setState(() {
+                          avatarFile = file;
+                        });
                       }
                     },
                     icon: Icon(Icons.person),
@@ -249,24 +186,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   SizedBox(height: 10),
                   ElevatedButton.icon(
                     onPressed: () async {
-                      if (kIsWeb) {
-                        final input =
-                            html.FileUploadInputElement()..accept = 'image/*';
-                        input.click();
-                        await input.onChange.first;
-                        final file = input.files?.first;
-                        if (file != null) {
-                          setState(() {
-                            coverWebFile = file;
-                          });
-                        }
-                      } else {
-                        final file = await _pickImageFile();
-                        if (file != null) {
-                          setState(() {
-                            coverFile = file;
-                          });
-                        }
+                      final file = await _pickImageFile();
+                      if (file != null) {
+                        setState(() {
+                          coverFile = file;
+                        });
                       }
                     },
                     icon: Icon(Icons.image),
@@ -297,10 +221,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if ((kIsWeb &&
-                            (avatarWebFile == null || coverWebFile == null)) ||
-                        (!kIsWeb &&
-                            (avatarFile == null || coverFile == null))) {
+                    if (avatarFile == null || coverFile == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text("Please upload both images")),
                       );
@@ -314,10 +235,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       videoUrl: videoUrl,
                       fullDuration:
                           int.tryParse(durationController.text.trim()) ?? 600,
-                      avatarFileWeb: kIsWeb ? avatarWebFile : null,
-                      coverFileWeb: kIsWeb ? coverWebFile : null,
-                      chefAvatarMobile: kIsWeb ? null : avatarFile,
-                      coverImageMobile: kIsWeb ? null : coverFile,
+                      chefAvatarMobile: avatarFile!,
+                      coverImageMobile: coverFile!,
                     );
 
                     Navigator.pop(context);
@@ -342,14 +261,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
     required String chefName,
     required String videoUrl,
     required int fullDuration,
-    html.File? avatarFileWeb,
-    html.File? coverFileWeb,
     File? chefAvatarMobile,
     File? coverImageMobile,
   }) async {
-    final uri = Uri.parse(
-      'http://localhost:3000/api/courses/create-from-single-video',
-    );
+    final uri = Uri.parse('$baseUrl/api/courses/create-from-single-video');
     final request = http.MultipartRequest('POST', uri);
 
     request.fields['title'] = title;
@@ -358,58 +273,26 @@ class _CoursesScreenState extends State<CoursesScreen> {
     request.fields['videoUrl'] = videoUrl;
     request.fields['fullDuration'] = fullDuration.toString();
 
-    if (kIsWeb) {
-      final reader1 = html.FileReader();
-      final reader2 = html.FileReader();
-
-      reader1.readAsArrayBuffer(avatarFileWeb!);
-      reader2.readAsArrayBuffer(coverFileWeb!);
-
-      await reader1.onLoadEnd.first;
-      await reader2.onLoadEnd.first;
-
-      final avatarBytes = Uint8List.fromList(reader1.result as List<int>);
-      final coverBytes = Uint8List.fromList(reader2.result as List<int>);
-
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'chefAvatar',
-          avatarBytes,
-          filename: 'chef.jpg',
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
-
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'image',
-          coverBytes,
-          filename: 'cover.jpg',
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
-    } else {
-      if (chefAvatarMobile == null || coverImageMobile == null) {
-        print('❌ Error: avatar or cover image is null');
-        return;
-      }
-
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'chefAvatar',
-          chefAvatarMobile.path,
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
-
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image',
-          coverImageMobile.path,
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
+    if (chefAvatarMobile == null || coverImageMobile == null) {
+      print('❌ Error: avatar or cover image is null');
+      return;
     }
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'chefAvatar',
+        chefAvatarMobile.path,
+        contentType: MediaType('image', 'jpeg'),
+      ),
+    );
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'image',
+        coverImageMobile.path,
+        contentType: MediaType('image', 'jpeg'),
+      ),
+    );
 
     final response = await request.send();
     final res = await http.Response.fromStream(response);
@@ -420,57 +303,23 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   Future<String?> pickAndUploadImage() async {
     final uri = Uri.parse('$baseUrl/api/upload-image');
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return null;
 
-    if (kIsWeb) {
-      final uploadInput = html.FileUploadInputElement();
-      uploadInput.accept = 'image/*';
-      uploadInput.click();
+    final request = http.MultipartRequest('POST', uri);
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'image',
+        picked.path,
+        contentType: MediaType('image', 'jpeg'),
+      ),
+    );
 
-      await uploadInput.onChange.first;
-
-      final file = uploadInput.files?.first;
-      if (file == null) return null;
-
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(file);
-      await reader.onLoad.first;
-
-      final data = Uint8List.fromList(reader.result as List<int>);
-      final request = http.MultipartRequest('POST', uri);
-
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'image',
-          data,
-          filename: file.name,
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
-
-      final res = await request.send();
-      final response = await http.Response.fromStream(res);
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body)['url'];
-      }
-    } else {
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked == null) return null;
-
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image',
-          picked.path,
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
-
-      final res = await request.send();
-      final response = await http.Response.fromStream(res);
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body)['url'];
-      }
+    final res = await request.send();
+    final response = await http.Response.fromStream(res);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['url'];
     }
 
     return null;
