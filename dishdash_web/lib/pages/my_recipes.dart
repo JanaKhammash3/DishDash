@@ -771,14 +771,18 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
       ),
       elevation: 2,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Image(
-              image: imageProvider,
-              width: double.infinity,
-              height: 200,
-              fit: BoxFit.cover,
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+              child: Image(
+                image: imageProvider,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
           Padding(
@@ -805,9 +809,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
                 ElevatedButton(
                   onPressed: () => unsaveRecipe(recipe['_id']),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(
-                      0xFF304D30,
-                    ), // ✅ dark Color(0xFF304D30)
+                    backgroundColor: const Color(0xFF304D30),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 6,
@@ -819,7 +821,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
                   child: const Text(
                     "Unsave",
                     style: TextStyle(color: Colors.white, fontSize: 12),
-                  ), // ✅ white text
+                  ),
                 ),
               ],
             ),
@@ -944,61 +946,73 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image(
-                                  image: _getImageProvider(recipe['image']),
-                                  width: double.infinity,
-                                  height: 200,
-                                  fit: BoxFit.cover,
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image(
+                                    image: _getImageProvider(recipe['image']),
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                recipe['title'] ?? 'Untitled',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
                                 ),
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                '${recipe['calories'] ?? 0} cal • ${recipe['difficulty'] ?? 'N/A'} • ${recipe['prepTime'] ?? 0} min',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    isPublic ? Icons.public : Icons.lock,
-                                    size: 16,
-                                    color:
-                                        isPublic
-                                            ? Color(0xFF304D30)
-                                            : Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    isPublic ? 'Public' : 'Private',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          isPublic
-                                              ? Color(0xFF304D30)
-                                              : Colors.grey,
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      recipe['title'] ?? 'Untitled',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${recipe['calories'] ?? 0} cal • ${recipe['difficulty'] ?? 'N/A'} • ${recipe['prepTime'] ?? 0} min',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          isPublic ? Icons.public : Icons.lock,
+                                          size: 16,
+                                          color:
+                                              isPublic
+                                                  ? Color(0xFF304D30)
+                                                  : Colors.grey,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          isPublic ? 'Public' : 'Private',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color:
+                                                isPublic
+                                                    ? Color(0xFF304D30)
+                                                    : Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const Spacer(),
                             ],
                           ),
                         ),

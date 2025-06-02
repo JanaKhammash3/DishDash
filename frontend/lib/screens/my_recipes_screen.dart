@@ -990,7 +990,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                                             if (confirm == true) {
                                               final res = await http.delete(
                                                 Uri.parse(
-                                                  'http://192.168.68.61:3000/api/recipes/${r['_id']}',
+                                                  'http://192.168.1.4:3000/api/recipes/${r['_id']}',
                                                 ),
                                               );
 
