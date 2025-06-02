@@ -26,7 +26,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController chefController = TextEditingController();
   final TextEditingController durationController = TextEditingController();
-
+  String selectedSort = 'All'; // Options: 'All', 'Top Rated'
   // Video URL
   String videoUrl = '';
 
@@ -48,6 +48,27 @@ class _CoursesScreenState extends State<CoursesScreen> {
   void initState() {
     super.initState();
     fetchCourses();
+  }
+
+  Future<void> fetchCourses() async {
+    final res = await http.get(Uri.parse('$baseUrl/api/courses'));
+    if (res.statusCode == 200) {
+      final List<dynamic> fetchedCourses = json.decode(res.body);
+      setState(() {
+        courses = _applySort(fetchedCourses);
+      });
+    }
+  }
+
+  List<dynamic> _applySort(List<dynamic> list) {
+    if (selectedSort == 'Top Rated') {
+      list.sort((a, b) {
+        final aAvg = calculateAverageRating(a['ratings'] ?? []);
+        final bAvg = calculateAverageRating(b['ratings'] ?? []);
+        return bAvg.compareTo(aAvg);
+      });
+    }
+    return list;
   }
 
   Future<String?> uploadVideo() async {
