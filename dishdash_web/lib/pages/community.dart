@@ -475,63 +475,180 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
   }
 
+  Widget _buildTopTab(String label, String value, IconData icon) {
+    final isSelected = selectedCategory == value;
+    return TextButton.icon(
+      onPressed: () {
+        if (!mounted) return;
+        setState(() => selectedCategory = value);
+        if (value == 'users')
+          fetchPosts();
+        else if (value == 'challenges')
+          fetchChallenges();
+      },
+      icon: Icon(
+        icon,
+        size: 18,
+        color: isSelected ? Colors.white : Colors.black54,
+      ),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: isSelected ? Colors.white : Colors.black54,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        backgroundColor:
+            isSelected ? const Color(0xFF304D30) : Colors.grey[300],
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F4F4),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF304D30),
-        title: Row(
-          children: [
-            const Text(
-              '🍽️ DishDash',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const Spacer(),
-            _buildCategoryButton('Users', 'users', Icons.person),
-            const SizedBox(width: 12),
-            _buildCategoryButton('Stores', 'stores', Icons.store),
-            const SizedBox(width: 12),
-            _buildCategoryButton('Challenges', 'challenges', Icons.flag),
-            const SizedBox(width: 24),
-          ],
-        ),
-      ),
-      body: Column(
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (selectedCategory == 'users')
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: _buildFilterToggleRow(),
+          // Secondary Sidebar (Users / Stores / Challenges)
+          // ✅ Sidebar as a Card
+          Container(
+            width: 220,
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          Expanded(
-            child: Builder(
-              builder: (_) {
-                if (selectedCategory == 'stores') {
-                  // 🔥 Full-screen store page
-                  return UserStoresPage(storeId: '');
-                }
-
-                // ✅ Keep constrained layout for posts and challenges
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 800),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: posts.length,
-                      itemBuilder: (context, index) {
-                        final post = posts[index];
-                        return selectedCategory == 'challenges'
-                            ? _buildChallengeJoinCard(post, index)
-                            : _buildPostCard(post, index);
-                      },
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    "🍽️ DishDash",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF304D30),
                     ),
                   ),
-                );
-              },
+                ),
+                _buildSidebarButton('Users', 'users', Icons.person),
+                _buildSidebarButton('Stores', 'stores', Icons.store),
+                _buildSidebarButton('Challenges', 'challenges', Icons.flag),
+              ],
+            ),
+          ),
+
+          // Content Area
+          Expanded(
+            child: Column(
+              children: [
+                if (selectedCategory == 'users')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: _buildFilterToggleRow(),
+                  ),
+                Expanded(
+                  child: Builder(
+                    builder: (_) {
+                      if (selectedCategory == 'stores') {
+                        return UserStoresPage(storeId: '');
+                      }
+
+                      return Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 900),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: posts.length,
+                            itemBuilder: (context, index) {
+                              final post = posts[index];
+                              return Center(
+                                // ⬅️ Center the smaller card
+                                child: SizedBox(
+                                  width:
+                                      500, // ⬅️ Set card width (adjust to your liking)
+                                  child:
+                                      selectedCategory == 'challenges'
+                                          ? _buildChallengeJoinCard(post, index)
+                                          : _buildPostCard(post, index),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: Colors.white70,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget _buildSidebarButton(String label, String value, IconData icon) {
+    final isSelected = selectedCategory == value;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      child: Material(
+        color: isSelected ? const Color(0xFF304D30) : Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: () {
+            setState(() => selectedCategory = value);
+            if (value == 'users') {
+              fetchPosts();
+            } else if (value == 'challenges') {
+              fetchChallenges();
+            }
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? Colors.white : const Color(0xFF304D30),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : const Color(0xFF304D30),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -600,12 +717,35 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ),
               trailing:
                   author?['_id'] != userId
-                      ? TextButton(
+                      ? OutlinedButton.icon(
                         onPressed: () async {
                           await fetchPosts();
                           await fetchUserProfile();
+                          // You can also navigate to user profile here
                         },
-                        child: const Text("Profile"),
+                        icon: const Icon(
+                          Icons.person,
+                          size: 16,
+                          color: Color(0xFF304D30),
+                        ),
+                        label: const Text(
+                          "Profile",
+                          style: TextStyle(
+                            color: Color(0xFF304D30),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF304D30)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          backgroundColor: Colors.white,
+                        ),
                       )
                       : null,
             ),
