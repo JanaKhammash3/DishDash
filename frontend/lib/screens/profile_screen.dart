@@ -913,7 +913,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Center(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: CupertinoColors.activeOrange,
+                    backgroundColor: Colors.red[700],
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 12,
