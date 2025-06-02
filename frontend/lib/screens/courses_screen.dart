@@ -31,6 +31,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   final TextEditingController durationController = TextEditingController();
   html.File? avatarWebFile;
   html.File? coverWebFile;
+  String selectedSort = 'All'; // Options: 'All', 'Top Rated'
 
   // Video URL
   String videoUrl = '';
@@ -53,6 +54,27 @@ class _CoursesScreenState extends State<CoursesScreen> {
   void initState() {
     super.initState();
     fetchCourses();
+  }
+
+  Future<void> fetchCourses() async {
+    final res = await http.get(Uri.parse('$baseUrl/api/courses'));
+    if (res.statusCode == 200) {
+      final List<dynamic> fetchedCourses = json.decode(res.body);
+      setState(() {
+        courses = _applySort(fetchedCourses);
+      });
+    }
+  }
+
+  List<dynamic> _applySort(List<dynamic> list) {
+    if (selectedSort == 'Top Rated') {
+      list.sort((a, b) {
+        final aAvg = calculateAverageRating(a['ratings'] ?? []);
+        final bAvg = calculateAverageRating(b['ratings'] ?? []);
+        return bAvg.compareTo(aAvg);
+      });
+    }
+    return list;
   }
 
   Future<String?> uploadVideo() async {
@@ -579,15 +601,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
-  Future<void> fetchCourses() async {
-    final res = await http.get(Uri.parse('$baseUrl/api/courses'));
-    if (res.statusCode == 200) {
-      setState(() {
-        courses = json.decode(res.body);
-      });
-    }
-  }
-
   double getTotalDuration(List episodes) {
     return episodes.fold(0, (sum, ep) => sum + ep['duration']);
   }
@@ -1017,10 +1030,75 @@ class _CoursesScreenState extends State<CoursesScreen> {
       body:
           courses.isEmpty
               ? Center(child: CircularProgressIndicator(color: green))
-              : ListView.builder(
-                itemCount: courses.length,
-                padding: EdgeInsets.symmetric(vertical: 12),
-                itemBuilder: (_, index) => buildCourseCard(courses[index]),
+              : Column(
+                children: [
+                  // ✅ Sort Dropdown
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children:
+                            ['All', 'Top Rated'].map((option) {
+                              final isSelected = selectedSort == option;
+                              return Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedSort = option;
+                                      courses = _applySort(courses);
+                                    });
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: Duration(milliseconds: 200),
+                                    padding: EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isSelected
+                                              ? green
+                                              : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        option,
+                                        style: TextStyle(
+                                          color:
+                                              isSelected
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // ✅ Course List
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: courses.length,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      itemBuilder:
+                          (_, index) => buildCourseCard(courses[index]),
+                    ),
+                  ),
+                ],
               ),
     );
   }
