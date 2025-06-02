@@ -6,6 +6,8 @@ const {
   markAsRead,
   getUnreadCount,
   getUserNotifications,
+  deleteNotification, // 👈 Add this
+  deleteAllNotificationsForRecipient,
 } = require('../controllers/notificationController');
 
 // ✅ POST route
@@ -18,7 +20,10 @@ router.patch('/read/:notificationId', markAsRead);
 
 // ✅ General fallback LAST
 router.get('/:userId', getUserNotifications);         
+router.delete('/:notificationId', deleteNotification);
 
+// Optional: Delete all for a recipient
+router.delete('/recipient/:recipientId', deleteAllNotificationsForRecipient);
 
 
 module.exports = router;

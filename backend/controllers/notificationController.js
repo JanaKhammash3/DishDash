@@ -108,11 +108,44 @@ const getUserNotifications = async (req, res) => {
   }
 };
 
+const deleteNotification = async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+
+    const deleted = await Notification.findByIdAndDelete(notificationId);
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    res.json({ message: 'Notification deleted successfully' });
+  } catch (err) {
+    console.error('❌ Error deleting notification:', err.message);
+    res.status(500).json({ error: 'Failed to delete notification', details: err.message });
+  }
+};
+
+const deleteAllNotificationsForRecipient = async (req, res) => {
+  try {
+    const { recipientId } = req.params;
+
+    await Notification.deleteMany({ recipientId });
+
+    res.json({ message: 'All notifications deleted for this recipient' });
+  } catch (err) {
+    console.error('❌ Error deleting all notifications:', err.message);
+    res.status(500).json({ error: 'Failed to delete notifications', details: err.message });
+  }
+};
+
+
 module.exports = {
   createNotification,
   getNotifications,
   markAsRead,
   getUnreadCount,
   getUserNotifications,
+  deleteNotification,
+  deleteAllNotificationsForRecipient
 };
 

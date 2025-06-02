@@ -15,6 +15,7 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   List<dynamic> notifications = [];
   bool isLoading = true;
+  String selectedView = 'All'; // or 'Unread'
 
   @override
   void initState() {
@@ -149,6 +150,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final visibleNotifications =
+        selectedView == 'All'
+            ? notifications
+            : notifications.where((n) => !(n['isRead'] ?? false)).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
@@ -162,11 +168,64 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 onRefresh: fetchNotifications,
                 child: Column(
                   children: [
+                    // 🟢 Toggle: All / Unread
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Container(
+                        height: 45,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Row(
+                          children:
+                              ['All', 'Unread'].map((label) {
+                                final isSelected = selectedView == label;
+                                return Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        selectedView = label;
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isSelected
+                                                ? green
+                                                : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          label,
+                                          style: TextStyle(
+                                            color:
+                                                isSelected
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                        ),
+                      ),
+                    ),
+
+                    // 🔔 Notification List
                     Expanded(
                       child: Builder(
                         builder: (context) {
-                          final visibleNotifications = notifications;
-
                           if (visibleNotifications.isEmpty) {
                             return const Center(
                               child: Text('No notifications for this view.'),
@@ -184,6 +243,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               final sender = n['senderId'];
                               final avatar =
                                   sender is Map ? sender['avatar'] : null;
+
                               return Dismissible(
                                 key: Key(n['_id']),
                                 direction: DismissDirection.endToStart,
@@ -210,7 +270,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                     children: [
                                       CircleAvatar(
                                         radius: 20,
-
                                         backgroundImage: _resolveAvatar(avatar),
                                       ),
                                       CircleAvatar(
@@ -224,7 +283,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                       ),
                                     ],
                                   ),
-
                                   title: Text.rich(
                                     TextSpan(
                                       children: [
