@@ -1,11 +1,9 @@
 import 'dart:convert';
 import 'package:dishdash_web/pages/users_stores_page.dart';
 import 'package:flutter/material.dart';
-//import 'package:frontend/screens/store_items_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-//import 'package:frontend/screens/userprofile-screen.dart';
-//import 'package:lucide_icons/lucide_icons.dart'; // For modern icons (optional)
+import 'UserProfileModalContent.dart';
 
 class CommunityScreen extends StatefulWidget {
   final String userId;
@@ -718,11 +716,24 @@ class _CommunityScreenState extends State<CommunityScreen> {
               trailing:
                   author?['_id'] != userId
                       ? OutlinedButton.icon(
-                        onPressed: () async {
-                          await fetchPosts();
-                          await fetchUserProfile();
-                          // You can also navigate to user profile here
+                        onPressed: () {
+                          if (userId == null) return;
+                          showDialog(
+                            context: context,
+                            builder:
+                                (_) => Dialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: UserProfileModalContent(
+                                    userId: author['_id'],
+                                    viewerId:
+                                        userId!, // Now guaranteed non-null
+                                  ),
+                                ),
+                          );
                         },
+
                         icon: const Icon(
                           Icons.person,
                           size: 16,
