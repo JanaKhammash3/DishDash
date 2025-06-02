@@ -19,6 +19,7 @@ import './category_filters.dart';
 import 'package:frontend/screens/recommendations_widget.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:frontend/screens/NotificationScreen.dart';
+import 'dart:ui';
 
 class HomeScreen extends StatefulWidget {
   final String userId;
@@ -137,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://192.168.68.61:3000/api/notifications/${widget.userId}/unread-count',
+          'http://192.168.1.4:3000/api/notifications/${widget.userId}/unread-count',
         ),
       );
 
@@ -169,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final userId = prefs.getString('userId');
     if (userId == null) return;
 
-    socket = IO.io('http://192.168.68.61:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false, // 👈 disable auto
     });
@@ -324,7 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
     final uri = Uri.http(
-      '192.168.68.61:3000',
+      '192.168.1.4:3000',
       '/api/recipes/filter',
       queryParams,
     );
@@ -354,7 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.61:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -362,6 +363,9 @@ class _HomeScreenState extends State<HomeScreen> {
               'imagePath': imagePath,
               'authorName': recipe['author']?['name'],
               'authorAvatar': recipe['author']?['avatar'],
+              'calories': recipe['calories'] ?? 0,
+              'difficulty': recipe['difficulty'] ?? 'Easy',
+              'instructions': recipe['instructions'] ?? '',
             };
           }).toList();
 
@@ -409,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.1.4:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -422,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/recipes');
+    final url = Uri.parse('http://192.168.1.4:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -439,7 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final userResponse = await http.get(
-      Uri.parse('http://192.168.68.61:3000/api/profile/$userId'),
+      Uri.parse('http://192.168.1.4:3000/api/profile/$userId'),
     );
     if (userResponse.statusCode != 200) return;
 
@@ -610,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipeConfirmed(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/$userId/saveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -624,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -637,7 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes({String? category}) async {
-    String baseUrl = 'http://192.168.68.61:3000/api/recipes/filter';
+    String baseUrl = 'http://192.168.1.4:3000/api/recipes/filter';
     Uri url;
 
     if (category != null && category.isNotEmpty) {
@@ -695,7 +699,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.61:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -703,6 +707,9 @@ class _HomeScreenState extends State<HomeScreen> {
               'imagePath': imagePath,
               'authorName': recipe['author']?['name'],
               'authorAvatar': recipe['author']?['avatar'],
+              'calories': recipe['calories'] ?? 0,
+              'difficulty': recipe['difficulty'] ?? 'Easy',
+              'instructions': recipe['instructions'] ?? '',
             };
           }).toList();
 
@@ -811,6 +818,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     authorAvatar: recipe['author']?['avatar'],
                     onSave: recipe['onSave'],
                     isSaved: recipe['isSaved'] ?? false,
+                    calories: recipe['calories'],
+                    difficulty: recipe['difficulty'],
                   ),
                 ),
               );
@@ -1208,6 +1217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         });
                       },
                     ),
+
                     const SizedBox(height: 12),
                     _buildRecommendationsSection(),
                     const SizedBox(height: 20),
@@ -1643,7 +1653,7 @@ class _HomeScreenState extends State<HomeScreen> {
               final rawPath = recipe['image'] ?? '';
               final imagePath =
                   rawPath.startsWith('/images/')
-                      ? 'http://192.168.68.61:3000$rawPath'
+                      ? 'http://192.168.1.4:3000$rawPath'
                       : rawPath;
 
               final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];
@@ -1900,6 +1910,8 @@ class _HomeScreenState extends State<HomeScreen> {
         isSaved: isSaved,
         authorName: authorName,
         authorAvatar: authorAvatar,
+        calories: calories, // ✅ add this
+        difficulty: difficulty,
       ),
     );
   }
@@ -1927,132 +1939,203 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isSaved = false,
     String? authorName,
     String? authorAvatar,
+    int? calories,
+    String? difficulty,
+    bool hasAllergy = false,
+    VoidCallback? onInfo,
   }) {
     final isBase64 =
-        imagePath.startsWith('/9j') ||
-        imagePath.startsWith('iVBOR'); // simple base64 check
+        imagePath.startsWith('/9j') || imagePath.startsWith('iVBOR');
     final isNetwork = imagePath.startsWith('http');
 
     ImageProvider imageProvider;
-    if (isBase64) {
-      imageProvider = MemoryImage(base64Decode(imagePath));
-    } else if (isNetwork) {
-      imageProvider = NetworkImage(imagePath);
-    } else {
+    try {
+      if (isBase64) {
+        imageProvider = MemoryImage(base64Decode(imagePath));
+      } else if (isNetwork) {
+        imageProvider = NetworkImage(imagePath);
+      } else {
+        imageProvider = const AssetImage('assets/placeholder.png');
+      }
+    } catch (_) {
       imageProvider = const AssetImage('assets/placeholder.png');
     }
 
-    return Stack(
-      children: [
-        Container(
-          width: 250,
-          height: 200,
-          margin: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.grey[300],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              children: [
-                Image(
-                  image: imageProvider,
-                  width: 250,
-                  height: 300,
-                  fit: BoxFit.cover,
-                ),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: IconButton(
-                    icon: Icon(
-                      isSaved ? Icons.bookmark : Icons.bookmark_border,
-                      color: Colors.white,
-                    ),
-                    onPressed: onSave ?? () {},
+    return Container(
+      width: 250,
+      height: 260,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.grey[300],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            // 🖼️ Background Image
+            Image(
+              image: imageProvider,
+              width: 250,
+              height: 260,
+              fit: BoxFit.cover,
+            ),
+
+            // 🔲 Glass-like Gradient + Blur
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 86,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.6),
+                      Colors.black.withOpacity(0.2),
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
                   ),
                 ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          Color.fromARGB(153, 0, 0, 0),
-                          Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.black.withOpacity(0.65), // darker
+                        Colors.transparent,
+                      ],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // 📌 Top Right Icons
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (hasAllergy)
+                    const Icon(
+                      Icons.warning,
+                      color: Colors.redAccent,
+                      size: 20,
+                    ),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: onSave,
+                    child: Icon(
+                      isSaved ? Icons.bookmark : Icons.bookmark_border,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 📍 Bottom Info Panel
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                    ),
+                  ),
+                  if (authorName != null && authorAvatar != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'by ',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                          CircleAvatar(
+                            radius: 10,
+                            backgroundImage: MemoryImage(
+                              base64Decode(authorAvatar),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            authorName,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.star, size: 14, color: Colors.amber),
+                      const SizedBox(width: 4),
+                      Text(
+                        rating.toStringAsFixed(1),
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+
+                      SizedBox(width: 10),
+                      Icon(
+                        Icons.local_fire_department,
+                        size: 14,
+                        color: Colors.redAccent,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '${calories ?? 0} kcal',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+
+                      SizedBox(width: 10),
+                      Icon(
+                        Icons.leaderboard,
+                        size: 14,
+                        color: Colors.white,
+                      ), // Or Icons.fitness_center
+                      SizedBox(width: 4),
+                      Text(
+                        difficulty ?? 'Easy',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              difficulty == 'Hard'
+                                  ? Colors.redAccent
+                                  : (difficulty == 'Medium'
+                                      ? Colors.orangeAccent
+                                      : Colors.greenAccent),
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              size: 14,
-                              color: Colors.amber,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              rating.toStringAsFixed(1),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (authorName != null && authorAvatar != null)
-                          Row(
-                            children: [
-                              const Text(
-                                'By ',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              CircleAvatar(
-                                radius: 10,
-                                backgroundImage: MemoryImage(
-                                  base64Decode(authorAvatar),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                authorName,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

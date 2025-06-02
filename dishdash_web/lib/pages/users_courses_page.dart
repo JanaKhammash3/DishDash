@@ -25,7 +25,7 @@ class UserCoursesPage extends StatefulWidget {
 
 class _UserCoursesPageState extends State<UserCoursesPage> {
   List<dynamic> courses = [];
-  final String baseUrl = 'http://192.168.68.61:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   bool isUploading = false;
   // Controllers
   final TextEditingController titleController = TextEditingController();

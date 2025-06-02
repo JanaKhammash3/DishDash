@@ -30,7 +30,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
     try {
       final response = await http.post(
         Uri.parse(
-          'http://192.168.68.61:3000/translate',
+          'http://192.168.1.4:3000/translate',
         ), // ✅ Your backend endpoint
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -83,7 +83,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
         imageProvider = NetworkImage(imagePath);
       } else {
         imageProvider = NetworkImage(
-          'http://192.168.68.61:3000/images/$imagePath',
+          'http://192.168.1.4:3000/images/$imagePath',
         );
       }
     } catch (_) {
@@ -385,7 +385,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
                             try {
                               final res = await http.post(
                                 Uri.parse(
-                                  'http://192.168.68.61:3000/api/analyze-nutrition',
+                                  'http://192.168.1.4:3000/api/analyze-nutrition',
                                 ),
                                 headers: {'Content-Type': 'application/json'},
                                 body: jsonEncode({
@@ -647,7 +647,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
 
                     final res = await http.post(
                       Uri.parse(
-                        'http://192.168.68.61:3000/api/users/${widget.userId}/customRecipe',
+                        'http://192.168.1.4:3000/api/users/${widget.userId}/customRecipe',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
@@ -679,7 +679,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
   Future<void> fetchUserRecipes() async {
     setState(() => isLoading = true);
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/${widget.userId}/myRecipes',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/myRecipes',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -714,12 +714,12 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
       return NetworkImage(image);
     }
 
-    return NetworkImage('http://192.168.68.61:3000/images/$image');
+    return NetworkImage('http://192.168.1.4:3000/images/$image');
   }
 
   Future<void> fetchSavedRecipes() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/${widget.userId}/savedRecipes',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/savedRecipes',
     );
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -729,7 +729,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
 
   Future<void> unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/${widget.userId}/unsaveRecipe',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/unsaveRecipe',
     );
     await http.post(
       url,
@@ -755,7 +755,7 @@ class _MyRecipesWebPageState extends State<MyRecipesWebPage> {
         (image.startsWith('/9j') || image.startsWith('iVBOR'))) {
       imageProvider = MemoryImage(base64Decode(image));
     } else if (image != null && image.isNotEmpty) {
-      imageProvider = NetworkImage('http://192.168.68.61:3000/images/$image');
+      imageProvider = NetworkImage('http://192.168.1.4:3000/images/$image');
     } else {
       imageProvider = const AssetImage('assets/placeholder.png');
     }
