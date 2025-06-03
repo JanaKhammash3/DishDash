@@ -4,6 +4,7 @@ import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/ChatsScreen.dart'; // 👈 Make sure this is imported
 import 'screens/home_screen.dart'; // Optional: Add your home screen
+import 'screens/welcome.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,9 +19,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/', // The initial route (login screen)
       routes: {
-        '/': (context) => const LoginScreen(),
+        '/': (context) => const WelcomeScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/login': (context) => const LoginScreen(),
       },
       // 👇 Handle dynamic routes like /chats with arguments
       onGenerateRoute: (settings) {

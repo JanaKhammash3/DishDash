@@ -29,7 +29,7 @@ class _MyChallengesScreenState extends State<MyChallengesScreen> {
 
   Future<void> fetchChallenges() async {
     final res = await http.get(
-      Uri.parse('http://localhost:3000/api/challenges'),
+      Uri.parse('http://192.168.68.61:3000/api/challenges'),
     );
     if (res.statusCode == 200) {
       final all = List<Map<String, dynamic>>.from(jsonDecode(res.body));
