@@ -29,7 +29,9 @@ class _MyChallengesScreenState extends State<MyChallengesScreen> {
 
   Future<void> fetchChallenges() async {
     final res = await http.get(
-      Uri.parse('http://localhost:3000/api/challenges'),
+      Uri.parse(
+        'http://192.168.1.4:3000/api/challenges',
+      ), // ✅ Replace localhost
     );
     if (res.statusCode == 200) {
       final all = List<Map<String, dynamic>>.from(jsonDecode(res.body));
@@ -48,9 +50,7 @@ class _MyChallengesScreenState extends State<MyChallengesScreen> {
 
   Future<void> fetchMyRecipes() async {
     final res = await http.get(
-      Uri.parse(
-        'http://192.168.68.61:3000/api/users/${widget.userId}/myRecipes',
-      ),
+      Uri.parse('http://192.168.1.4:3000/api/users/${widget.userId}/myRecipes'),
     );
     if (res.statusCode == 200) {
       setState(() => myRecipes = jsonDecode(res.body));
@@ -146,7 +146,7 @@ class _MyChallengesScreenState extends State<MyChallengesScreen> {
 
                   final res = await http.post(
                     Uri.parse(
-                      'http://192.168.68.61:3000/api/challenges/${challenge['_id']}/submit',
+                      'http://192.168.1.4:3000/api/challenges/${challenge['_id']}/submit',
                     ),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode(body),

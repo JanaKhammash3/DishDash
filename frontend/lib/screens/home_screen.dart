@@ -138,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://192.168.68.61:3000/api/notifications/${widget.userId}/unread-count',
+          'http://192.168.1.4:3000/api/notifications/${widget.userId}/unread-count',
         ),
       );
 
@@ -170,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final userId = prefs.getString('userId');
     if (userId == null) return;
 
-    socket = IO.io('http://192.168.68.61:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.1.4:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false, // 👈 disable auto
     });
@@ -325,7 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchFilteredRecipes(Map<String, String> queryParams) async {
     final uri = Uri.http(
-      '192.168.68.61:3000',
+      '192.168.1.4:3000',
       '/api/recipes/filter',
       queryParams,
     );
@@ -355,7 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.61:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -413,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchUserProfile() async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/profile/$userId');
+    final url = Uri.parse('http://192.168.1.4:3000/api/profile/$userId');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -426,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchRandomRecipes() async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/recipes');
+    final url = Uri.parse('http://192.168.1.4:3000/api/recipes');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final allRecipes = jsonDecode(response.body);
@@ -443,7 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final userResponse = await http.get(
-      Uri.parse('http://192.168.68.61:3000/api/profile/$userId'),
+      Uri.parse('http://192.168.1.4:3000/api/profile/$userId'),
     );
     if (userResponse.statusCode != 200) return;
 
@@ -614,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveRecipeConfirmed(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/$userId/saveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -628,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/$userId/unsaveRecipe',
+      'http://192.168.1.4:3000/api/users/$userId/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -641,7 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchPopularRecipes({String? category}) async {
-    String baseUrl = 'http://192.168.68.61:3000/api/recipes/filter';
+    String baseUrl = 'http://192.168.1.4:3000/api/recipes/filter';
     Uri url;
 
     if (category != null && category.isNotEmpty) {
@@ -699,7 +699,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final image = recipe['image'];
             final imagePath =
                 (image != null && image.isNotEmpty)
-                    ? 'http://192.168.68.61:3000/images/$image'
+                    ? 'http://192.168.1.4:3000/images/$image'
                     : 'assets/placeholder.png';
 
             return {
@@ -1637,50 +1637,57 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Column(
       children: [
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.2,
-          children: List.generate(
-            filtered.length > visibleRecipeCount
-                ? visibleRecipeCount
-                : filtered.length,
-            (index) {
-              final recipe = filtered[index];
-              final rawPath = recipe['image'] ?? '';
-              final imagePath =
-                  rawPath.startsWith('/images/')
-                      ? 'http://192.168.68.61:3000$rawPath'
-                      : rawPath;
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth =
+                (constraints.maxWidth - 8) / 2; // spacing adjustment
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 2,
+              childAspectRatio: 0.8, // width/height (adjust if needed)
+              children: List.generate(
+                filtered.length > visibleRecipeCount
+                    ? visibleRecipeCount
+                    : filtered.length,
+                (index) {
+                  final recipe = filtered[index];
+                  final rawPath = recipe['image'] ?? '';
+                  final imagePath =
+                      rawPath.startsWith('/images/')
+                          ? 'http://192.168.1.4:3000$rawPath'
+                          : rawPath;
 
-              final ratings = (recipe['ratings'] as List?)?.cast<num>() ?? [];
-              final avgRating =
-                  ratings.isNotEmpty
-                      ? ratings.reduce((x, y) => x + y) / ratings.length
-                      : 0.0;
+                  final ratings =
+                      (recipe['ratings'] as List?)?.cast<num>() ?? [];
+                  final avgRating =
+                      ratings.isNotEmpty
+                          ? ratings.reduce((x, y) => x + y) / ratings.length
+                          : 0.0;
 
-              final isSaved = savedRecipeIds.contains(recipe['_id']);
+                  final isSaved = savedRecipeIds.contains(recipe['_id']);
 
-              return popularRecipeButton(
-                recipe['title'] ?? '',
-                imagePath,
-                avgRating,
-                recipe['_id'],
-                isSaved,
-                description: recipe['description'] ?? '',
-                ingredients: recipe['ingredients'] ?? [],
-                calories: recipe['calories'] ?? 0,
-                authorName: recipe['author']?['name'],
-                authorAvatar: recipe['author']?['avatar'],
-                prepTime: recipe['prepTime'] ?? 0,
-                difficulty: recipe['difficulty'] ?? 'Easy',
-                instructions: recipe['instructions'] ?? '',
-              );
-            },
-          ),
+                  return popularRecipeButton(
+                    recipe['title'] ?? '',
+                    imagePath,
+                    avgRating,
+                    recipe['_id'],
+                    isSaved,
+                    description: recipe['description'] ?? '',
+                    ingredients: recipe['ingredients'] ?? [],
+                    calories: recipe['calories'] ?? 0,
+                    authorName: recipe['author']?['name'],
+                    authorAvatar: recipe['author']?['avatar'],
+                    prepTime: recipe['prepTime'] ?? 0,
+                    difficulty: recipe['difficulty'] ?? 'Easy',
+                    instructions: recipe['instructions'] ?? '',
+                  );
+                },
+              ),
+            );
+          },
         ),
         if (filtered.length > 4)
           Padding(
@@ -1870,6 +1877,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int prepTime = 0,
     String difficulty = 'Easy',
     String instructions = '',
+    double? cardWidth, // 👈 add this
   }) {
     return GestureDetector(
       onTap: () {
@@ -1912,6 +1920,7 @@ class _HomeScreenState extends State<HomeScreen> {
         authorAvatar: authorAvatar,
         calories: calories, // ✅ add this
         difficulty: difficulty,
+        width: cardWidth,
       ),
     );
   }
@@ -1943,6 +1952,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String? difficulty,
     bool hasAllergy = false,
     VoidCallback? onInfo,
+    double? width,
   }) {
     final isBase64 =
         imagePath.startsWith('/9j') || imagePath.startsWith('iVBOR');
@@ -1962,7 +1972,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Container(
-      width: 250,
+      width: width ?? 250,
       height: 260,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
@@ -2087,48 +2097,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.star, size: 14, color: Colors.amber),
-                      const SizedBox(width: 4),
-                      Text(
-                        rating.toStringAsFixed(1),
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-
-                      SizedBox(width: 10),
-                      Icon(
-                        Icons.local_fire_department,
-                        size: 14,
-                        color: Colors.redAccent,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        '${calories ?? 0} kcal',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-
-                      SizedBox(width: 10),
-                      Icon(
-                        Icons.leaderboard,
-                        size: 14,
-                        color: Colors.white,
-                      ), // Or Icons.fitness_center
-                      SizedBox(width: 4),
-                      Text(
-                        difficulty ?? 'Easy',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color:
-                              difficulty == 'Hard'
-                                  ? Colors.redAccent
-                                  : (difficulty == 'Medium'
-                                      ? Colors.orangeAccent
-                                      : Colors.greenAccent),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        Icon(Icons.star, size: 14, color: Colors.amber),
+                        Text(
+                          rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.local_fire_department,
+                          size: 14,
+                          color: Colors.redAccent,
+                        ),
+                        Text(
+                          '${calories ?? 0}cal',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(Icons.leaderboard, size: 12, color: Colors.white),
+                        Text(
+                          difficulty ?? 'Easy',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color:
+                                difficulty == 'Hard'
+                                    ? Colors.redAccent
+                                    : (difficulty == 'Medium'
+                                        ? Colors.orangeAccent
+                                        : Colors.greenAccent),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
