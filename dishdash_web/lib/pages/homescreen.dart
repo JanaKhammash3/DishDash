@@ -64,7 +64,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/profile/${widget.userId}',
+      'http://192.168.68.61:3000/api/profile/${widget.userId}',
     );
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -80,7 +80,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Future<void> _saveRecipeConfirmed(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/saveRecipe',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/saveRecipe',
     );
     final response = await http.post(
       url,
@@ -101,7 +101,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Future<void> _unsaveRecipe(String recipeId) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/unsaveRecipe',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/unsaveRecipe',
     );
     final response = await http.post(
       url,
@@ -115,7 +115,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Future<void> fetchSurveyRecommendations() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/recommendations',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/recommendations',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -128,7 +128,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 
   Future<void> fetchRecipes() async {
     final response = await http.get(
-      Uri.parse('http://192.168.1.4:3000/api/recipes'),
+      Uri.parse('http://192.168.68.61:3000/api/recipes'),
     );
 
     if (response.statusCode == 200) {
@@ -176,7 +176,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     } else if (isNetwork) {
       return NetworkImage(imageData);
     } else {
-      return NetworkImage('http://192.168.1.4:3000/images/$imageData');
+      return NetworkImage('http://192.168.68.61:3000/images/$imageData');
     }
   }
 
@@ -211,7 +211,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         imageProvider = NetworkImage(imagePath);
       } else {
         imageProvider = NetworkImage(
-          'http://192.168.1.4:3000/images/$imagePath',
+          'http://192.168.68.61:3000/images/$imagePath',
         );
       }
     } catch (_) {

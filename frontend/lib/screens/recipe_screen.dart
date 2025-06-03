@@ -43,21 +43,26 @@ class _RecipeScreenState extends State<RecipeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ImageProvider imageProvider;
-    try {
-      final isLikelyBase64 =
-          widget.imagePath.length > 100 && !widget.imagePath.contains('http');
-      if (isLikelyBase64) {
-        imageProvider = MemoryImage(base64Decode(widget.imagePath));
-      } else if (widget.imagePath.startsWith('http')) {
-        imageProvider = NetworkImage(widget.imagePath);
+    ImageProvider _getImageProvider(String? image) {
+      if (image != null && image.startsWith('http')) {
+        return NetworkImage(image);
+      } else if (image != null &&
+          (image.startsWith('/9j') || image.startsWith('iVBOR'))) {
+        try {
+          return MemoryImage(base64Decode(image));
+        } catch (e) {
+          debugPrint('❌ Base64 decode failed: $e');
+          return const AssetImage('assets/placeholder.png');
+        }
+      } else if (image != null && image.isNotEmpty) {
+        return NetworkImage('http://192.168.68.61:3000/images/$image');
       } else {
-        imageProvider = const AssetImage('assets/placeholder.png');
+        return const AssetImage('assets/placeholder.png');
       }
-    } catch (_) {
-      imageProvider = const AssetImage('assets/placeholder.png');
     }
 
+    final String? image = widget.imagePath;
+    final ImageProvider imageProvider = _getImageProvider(image);
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(

@@ -43,7 +43,7 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.4:3000/translate'),
+        Uri.parse('http://192.168.68.61:3000/translate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'text': text, 'target': 'ar'}),
       );
@@ -79,7 +79,7 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
   }
 
   Future<void> _showNutritionModal() async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/analyze-nutrition');
+    final url = Uri.parse('http://192.168.68.61:3000/api/analyze-nutrition');
 
     final response = await http.post(
       url,
@@ -152,21 +152,26 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ImageProvider imageProvider;
-    try {
-      final isLikelyBase64 =
-          widget.imagePath.length > 100 && !widget.imagePath.contains('http');
-      if (isLikelyBase64) {
-        imageProvider = MemoryImage(base64Decode(widget.imagePath));
-      } else if (widget.imagePath.startsWith('http')) {
-        imageProvider = NetworkImage(widget.imagePath);
+    ImageProvider _getImageProvider(String? image) {
+      if (image != null && image.startsWith('http')) {
+        return NetworkImage(image);
+      } else if (image != null &&
+          (image.startsWith('/9j') || image.startsWith('iVBOR'))) {
+        try {
+          return MemoryImage(base64Decode(image));
+        } catch (e) {
+          debugPrint('❌ Base64 decode failed: $e');
+          return const AssetImage('assets/placeholder.png');
+        }
+      } else if (image != null && image.isNotEmpty) {
+        return NetworkImage('http://192.168.68.61:3000/images/$image');
       } else {
-        imageProvider = const AssetImage('assets/placeholder.png');
+        return const AssetImage('assets/placeholder.png');
       }
-    } catch (_) {
-      imageProvider = const AssetImage('assets/placeholder.png');
     }
 
+    final String? image = widget.imagePath;
+    final ImageProvider imageProvider = _getImageProvider(image);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -270,7 +275,7 @@ class _RecipeDetailedScreenState extends State<RecipeDetailedScreen> {
 
                       final response = await http.post(
                         Uri.parse(
-                          'http://192.168.1.4:3000/api/ai/instructions-to-steps',
+                          'http://192.168.68.61:3000/api/ai/instructions-to-steps',
                         ),
                         headers: {'Content-Type': 'application/json'},
                         body: jsonEncode({'instructions': widget.instructions}),

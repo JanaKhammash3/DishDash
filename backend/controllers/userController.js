@@ -773,7 +773,7 @@ exports.requestOtp = async (req, res) => {
 
   const otp = generateOTP();
   const hashedOtp = hashOTP(otp);
-  const expiresAt = new Date(Date.now() + 10 * 60000); // 10 minutes
+  const expiresAt = new Date(Date.now() + 1 * 60000); // 1 minute
 
   user.otpHash = hashedOtp;
   user.otpExpiresAt = expiresAt;

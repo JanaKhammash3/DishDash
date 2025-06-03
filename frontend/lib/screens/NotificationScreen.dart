@@ -61,7 +61,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Future<void> fetchNotifications() async {
     setState(() => isLoading = true);
     final res = await http.get(
-      Uri.parse('http://192.168.1.4:3000/api/notifications/${widget.userId}'),
+      Uri.parse('http://192.168.68.61:3000/api/notifications/${widget.userId}'),
     );
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
@@ -78,14 +78,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Future<void> markAsRead(String notificationId) async {
     await http.patch(
       Uri.parse(
-        'http://192.168.1.4:3000/api/notifications/read/$notificationId',
+        'http://192.168.68.61:3000/api/notifications/read/$notificationId',
       ),
     );
   }
 
   Future<void> deleteNotification(String notificationId) async {
     final res = await http.delete(
-      Uri.parse('http://192.168.1.4:3000/api/notifications/$notificationId'),
+      Uri.parse('http://192.168.68.61:3000/api/notifications/$notificationId'),
     );
     if (res.statusCode == 200) {
       setState(() {

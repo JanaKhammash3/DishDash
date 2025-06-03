@@ -38,7 +38,7 @@ class _AiFromIngredientsScreenState extends State<AiFromIngredientsScreen> {
     setState(() => isLoading = true);
 
     final res = await http.post(
-      Uri.parse('http://192.168.1.4:3000/api/ai/generate-from-ingredients'),
+      Uri.parse('http://192.168.68.61:3000/api/ai/generate-from-ingredients'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'availableIngredients': ingredients,
@@ -59,7 +59,7 @@ class _AiFromIngredientsScreenState extends State<AiFromIngredientsScreen> {
 
   Future<void> _loadAvailableIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/available-ingredients',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -76,7 +76,7 @@ class _AiFromIngredientsScreenState extends State<AiFromIngredientsScreen> {
 
     final response = await http.post(
       Uri.parse(
-        'http://192.168.1.4:3000/api/users/${widget.userId}/customRecipe',
+        'http://192.168.68.61:3000/api/users/${widget.userId}/customRecipe',
       ),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
