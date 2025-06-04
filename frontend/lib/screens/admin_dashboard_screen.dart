@@ -32,13 +32,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     setState(() => isLoading = true);
     try {
       final userRes = await http.get(
-        Uri.parse('http://192.168.68.61:3000/api/users'),
+        Uri.parse('http://192.168.1.4:3000/api/users'),
       );
       final storeRes = await http.get(
-        Uri.parse('http://192.168.68.61:3000/api/stores'),
+        Uri.parse('http://192.168.1.4:3000/api/stores'),
       );
       final recipeRes = await http.get(
-        Uri.parse('http://192.168.68.61:3000/api/recipes'),
+        Uri.parse('http://192.168.1.4:3000/api/recipes'),
       );
 
       if (userRes.statusCode == 200 &&
@@ -103,15 +103,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   if (message.isEmpty) return;
 
                   final res = await http.get(
-                    Uri.parse('http://192.168.68.61:3000/api/users'),
+                    Uri.parse('http://192.168.1.4:3000/api/users'),
                   );
                   if (res.statusCode == 200) {
                     final users = jsonDecode(res.body);
                     for (var user in users) {
                       await http.post(
-                        Uri.parse(
-                          'http://192.168.68.61:3000/api/notifications',
-                        ),
+                        Uri.parse('http://192.168.1.4:3000/api/notifications'),
                         headers: {'Content-Type': 'application/json'},
                         body: jsonEncode({
                           'recipientId': user['_id'],
@@ -202,27 +200,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Row(
+                    Column(
                       children: [
-                        Expanded(
-                          child: buildChartCard(
-                            "User Distribution",
-                            buildUserDistributionPie(),
-                            Icons.pie_chart,
-                            Colors.blue,
-                          ),
+                        buildChartCard(
+                          "User Distribution",
+                          buildUserDistributionPie(),
+                          Icons.pie_chart,
+                          Colors.blue,
+                          width:
+                              MediaQuery.of(context).size.width -
+                              40, // Full width with padding
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: buildChartCard(
-                            "Users by Role",
-                            buildBarChart(),
-                            Icons.bar_chart,
-                            Colors.deepOrange,
-                          ),
+                        const SizedBox(height: 16),
+                        buildChartCard(
+                          "Users by Role",
+                          buildBarChart(),
+                          Icons.bar_chart,
+                          Colors.deepOrange,
+                          width: MediaQuery.of(context).size.width - 40,
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 24),
                     Row(
                       children: [
@@ -338,8 +337,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     String title,
     Widget chart,
     IconData icon,
-    Color color,
-  ) {
+    Color color, {
+    double width = 300,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -360,7 +360,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(height: 150, child: chart),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: 220, // Ensure enough space for charts to render safely
+              height: 150,
+              child: chart,
+            ),
+          ),
         ],
       ),
     );
@@ -374,16 +381,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             value: totalUsers.toDouble(),
             title: 'Users',
             color: Colors.green,
+            titleStyle: const TextStyle(fontSize: 12, color: Colors.white),
           ),
           PieChartSectionData(
             value: totalStores.toDouble(),
             title: 'Stores',
             color: Colors.orange,
+            titleStyle: const TextStyle(fontSize: 12, color: Colors.white),
           ),
           PieChartSectionData(
             value: totalRecipes.toDouble(),
             title: 'Recipes',
             color: Colors.blue,
+            titleStyle: const TextStyle(fontSize: 12, color: Colors.white),
           ),
         ],
         sectionsSpace: 2,
@@ -431,11 +441,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               getTitlesWidget: (value, _) {
                 switch (value.toInt()) {
                   case 0:
-                    return const Text('Users');
+                    return const Text('Users', style: TextStyle(fontSize: 10));
                   case 1:
-                    return const Text('Stores');
+                    return const Text('Stores', style: TextStyle(fontSize: 10));
                   case 2:
-                    return const Text('Recipes');
+                    return const Text(
+                      'Recipes',
+                      style: TextStyle(fontSize: 10),
+                    );
                   default:
                     return const SizedBox();
                 }

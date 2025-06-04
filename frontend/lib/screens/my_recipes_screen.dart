@@ -456,303 +456,319 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                 'Customize Your Recipe',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              content: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        final picker = ImagePicker();
-                        final picked = await picker.pickImage(
-                          source: ImageSource.gallery,
-                        );
-                        if (picked != null) {
-                          final bytes = await picked.readAsBytes();
-                          setModalState(() => imageBytes = bytes);
-                        }
-                      },
-                      child: Container(
-                        height: 150,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child:
-                            imageBytes != null
-                                ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.memory(
-                                    imageBytes!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                                : const Center(
-                                  child: Text('Tap to upload image'),
-                                ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Title (English)',
-                      ),
-                      onChanged: (val) => title = val,
-                    ),
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Title (Arabic)',
-                      ),
-                      textDirection: TextDirection.rtl,
-                      onChanged: (val) => titleAr = val,
-                    ),
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Ingredients',
-                      ),
-                      onChanged: (val) => ingredients = val,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            decoration: const InputDecoration(
-                              labelText: 'Calories',
-                            ),
-                            keyboardType: TextInputType.number,
-                            controller: TextEditingController(text: calories),
-                            onChanged: (val) => calories = val,
+              content: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.75,
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () async {
+                          final picker = ImagePicker();
+                          final picked = await picker.pickImage(
+                            source: ImageSource.gallery,
+                          );
+                          if (picked != null) {
+                            final bytes = await picked.readAsBytes();
+                            setModalState(() => imageBytes = bytes);
+                          }
+                        },
+                        child: Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          child:
+                              imageBytes != null
+                                  ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.memory(
+                                      imageBytes!,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                  : const Center(
+                                    child: Text('Tap to upload image'),
+                                  ),
                         ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: green,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Title (English)',
+                        ),
+                        onChanged: (val) => title = val,
+                      ),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Title (Arabic)',
+                        ),
+                        textDirection: TextDirection.rtl,
+                        onChanged: (val) => titleAr = val,
+                      ),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Ingredients',
+                        ),
+                        onChanged: (val) => ingredients = val,
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              decoration: const InputDecoration(
+                                labelText: 'Calories',
+                              ),
+                              keyboardType: TextInputType.number,
+                              controller: TextEditingController(text: calories),
+                              onChanged: (val) => calories = val,
                             ),
                           ),
-                          onPressed: () async {
-                            final ingrList =
-                                ingredients
-                                    .split(',')
-                                    .map((e) => e.trim())
-                                    .where((e) => e.isNotEmpty)
-                                    .toList();
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: green,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            onPressed: () async {
+                              final ingrList =
+                                  ingredients
+                                      .split(',')
+                                      .map((e) => e.trim())
+                                      .where((e) => e.isNotEmpty)
+                                      .toList();
 
-                            if (ingrList.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please enter ingredients first',
+                              if (ingrList.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please enter ingredients first',
+                                    ),
                                   ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            setModalState(() => calories = 'Analyzing...');
-
-                            try {
-                              final res = await http.post(
-                                Uri.parse(
-                                  'http://192.168.1.4:3000/api/analyze-nutrition',
-                                ),
-                                headers: {'Content-Type': 'application/json'},
-                                body: jsonEncode({
-                                  'title': title,
-                                  'ingredients': ingrList,
-                                }),
-                              );
-
-                              if (res.statusCode == 200) {
-                                final data = jsonDecode(res.body);
-                                setModalState(
-                                  () => calories = data['calories'].toString(),
                                 );
-                              } else {
+                                return;
+                              }
+
+                              setModalState(() => calories = 'Analyzing...');
+                              try {
+                                final res = await http.post(
+                                  Uri.parse(
+                                    'http://192.168.1.4:3000/api/analyze-nutrition',
+                                  ),
+                                  headers: {'Content-Type': 'application/json'},
+                                  body: jsonEncode({
+                                    'title': title,
+                                    'ingredients': ingrList,
+                                  }),
+                                );
+
+                                if (res.statusCode == 200) {
+                                  final data = jsonDecode(res.body);
+                                  setModalState(
+                                    () =>
+                                        calories = data['calories'].toString(),
+                                  );
+                                } else {
+                                  setModalState(() => calories = '');
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Failed to analyze calories',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
                                 setModalState(() => calories = '');
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Failed to analyze calories'),
+                                    content: Text('Error analyzing calories'),
                                   ),
                                 );
                               }
-                            } catch (e) {
-                              setModalState(() => calories = '');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Error analyzing calories'),
-                                ),
-                              );
-                            }
-                          },
-                          child: const Text(
-                            'Analyze Calories',
-                            style: TextStyle(color: Colors.white),
+                            },
+                            child: const Text(
+                              'Analyze Calories',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                        ),
+                        maxLines: 3,
+                        onChanged: (val) => description = val,
+                      ),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Instructions',
+                        ),
+                        maxLines: 3,
+                        onChanged: (val) => instructions = val,
+                      ),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Preparation Time (minutes)',
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (val) => prepTime = val,
+                      ),
+                      DropdownButtonFormField<String>(
+                        value: diet,
+                        decoration: const InputDecoration(labelText: 'Diet'),
+                        items:
+                            [
+                                  'None',
+                                  'Vegan',
+                                  'Keto',
+                                  'Low-Carb',
+                                  'Paleo',
+                                  'Vegetarian',
+                                ]
+                                .map(
+                                  (d) => DropdownMenuItem(
+                                    value: d,
+                                    child: Text(d),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (val) => setModalState(() => diet = val!),
+                      ),
+                      DropdownButtonFormField<String>(
+                        value: mealTime,
+                        decoration: const InputDecoration(
+                          labelText: 'Meal Time',
+                        ),
+                        items:
+                            ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert']
+                                .map(
+                                  (m) => DropdownMenuItem(
+                                    value: m,
+                                    child: Text(m),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged:
+                            (val) => setModalState(() => mealTime = val!),
+                      ),
+                      DropdownButtonFormField<String>(
+                        value: difficulty,
+                        decoration: const InputDecoration(
+                          labelText: 'Difficulty',
+                        ),
+                        items:
+                            ['Easy', 'Medium', 'Hard']
+                                .map(
+                                  (d) => DropdownMenuItem(
+                                    value: d,
+                                    child: Text(d),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged:
+                            (val) => setModalState(() => difficulty = val!),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        decoration: InputDecoration(
+                          labelText: 'Add Tag',
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.add),
+                            onPressed: () {
+                              if (tagInput.isNotEmpty &&
+                                  !tags.contains(tagInput)) {
+                                setModalState(() {
+                                  tags.add(tagInput.trim());
+                                  tagInput = '';
+                                });
+                              }
+                            },
                           ),
                         ),
-                      ],
-                    ),
-
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
+                        onChanged: (val) => tagInput = val,
+                        onSubmitted: (_) {
+                          if (tagInput.isNotEmpty && !tags.contains(tagInput)) {
+                            setModalState(() {
+                              tags.add(tagInput.trim());
+                              tagInput = '';
+                            });
+                          }
+                        },
                       ),
-                      maxLines: 3,
-                      onChanged: (val) => description = val,
-                    ),
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Instructions',
-                      ),
-                      maxLines: 3,
-                      onChanged: (val) => instructions = val,
-                    ),
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Preparation Time (minutes)',
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) => prepTime = val,
-                    ),
-                    DropdownButtonFormField<String>(
-                      value: diet,
-                      decoration: const InputDecoration(labelText: 'Diet'),
-                      items:
-                          [
-                                'None',
-                                'Vegan',
-                                'Keto',
-                                'Low-Carb',
-                                'Paleo',
-                                'Vegetarian',
-                              ]
-                              .map(
-                                (d) =>
-                                    DropdownMenuItem(value: d, child: Text(d)),
-                              )
-                              .toList(),
-                      onChanged: (val) => setModalState(() => diet = val!),
-                    ),
-                    DropdownButtonFormField<String>(
-                      value: mealTime,
-                      decoration: const InputDecoration(labelText: 'Meal Time'),
-                      items:
-                          ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert']
-                              .map(
-                                (m) =>
-                                    DropdownMenuItem(value: m, child: Text(m)),
-                              )
-                              .toList(),
-                      onChanged: (val) => setModalState(() => mealTime = val!),
-                    ),
-                    DropdownButtonFormField<String>(
-                      value: difficulty,
-                      decoration: const InputDecoration(
-                        labelText: 'Difficulty',
-                      ),
-                      items:
-                          ['Easy', 'Medium', 'Hard']
-                              .map(
-                                (d) =>
-                                    DropdownMenuItem(value: d, child: Text(d)),
-                              )
-                              .toList(),
-                      onChanged:
-                          (val) => setModalState(() => difficulty = val!),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Add Tag',
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () {
-                            if (tagInput.isNotEmpty &&
-                                !tags.contains(tagInput)) {
-                              setModalState(() {
-                                tags.add(tagInput.trim());
-                                tagInput = '';
-                              });
-                            }
-                          },
-                        ),
-                      ),
-                      onChanged: (val) => tagInput = val,
-                      onSubmitted: (_) {
-                        if (tagInput.isNotEmpty && !tags.contains(tagInput)) {
+                      TextButton.icon(
+                        onPressed: () async {
                           setModalState(() {
-                            tags.add(tagInput.trim());
-                            tagInput = '';
+                            descriptionAr = 'Translating...';
+                            instructionsAr = 'Translating...';
+                            ingredientsAr = 'Translating...';
+                            showArabicFields = true;
                           });
-                        }
-                      },
-                    ),
-                  ],
+
+                          final translatedDescription = await translateToArabic(
+                            description,
+                          );
+                          final translatedInstructions =
+                              await translateToArabic(instructions);
+                          final translatedIngredients = await translateToArabic(
+                            ingredients,
+                          );
+
+                          setModalState(() {
+                            descriptionAr = translatedDescription;
+                            instructionsAr = translatedInstructions;
+                            ingredientsAr = translatedIngredients;
+                          });
+                        },
+                        icon: const Icon(Icons.translate, color: Colors.green),
+                        label: const Text('Translate to Arabic'),
+                      ),
+                      if (showArabicFields) ...[
+                        TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Description (Arabic)',
+                          ),
+                          controller: TextEditingController(
+                            text: descriptionAr,
+                          ),
+                          textDirection: TextDirection.rtl,
+                          maxLines: 3,
+                          onChanged: (val) => descriptionAr = val,
+                        ),
+                        TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Instructions (Arabic)',
+                          ),
+                          controller: TextEditingController(
+                            text: instructionsAr,
+                          ),
+                          textDirection: TextDirection.rtl,
+                          maxLines: 3,
+                          onChanged: (val) => instructionsAr = val,
+                        ),
+                        TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Ingredients (Arabic)',
+                          ),
+                          controller: TextEditingController(
+                            text: ingredientsAr,
+                          ),
+                          textDirection: TextDirection.rtl,
+                          onChanged: (val) => ingredientsAr = val,
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
               actions: [
-                TextButton.icon(
-                  onPressed: () async {
-                    setModalState(() {
-                      descriptionAr = 'Translating...';
-                      instructionsAr = 'Translating...';
-                      ingredientsAr = 'Translating...';
-                      showArabicFields = true;
-                    });
-
-                    final translatedDescription = await translateToArabic(
-                      description,
-                    );
-                    final translatedInstructions = await translateToArabic(
-                      instructions,
-                    );
-                    final translatedIngredients = await translateToArabic(
-                      ingredients,
-                    );
-
-                    setModalState(() {
-                      descriptionAr = translatedDescription;
-                      instructionsAr = translatedInstructions;
-                      ingredientsAr = translatedIngredients;
-                    });
-                  },
-                  icon: const Icon(Icons.translate, color: Colors.green),
-                  label: const Text('Translate to Arabic'),
-                ),
-                if (showArabicFields) ...[
-                  const SizedBox(height: 10),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Description (Arabic)',
-                    ),
-                    controller: TextEditingController(text: descriptionAr),
-                    textDirection: TextDirection.rtl,
-                    maxLines: 3,
-                    onChanged: (val) => descriptionAr = val,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Instructions (Arabic)',
-                    ),
-                    controller: TextEditingController(text: instructionsAr),
-                    textDirection: TextDirection.rtl,
-                    maxLines: 3,
-                    onChanged: (val) => instructionsAr = val,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Ingredients (Arabic)',
-                    ),
-                    controller: TextEditingController(text: ingredientsAr),
-                    textDirection: TextDirection.rtl,
-                    onChanged: (val) => ingredientsAr = val,
-                  ),
-                ],
-
                 TextButton(
                   child: const Text('Cancel'),
                   onPressed: () => Navigator.pop(context),
@@ -765,6 +781,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                   ),
                   onPressed: () async {
                     if (title.isEmpty || calories.isEmpty) return;
+
                     final body = {
                       'title': title,
                       'titleAr': titleAr,
@@ -779,9 +796,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               .split(',')
                               .map((e) => e.trim())
                               .toList(),
-
                       'calories': int.tryParse(calories) ?? 0,
-
                       'image':
                           imageBytes != null ? base64Encode(imageBytes!) : '',
                       'diet': diet,
@@ -791,6 +806,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                       'difficulty': difficulty,
                       'isPublic': true,
                     };
+
                     final result = await showDialog<bool>(
                       context: context,
                       builder:
