@@ -19,7 +19,7 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
     with SingleTickerProviderStateMixin {
   List<dynamic> stores = [];
   List<dynamic> filteredStores = [];
-  final String baseUrl = 'http://192.168.1.4:3000';
+  final String baseUrl = 'http://192.168.68.61:3000';
   String searchQuery = '';
   Position? userPosition;
   late TabController _tabController;
@@ -76,22 +76,69 @@ class _StoreItemsScreenState extends State<StoreItemsScreen>
   }
 
   Future<void> _getUserLocationAndFetchStores() async {
-    final permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever)
-      return;
+    try {
+      final permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        debugPrint("❌ Location permission denied");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Please enable location to view nearby stores"),
+          ),
+        );
+        return;
+      }
 
-    userPosition = await Geolocator.getCurrentPosition();
-    fetchStores(userPosition!.latitude, userPosition!.longitude);
+      userPosition = await Geolocator.getCurrentPosition().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint("⚠️ Location timeout, using fallback location");
+          return Position(
+            latitude: 31.95,
+            longitude: 35.91,
+            timestamp: DateTime.now(),
+            accuracy: 1,
+            altitude: 0,
+            altitudeAccuracy: 1,
+            heading: 0,
+            headingAccuracy: 1,
+            speed: 0,
+            speedAccuracy: 1,
+            isMocked: false,
+          );
+        },
+      );
+
+      debugPrint(
+        "📍 Got location: ${userPosition!.latitude}, ${userPosition!.longitude}",
+      );
+      await fetchStores(userPosition!.latitude, userPosition!.longitude);
+    } catch (e) {
+      debugPrint("❌ Error getting location: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Could not get your location.")),
+      );
+    }
   }
 
   Future<void> fetchStores(double lat, double lng) async {
-    final url = Uri.parse('$baseUrl/api/stores-with-items?lat=$lat&lng=$lng');
-    final res = await http.get(url);
+    try {
+      final url = Uri.parse('$baseUrl/api/stores-with-items?lat=$lat&lng=$lng');
+      debugPrint("🌐 Fetching stores from: $url");
 
-    if (res.statusCode == 200) {
-      stores = json.decode(res.body);
-      _applyTabFilter();
+      final res = await http.get(url);
+
+      if (res.statusCode == 200) {
+        stores = json.decode(res.body);
+        debugPrint("✅ Stores loaded: ${stores.length}");
+        _applyTabFilter();
+      } else {
+        debugPrint(
+          "❌ Failed to fetch stores. Status: ${res.statusCode}, Body: ${res.body}",
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ Exception while fetching stores: $e");
     }
   }
 
