@@ -25,6 +25,7 @@
     "node-cron": "^4.0.7",
     "nodemailer": "^7.0.3",
     "openai": "^4.102.0",
+    "pluralize": "^8.0.0",
     "puppeteer": "^24.8.2",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",

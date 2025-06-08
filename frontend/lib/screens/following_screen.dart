@@ -23,7 +23,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
 
   Future<void> fetchFollowing() async {
     final response = await http.get(
-      Uri.parse('http://192.168.68.61:3000/api/profile/${widget.userId}'),
+      Uri.parse('http://192.168.1.4:3000/api/profile/${widget.userId}'),
     );
 
     if (response.statusCode == 200) {
@@ -53,7 +53,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
       if (image.startsWith('/9j') || image.length > 100) {
         return MemoryImage(base64Decode(image));
       }
-      return NetworkImage('http://192.168.68.61:3000/images/$image');
+      return NetworkImage('http://192.168.1.4:3000/images/$image');
     } catch (e) {
       return const AssetImage('assets/placeholder.png');
     }

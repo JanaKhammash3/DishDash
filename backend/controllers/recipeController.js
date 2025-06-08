@@ -135,28 +135,33 @@ exports.filterRecipes = async (req, res) => {
   }
 };
 
+const unitPattern = /\b(\d+\/\d+|\d+\.\d+|\d+|cup|cups|tbsp|tsp|tablespoon|teaspoon|grams?|ml|oz|kg|lb|liters?|pinch|dash|of)\b/gi;
+
 exports.searchByIngredients = async (req, res) => {
   try {
-    const keywords = req.params.ingredients
+    const rawKeywords = req.params.ingredients
       .split(',')
-      .map(word => word.trim().toLowerCase())
+      .map(w => w.trim().toLowerCase())
       .filter(Boolean);
 
-    // Build an $or query with $regex for each keyword
-    const regexQueries = keywords.map(kw => ({
+    // Remove units/numbers/specials from each keyword
+    const cleanedKeywords = rawKeywords.map(kw =>
+      kw.replace(unitPattern, '').replace(/[^a-zA-Z\s]/g, '').trim()
+    ).filter(Boolean);
+
+    const regexQueries = cleanedKeywords.map(kw => ({
       ingredients: { $elemMatch: { $regex: kw, $options: 'i' } },
     }));
 
-    const recipes = await Recipe.find({
-      $or: regexQueries,
-    });
+    const recipes = await Recipe.find({ $or: regexQueries });
 
     res.status(200).json(recipes);
   } catch (err) {
-    console.error(err);
+    console.error('🔴 Ingredient search error:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 
 
