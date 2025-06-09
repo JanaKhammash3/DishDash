@@ -194,16 +194,18 @@ class _StoreNotificationsScreenState extends State<StoreNotificationsScreen> {
                                       title: Text.rich(
                                         TextSpan(
                                           children: [
-                                            TextSpan(
-                                              text: "$name ",
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
+                                            if (!message.startsWith(name))
+                                              TextSpan(
+                                                text: "$name ",
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
-                                            ),
                                             TextSpan(text: message),
                                           ],
                                         ),
                                       ),
+
                                       subtitle: Text(
                                         _formatTimestamp(timestamp),
                                         style: TextStyle(
