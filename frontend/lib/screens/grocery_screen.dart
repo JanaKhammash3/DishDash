@@ -146,9 +146,11 @@ class _GroceryScreenState extends State<GroceryScreen> {
   Future<void> _placeOrderFirstThenPayment() async {
     if (cartItems.isEmpty) return;
 
-    final storeId = await _promptStoreSelection(); // ✅ KEEP THIS
-    if (storeId == null) return;
+    final result = await _promptStoreSelection();
+    if (result == null) return;
 
+    final storeId = result['storeId'];
+    final storePrices = result['storePrices']; // Map<String, double>
     for (var item in cartItems) {
       final name = item['name'];
 
@@ -161,10 +163,11 @@ class _GroceryScreenState extends State<GroceryScreen> {
     }
 
     Navigator.pop(context);
-    _proceedToFakePayment(storeId); // ✅ PASS STORE ID FORWARD
+    _proceedToFakePayment(storeId, storePrices); // ✅ Correct
+    // ✅ PASS STORE ID FORWARD
   }
 
-  void _proceedToFakePayment(String storeId) {
+  void _proceedToFakePayment(String storeId, Map<String, dynamic> storePrices) {
     String selectedMethod = 'Pickup';
 
     showModalBottomSheet(
@@ -189,7 +192,11 @@ class _GroceryScreenState extends State<GroceryScreen> {
                 onChanged: (value) {
                   selectedMethod = value!;
                   Navigator.pop(context);
-                  _showCardInputDialog(selectedMethod, storeId); // ✅ pass
+                  _showCardInputDialog(
+                    selectedMethod,
+                    storeId,
+                    storePrices,
+                  ); // ✅ pass
                 },
               ),
               RadioListTile<String>(
@@ -199,7 +206,11 @@ class _GroceryScreenState extends State<GroceryScreen> {
                 onChanged: (value) {
                   selectedMethod = value!;
                   Navigator.pop(context);
-                  _showCardInputDialog(selectedMethod, storeId); // ✅ pass
+                  _showCardInputDialog(
+                    selectedMethod,
+                    storeId,
+                    storePrices,
+                  ); // ✅ pass
                 },
               ),
             ],
@@ -209,7 +220,11 @@ class _GroceryScreenState extends State<GroceryScreen> {
     );
   }
 
-  void _showCardInputDialog(String method, String storeId) {
+  void _showCardInputDialog(
+    String method,
+    String storeId,
+    Map<String, dynamic> storePrices,
+  ) {
     final cardNumberController = TextEditingController();
     final expiryDateController = TextEditingController();
     final cvvController = TextEditingController();
@@ -247,16 +262,26 @@ class _GroceryScreenState extends State<GroceryScreen> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(context); // Close dialog
-                await _placeOrder(method, storeId); // ✅ NOW IT PLACES ORDER
+                await _placeOrder(
+                  method,
+                  storeId,
+                  Map<String, double>.from(storePrices),
+                );
+
+                if (!mounted)
+                  return; // ✅ Prevent setState if widget is disposed
+
                 setState(() {
                   cartItems.clear();
                 });
+
                 await _saveCartToPrefs();
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Order placed successfully!')),
                 );
               },
+
               style: ElevatedButton.styleFrom(
                 backgroundColor: green,
                 foregroundColor: Colors.white,
@@ -269,9 +294,9 @@ class _GroceryScreenState extends State<GroceryScreen> {
     );
   }
 
-  Future<String?> _promptStoreSelection() async {
+  Future<Map<String, dynamic>?> _promptStoreSelection() async {
     final response = await http.get(
-      Uri.parse('http://192.168.1.4:3000/api/stores-with-items'),
+      Uri.parse('http://192.168.68.61:3000/api/stores-with-items'),
     );
 
     if (response.statusCode != 200) {
@@ -296,6 +321,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
       if (hasAllItems) {
         double totalPrice = 0.0;
+        Map<String, double> itemPrices = {};
 
         for (var itemName in itemNames) {
           final matchedItem = storeItems.firstWhere(
@@ -305,6 +331,8 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
           final price =
               double.tryParse(matchedItem?['price']?.toString() ?? '0') ?? 0.0;
+
+          itemPrices[itemName] = price;
           totalPrice += price;
         }
 
@@ -313,6 +341,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
           'name': store['name'],
           'image': store['image'],
           'totalPrice': totalPrice,
+          'itemPrices': itemPrices, // ✅ Needed for accurate pricing
         });
       }
     }
@@ -337,10 +366,10 @@ class _GroceryScreenState extends State<GroceryScreen> {
       return null;
     }
 
-    // ✅ Sort by total price ascending
     storeOptions.sort((a, b) => a['totalPrice'].compareTo(b['totalPrice']));
 
     String? selectedStoreId;
+    Map<String, double>? selectedPrices;
 
     await showModalBottomSheet(
       context: context,
@@ -368,6 +397,9 @@ class _GroceryScreenState extends State<GroceryScreen> {
                 ),
                 onTap: () {
                   selectedStoreId = store['_id'];
+                  selectedPrices = Map<String, double>.from(
+                    store['itemPrices'],
+                  ); // ✅ Cast correctly
                   Navigator.pop(context);
                 },
               );
@@ -377,50 +409,53 @@ class _GroceryScreenState extends State<GroceryScreen> {
       },
     );
 
-    return selectedStoreId;
+    if (selectedStoreId == null || selectedPrices == null) return null;
+
+    return {
+      'storeId': selectedStoreId,
+      'storePrices': Map<String, double>.from(selectedPrices!), // ✅ cast here
+    };
   }
 
-  Future<void> _placeOrder(String method, String storeId) async {
+  Future<void> _placeOrder(
+    String method,
+    String storeId,
+    Map<String, double> storePrices,
+  ) async {
     final List<Map<String, dynamic>> items =
         cartItems.map((item) {
-          final rawPrice = item['price'];
-
-          // Normalize the price
-          double price = 0.0;
-          if (rawPrice is num) {
-            price = rawPrice.toDouble();
-          } else if (rawPrice is String) {
-            price = double.tryParse(rawPrice) ?? 0.0;
-          }
+          final name = item['name'];
+          final rawPrice = storePrices[name.toLowerCase()] ?? 0.0;
 
           return {
-            'name': item['name'],
-            'price': price,
-            'quantity':
-                item['quantity'] ?? 1, // Optional if you're tracking quantity
+            'name': name,
+            'price': rawPrice,
+            'quantity': item['quantity'] ?? 1,
           };
         }).toList();
 
-    // Final total calculation using cleaned prices
     final double total = items.fold(
       0.0,
       (sum, item) => sum + item['price'] * (item['quantity'] ?? 1),
     );
+
     final response = await http.post(
-      Uri.parse('http://192.168.1.4:3000/api/orders/create'),
+      Uri.parse('http://192.168.68.61:3000/api/orders/create'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'userId': widget.userId,
         'storeId': storeId,
         'items': items,
         'total': total,
-        'method': method, // optional, match with deliveryMethod in schema
+        'deliveryMethod': method, // ✅ not "method"
       }),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final userResponse = await http.get(
-        Uri.parse('http://192.168.1.4:3000/api/users/profile/${widget.userId}'),
+        Uri.parse(
+          'http://192.168.68.61:3000/api/users/profile/${widget.userId}',
+        ),
       );
 
       String userName = 'Someone';
@@ -428,6 +463,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
         final user = jsonDecode(userResponse.body);
         userName = user['name'] ?? 'Someone';
       }
+
       await sendNotification(
         recipientId: storeId,
         recipientModel: 'Store',
@@ -438,10 +474,16 @@ class _GroceryScreenState extends State<GroceryScreen> {
             '$userName placed an order worth \$${total.toStringAsFixed(2)}!',
         relatedId: storeId,
       );
-      print('✅ Order placed!');
+
+      print('✅ Order placed for \$${total.toStringAsFixed(2)}');
     } else {
-      print('❌ Order placement failed: ${response.body}');
+      print('❌ Order failed: ${response.body}');
     }
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Order placed successfully!')));
   }
 
   Future<void> sendNotification({
@@ -453,7 +495,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     required String message,
     String? relatedId,
   }) async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/notifications');
+    final url = Uri.parse('http://192.168.68.61:3000/api/notifications');
     await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -471,7 +513,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/mealplans/user/${widget.userId}/grocery-list',
+      'http://192.168.68.61:3000/api/mealplans/user/${widget.userId}/grocery-list',
     );
 
     final response = await http.get(url);
@@ -548,7 +590,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadAvailableIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/available-ingredients',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -561,7 +603,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _saveIngredients() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/grocery-list',
     );
     final ingredients =
         groceryItems.map((item) => item['name'] as String).toList();
@@ -588,7 +630,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     print('📤 Attempting to save available ingredients: $ingredientsList');
 
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/available-ingredients',
     );
 
     try {
@@ -613,7 +655,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> recordPurchase(String storeId, String ingredient) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores/$storeId/purchase',
+      'http://192.168.68.61:3000/api/stores/$storeId/purchase',
     );
 
     final response = await http.post(
@@ -714,7 +756,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   void _showStoreSelection(String itemName) async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
+      'http://192.168.68.61:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
     );
     final response = await http.get(url);
 
@@ -1331,7 +1373,7 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
 
   Future<void> fetchStorePrices() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
+      'http://192.168.68.61:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
     );
 
     try {

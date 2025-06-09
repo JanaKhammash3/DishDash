@@ -43,7 +43,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
       return NetworkImage(image);
     }
 
-    return NetworkImage('http://192.168.1.4:3000/images/$image');
+    return NetworkImage('http://192.168.68.61:3000/images/$image');
   }
 
   @override
@@ -55,7 +55,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
   Future<void> fetchUserRecipes() async {
     setState(() => isLoading = true);
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/users/${widget.userId}/myRecipes',
+      'http://192.168.68.61:3000/api/users/${widget.userId}/myRecipes',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -74,7 +74,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'http://192.168.1.4:3000/translate',
+          'http://192.168.68.61:3000/translate',
         ), // ✅ Your backend endpoint
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -234,7 +234,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                             try {
                               final res = await http.post(
                                 Uri.parse(
-                                  'http://192.168.1.4:3000/api/analyze-nutrition',
+                                  'http://192.168.68.61:3000/api/analyze-nutrition',
                                 ),
                                 headers: {'Content-Type': 'application/json'},
                                 body: jsonEncode({
@@ -387,7 +387,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
                     final res = await http.put(
                       Uri.parse(
-                        'http://192.168.1.4:3000/api/recipes/${recipe['_id']}',
+                        'http://192.168.68.61:3000/api/recipes/${recipe['_id']}',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
@@ -559,7 +559,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                               try {
                                 final res = await http.post(
                                   Uri.parse(
-                                    'http://192.168.1.4:3000/api/analyze-nutrition',
+                                    'http://192.168.68.61:3000/api/analyze-nutrition',
                                   ),
                                   headers: {'Content-Type': 'application/json'},
                                   body: jsonEncode({
@@ -834,7 +834,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
 
                     final res = await http.post(
                       Uri.parse(
-                        'http://192.168.1.4:3000/api/users/${widget.userId}/customRecipe',
+                        'http://192.168.68.61:3000/api/users/${widget.userId}/customRecipe',
                       ),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode(body),
@@ -1006,7 +1006,7 @@ class _MyRecipesScreenState extends State<MyRecipesScreen> {
                                             if (confirm == true) {
                                               final res = await http.delete(
                                                 Uri.parse(
-                                                  'http://192.168.1.4:3000/api/recipes/${r['_id']}',
+                                                  'http://192.168.68.61:3000/api/recipes/${r['_id']}',
                                                 ),
                                               );
 
