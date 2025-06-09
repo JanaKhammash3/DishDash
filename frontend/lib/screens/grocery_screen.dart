@@ -296,7 +296,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<Map<String, dynamic>?> _promptStoreSelection() async {
     final response = await http.get(
-      Uri.parse('http://192.168.68.61:3000/api/stores-with-items'),
+      Uri.parse('http://192.168.1.4:3000/api/stores-with-items'),
     );
 
     if (response.statusCode != 200) {
@@ -440,7 +440,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     );
 
     final response = await http.post(
-      Uri.parse('http://192.168.68.61:3000/api/orders/create'),
+      Uri.parse('http://192.168.1.4:3000/api/orders/create'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'userId': widget.userId,
@@ -453,9 +453,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final userResponse = await http.get(
-        Uri.parse(
-          'http://192.168.68.61:3000/api/users/profile/${widget.userId}',
-        ),
+        Uri.parse('http://192.168.1.4:3000/api/users/profile/${widget.userId}'),
       );
 
       String userName = 'Someone';
@@ -495,7 +493,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     required String message,
     String? relatedId,
   }) async {
-    final url = Uri.parse('http://192.168.68.61:3000/api/notifications');
+    final url = Uri.parse('http://192.168.1.4:3000/api/notifications');
     await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -513,7 +511,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadIngredients() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/mealplans/user/${widget.userId}/grocery-list',
+      'http://192.168.1.4:3000/api/mealplans/user/${widget.userId}/grocery-list',
     );
 
     final response = await http.get(url);
@@ -590,7 +588,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _loadAvailableIngredients() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -603,7 +601,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> _saveIngredients() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/${widget.userId}/grocery-list',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/grocery-list',
     );
     final ingredients =
         groceryItems.map((item) => item['name'] as String).toList();
@@ -630,7 +628,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
     print('📤 Attempting to save available ingredients: $ingredientsList');
 
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/users/${widget.userId}/available-ingredients',
+      'http://192.168.1.4:3000/api/users/${widget.userId}/available-ingredients',
     );
 
     try {
@@ -655,7 +653,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Future<void> recordPurchase(String storeId, String ingredient) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/stores/$storeId/purchase',
+      'http://192.168.1.4:3000/api/stores/$storeId/purchase',
     );
 
     final response = await http.post(
@@ -756,7 +754,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   void _showStoreSelection(String itemName) async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
+      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(itemName)}',
     );
     final response = await http.get(url);
 
@@ -909,7 +907,8 @@ class _GroceryScreenState extends State<GroceryScreen> {
 
   Widget _buildAvailableSidebar() {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.35,
+      width: 171,
+
       color: lightGrey,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -925,7 +924,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
           ),
           const SizedBox(height: 12),
           // 🔸 NEW AI BUTTON HERE
-          IconButton(
+          ElevatedButton.icon(
             onPressed: () {
               Navigator.push(
                 context,
@@ -936,13 +935,20 @@ class _GroceryScreenState extends State<GroceryScreen> {
               );
             },
             icon: const Icon(Icons.auto_awesome, color: Colors.white),
-
+            label: const Text(
+              'Generate with ingredients',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14, // ✅ Set your desired font size here
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
 
@@ -1224,85 +1230,101 @@ class _GroceryScreenState extends State<GroceryScreen> {
                             ),
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             elevation: 3,
-                            child: ListTile(
-                              leading: Icon(
-                                item['icon'],
-                                size: 36,
-                                color: isAvailable ? Colors.grey : green,
-                              ),
-                              title: Text(
-                                item['name'],
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Column(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (item['source'] != null)
-                                    Text(
-                                      'From: ${item['source']}',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  if (item['timeLeft'] != null)
-                                    Text(
-                                      _formatTimeLeft(item['timeLeft']),
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.orange,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.add_shopping_cart,
-                                      color: green,
-                                    ),
-                                    onPressed: () {
-                                      final existing = cartItems.any(
-                                        (i) => i['name'] == item['name'],
-                                      );
-                                      if (!existing) {
-                                        setState(() {
-                                          cartItems.add({
-                                            'name': item['name'],
-                                            'price': item['price'],
-                                            'storeId': null,
-                                          });
-                                          _saveCartToPrefs();
-                                        });
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Added to cart'),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                  Icon(
+                                    item['icon'],
+                                    size: 36,
+                                    color: isAvailable ? Colors.grey : green,
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.store, color: green),
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) => StorePriceScreen(
-                                                itemName: item['name'],
-                                              ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item['name'],
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
                                         ),
-                                      );
-                                    },
+                                        if (item['source'] != null)
+                                          Text(
+                                            'From: ${item['source']}',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        if (item['timeLeft'] != null)
+                                          Text(
+                                            _formatTimeLeft(item['timeLeft']),
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.orange,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.store,
+                                          color: green,
+                                        ),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (context) => StorePriceScreen(
+                                                    itemName: item['name'],
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.add_shopping_cart,
+                                          color: green,
+                                        ),
+                                        onPressed: () {
+                                          final existing = cartItems.any(
+                                            (i) => i['name'] == item['name'],
+                                          );
+                                          if (!existing) {
+                                            setState(() {
+                                              cartItems.add({
+                                                'name': item['name'],
+                                                'price': item['price'],
+                                                'storeId': null,
+                                              });
+                                              _saveCartToPrefs();
+                                            });
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Added to cart'),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -1314,6 +1336,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
           ),
         ],
       ),
+
       floatingActionButton: FloatingActionButton(
         backgroundColor: green,
         onPressed: _showCartModal,
@@ -1373,7 +1396,7 @@ class _StorePriceScreenState extends State<StorePriceScreen> {
 
   Future<void> fetchStorePrices() async {
     final url = Uri.parse(
-      'http://192.168.68.61:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
+      'http://192.168.1.4:3000/api/stores?item=${Uri.encodeComponent(widget.itemName)}',
     );
 
     try {
