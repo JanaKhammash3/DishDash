@@ -108,9 +108,26 @@ class _StoreProfileScreenState extends State<StoreProfileScreen> {
   }
 
   void _launchWhatsApp(String phone) async {
-    final url = Uri.parse('https://wa.me/$phone');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
+    final Uri url = Uri.parse('https://wa.me/$phone');
+
+    print('📱 Attempting to open WhatsApp: $url');
+
+    try {
+      final success = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!success) {
+        throw Exception('Failed to launch');
+      }
+    } catch (e) {
+      debugPrint('❌ Error launching WhatsApp: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Could not open WhatsApp. Make sure it's installed."),
+        ),
+      );
     }
   }
 
