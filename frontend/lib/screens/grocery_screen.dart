@@ -885,7 +885,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
           ),
           const SizedBox(height: 12),
           // 🔸 NEW AI BUTTON HERE
-          ElevatedButton.icon(
+          IconButton(
             onPressed: () {
               Navigator.push(
                 context,
@@ -896,10 +896,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
               );
             },
             icon: const Icon(Icons.auto_awesome, color: Colors.white),
-            label: const Text(
-              'Generate From my ingredients',
-              style: TextStyle(color: Colors.white),
-            ),
+
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               shape: RoundedRectangleBorder(
