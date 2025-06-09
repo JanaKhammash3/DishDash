@@ -19,7 +19,7 @@ class UserProfileModalContent extends StatefulWidget {
 }
 
 class _UserProfileModalContentState extends State<UserProfileModalContent> {
-  final String baseUrl = 'http://192.168.68.61:3000';
+  final String baseUrl = 'http://192.168.1.4:3000';
   Map<String, dynamic>? user;
   List<Map<String, dynamic>> recipes = [];
   int followerCount = 0;
