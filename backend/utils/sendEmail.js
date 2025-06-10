@@ -6,7 +6,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false, // disables SSL certificate checking
+  },
 });
+
 
 module.exports = async function sendEmail(to, subject, text) {
   await transporter.sendMail({
