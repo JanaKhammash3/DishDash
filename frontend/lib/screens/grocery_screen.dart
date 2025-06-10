@@ -843,14 +843,13 @@ class _GroceryScreenState extends State<GroceryScreen> {
   void _addAvailableIngredient(String name) async {
     final normalized = normalizeIngredientName(name);
 
-    // Always add to availableIngredients set
     setState(() {
-      availableIngredients.add(name);
+      availableIngredients.add(normalized);
+      _sortGroceryItems(); // ✅ Trigger reordering after adding
     });
 
-    // If it's not in groceryItems, do NOT block anything — just don't display it in the list
     final alreadyInList = groceryItems.any(
-      (item) => item['name'].toString().toLowerCase() == normalized,
+      (item) => item['name'].toLowerCase() == normalized.toLowerCase(),
     );
 
     if (!alreadyInList) {
@@ -859,7 +858,7 @@ class _GroceryScreenState extends State<GroceryScreen> {
       );
     }
 
-    await _saveAvailableIngredients(); // Always save regardless of display
+    await _saveAvailableIngredients();
   }
 
   void _showAddIngredientDialog() {
