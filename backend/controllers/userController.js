@@ -773,17 +773,22 @@ exports.requestOtp = async (req, res) => {
 
   const otp = generateOTP();
   const hashedOtp = hashOTP(otp);
-  const expiresAt = new Date(Date.now() + 1 * 60000); // 1 minute
+  const expiresAt = new Date(Date.now() + 5 * 60000); // 5 minute
 
   user.otpHash = hashedOtp;
   user.otpExpiresAt = expiresAt;
   await user.save();
 
-  // Send the OTP (use your mail utility if applicable)
-  await sendEmail(user.email, 'Your OTP Code', `Your OTP: ${otp}`);
-
-  res.status(200).json({ message: 'If registered, OTP sent.' });
+  try {
+    await sendEmail(user.email, 'Your OTP Code', `Your OTP: ${otp}`);
+    // ✅ Add this response
+    return res.status(200).json({ message: 'If registered, OTP sent.' });
+  } catch (err) {
+    console.error('❌ Failed to send email:', err);
+    return res.status(500).json({ message: 'Failed to send OTP email.' });
+  }
 };
+
 
 // Reset password with OTP
 exports.resetPasswordWithOtp = async (req, res) => {

@@ -124,7 +124,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
                   final res = await http.post(
                     Uri.parse(
-                      'http://192.168.1.4:3000/api/challenges/${challenge['_id']}/submit',
+                      'http://192.168.68.61:3000/api/challenges/${challenge['_id']}/submit',
                     ),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode(body),
@@ -496,7 +496,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
   Future<void> _fetchSurveyData() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/profile/${widget.userId}',
+      'http://192.168.68.61:3000/api/profile/${widget.userId}',
     );
     final res = await http.get(url);
     if (res.statusCode == 200) {
@@ -542,14 +542,14 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
     final allergyRes = await http.patch(
       Uri.parse(
-        'http://192.168.1.4:3000/api/users/updateAllergies/${widget.userId}',
+        'http://192.168.68.61:3000/api/users/updateAllergies/${widget.userId}',
       ),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'allergies': allergies}),
     );
 
     final surveyRes = await http.put(
-      Uri.parse('http://192.168.1.4:3000/api/users/${widget.userId}/survey'),
+      Uri.parse('http://192.168.68.61:3000/api/users/${widget.userId}/survey'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(surveyData),
     );
@@ -573,7 +573,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
   Future<void> fetchChallenges() async {
     final res = await http.get(
-      Uri.parse('http://192.168.1.4:3000/api/challenges'),
+      Uri.parse('http://192.168.68.61:3000/api/challenges'),
     );
     if (res.statusCode == 200) {
       final all = List<Map<String, dynamic>>.from(jsonDecode(res.body));
@@ -592,7 +592,9 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
   Future<void> fetchMyRecipes() async {
     final res = await http.get(
-      Uri.parse('http://192.168.1.4:3000/api/users/${widget.userId}/myRecipes'),
+      Uri.parse(
+        'http://192.168.68.61:3000/api/users/${widget.userId}/myRecipes',
+      ),
     );
     if (res.statusCode == 200) {
       setState(() => myRecipes = jsonDecode(res.body));
@@ -627,7 +629,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
       final base64String = base64Encode(compressedBytes);
 
       final url = Uri.parse(
-        'http://192.168.1.4:3000/api/profile/${widget.userId}/avatar',
+        'http://192.168.68.61:3000/api/profile/${widget.userId}/avatar',
       );
 
       final response = await http.put(
@@ -651,7 +653,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
   Future<void> fetchRecipeCount() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/recipes/count/${widget.userId}',
+      'http://192.168.68.61:3000/api/recipes/count/${widget.userId}',
     );
 
     try {
@@ -669,7 +671,7 @@ class _WebProfileScreenState extends State<WebProfileScreen> {
 
   Future<void> fetchUserProfile() async {
     final url = Uri.parse(
-      'http://192.168.1.4:3000/api/profile/${widget.userId}',
+      'http://192.168.68.61:3000/api/profile/${widget.userId}',
     );
 
     try {

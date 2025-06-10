@@ -8,7 +8,7 @@ class LoginPage extends StatelessWidget {
   final TextEditingController passwordController = TextEditingController();
 
   Future<void> _login(BuildContext context) async {
-    final url = Uri.parse('http://192.168.1.4:3000/api/login');
+    final url = Uri.parse('http://192.168.68.61:3000/api/login');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},

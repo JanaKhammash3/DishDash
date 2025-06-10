@@ -55,7 +55,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
           return const AssetImage('assets/placeholder.png');
         }
       } else if (image != null && image.isNotEmpty) {
-        return NetworkImage('http://192.168.1.4:3000/images/$image');
+        return NetworkImage('http://192.168.68.61:3000/images/$image');
       } else {
         return const AssetImage('assets/placeholder.png');
       }

@@ -14,46 +14,6 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool _isLoading = false;
-
-  Future<void> _sendOtp() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      _showDialog('Error', 'Please enter a valid email.');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final response = await http.post(
-        Uri.parse('http://192.168.1.4:3000/api/users/request-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
-      );
-
-      setState(() => _isLoading = false);
-
-      if (response.statusCode == 200) {
-        _showDialog(
-          'Success',
-          'An OTP has been sent to your email.',
-          onOk: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => OtpResetScreen(email: email)),
-            );
-          },
-        );
-      } else {
-        final data = jsonDecode(response.body);
-        _showDialog('Error', data['message'] ?? 'Something went wrong.');
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showDialog('Error', 'Failed to send request. Please try again.');
-    }
-  }
-
   void _showDialog(String title, String message, {VoidCallback? onOk}) {
     showDialog(
       context: context,
@@ -75,6 +35,61 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ],
           ),
     );
+  }
+
+  // ✅ Then define _sendOtp
+  Future<void> _sendOtp() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _showDialog('Error', 'Please enter a valid email.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://192.168.68.61:3000/api/users/request-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      setState(() => _isLoading = false); // ✅ always stop loading here
+
+      String message = 'An OTP has been sent to your email.';
+      if (response.statusCode == 200) {
+        // ✅ Safe decode
+        if (response.body.isNotEmpty) {
+          try {
+            final data = jsonDecode(response.body);
+            message = data['message'] ?? message;
+          } catch (_) {} // ignore parsing errors
+        }
+
+        _showDialog(
+          'Success',
+          message,
+          onOk: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => OtpResetScreen(email: email)),
+            );
+          },
+        );
+      } else {
+        String errorMsg = 'Something went wrong.';
+        if (response.body.isNotEmpty) {
+          try {
+            final data = jsonDecode(response.body);
+            errorMsg = data['message'] ?? errorMsg;
+          } catch (_) {}
+        }
+        _showDialog('Error', errorMsg);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false); // ✅ stop loading on network error
+      _showDialog('Error', 'Failed to send request. Please try again.');
+    }
   }
 
   @override
