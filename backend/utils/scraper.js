@@ -4,7 +4,27 @@ const axios = require('axios');
 
 puppeteer.use(StealthPlugin());
 
+const resolveRedirect = async (shortUrl) => {
+  try {
+    const res = await axios.get(shortUrl, {
+      maxRedirects: 0,
+      validateStatus: status => status >= 300 && status < 400,
+    });
+    return res.headers.location;
+  } catch (err) {
+    throw new Error("Failed to resolve Pinterest redirect URL");
+  }
+};
+
 const scrapeSinglePin = async (pinUrl) => {
+  // ✅ Handle short Pinterest links
+  if (!pinUrl.includes('/pin/')) {
+    pinUrl = await resolveRedirect(pinUrl);
+  }
+
+  const pinIdPart = pinUrl.split("/pin/")[1];
+  const pinId = pinIdPart ? pinIdPart.replace("/", "") : 'unknown';
+
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -12,7 +32,6 @@ const scrapeSinglePin = async (pinUrl) => {
   });
 
   const page = await browser.newPage();
-  const pinId = pinUrl.split("/pin/")[1].replace("/", "");
 
   try {
     await page.goto(pinUrl, {
@@ -23,22 +42,19 @@ const scrapeSinglePin = async (pinUrl) => {
     await page.waitForSelector("img", { timeout: 10000 });
 
     const data = await page.evaluate(() => {
-        const title = document.querySelector('h1')?.innerText?.trim() || '';
-      
-        // Look for meta tag description
-        const metaDesc = document.querySelector("meta[name='description']")?.content?.trim() || '';
-      
-        const imgEl = document.querySelector("img[src*='i.pinimg.com']");
-        let imageUrl = imgEl?.src || '';
-        if (imageUrl.includes('/236x/')) imageUrl = imageUrl.replace('/236x/', '/736x/');
-      
-        return {
-          title,
-          description: metaDesc,
-          imageUrl,
-          bodyText: document.body.innerText,
-        };
-      });
+      const title = document.querySelector('h1')?.innerText?.trim() || '';
+      const metaDesc = document.querySelector("meta[name='description']")?.content?.trim() || '';
+      const imgEl = document.querySelector("img[src*='i.pinimg.com']");
+      let imageUrl = imgEl?.src || '';
+      if (imageUrl.includes('/236x/')) imageUrl = imageUrl.replace('/236x/', '/736x/');
+
+      return {
+        title,
+        description: metaDesc,
+        imageUrl,
+        bodyText: document.body.innerText,
+      };
+    });
 
     if (!data || !data.imageUrl) throw new Error("Image URL not found");
 
@@ -48,7 +64,7 @@ const scrapeSinglePin = async (pinUrl) => {
     const fullBase64 = `data:${contentType};base64,${base64Image}`;
 
     await browser.close();
-    return { ...data, image: base64Image, pinId }; 
+    return { ...data, image: fullBase64, pinId };
   } catch (err) {
     await browser.close();
     console.error("Scrape error:", err.message);
