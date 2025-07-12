@@ -131,7 +131,7 @@ exports.scoreSubmission = async (req, res) => {
 exports.setWinners = async (req, res) => {
   try {
     const challenge = await Challenge.findById(req.params.id);
-    const { winners } = req.body; // [{ user: userId, position: 1 }]
+    const { winners } = req.body; 
 
     challenge.winners = winners;
     await challenge.save();
