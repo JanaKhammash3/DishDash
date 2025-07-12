@@ -1623,6 +1623,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final filtered =
         popularRecipes.where((recipe) {
           final title = (recipe['title'] ?? '').toString().toLowerCase();
+          final titleAr = (recipe['titleAr'] ?? '').toString().toLowerCase();
           final diet = (recipe['diet'] ?? '').toString().toLowerCase();
           final mealTime = (recipe['mealTime'] ?? '').toString().toLowerCase();
 
@@ -1632,7 +1633,8 @@ class _HomeScreenState extends State<HomeScreen> {
               diet == selectedCategory.toLowerCase() ||
               mealTime == selectedCategory.toLowerCase();
 
-          return matchesSearch && matchesCategory;
+          return matchesSearch && matchesCategory ||
+              titleAr.contains(searchQuery);
         }).toList();
 
     return Column(
