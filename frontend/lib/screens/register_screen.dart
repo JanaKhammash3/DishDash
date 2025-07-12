@@ -84,7 +84,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             telephoneController.clear();
             latitude = null;
             longitude = null;
-            selectedRole = 'user'; // reset to default
+            selectedRole = 'user';
           });
 
           // Or redirect as needed
